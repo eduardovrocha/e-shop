@@ -19,7 +19,7 @@ class Rack::Attack
     [
       429,
       { "Content-Type" => "application/json" },
-      ['{"error":"Muitas tentativas. Aguarde 60 segundos."}'],
+      [ '{"error":"Muitas tentativas. Aguarde 60 segundos."}' ]
     ]
   end
 end

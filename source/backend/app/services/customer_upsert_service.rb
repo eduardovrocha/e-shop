@@ -19,7 +19,7 @@ class CustomerUpsertService
   # Backfill all paid orders that have no customer_id yet
   def self.backfill_all
     Order.where(status: PAID_STATUSES, customer_id: nil)
-         .where.not(customer_email: [nil, ""])
+         .where.not(customer_email: [ nil, "" ])
          .find_each { |o| call(o) }
   end
 

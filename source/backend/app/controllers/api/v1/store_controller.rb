@@ -13,7 +13,7 @@ module Api
           pickup_number:             settings.pickup_number,
           pickup_complement:         settings.pickup_complement,
           pickup_city:               settings.pickup_city,
-          pickup_state:              settings.pickup_state,
+          pickup_state:              settings.pickup_state
         }
       end
     end

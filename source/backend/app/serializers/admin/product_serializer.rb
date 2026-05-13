@@ -23,7 +23,7 @@ module Admin
         total_stock:    @product.total_stock,
         has_dimensions: @product.has_dimensions?,
         images:         @images,
-        variants:       serialize_variants,
+        variants:       serialize_variants
       }
     end
 
@@ -41,7 +41,7 @@ module Admin
           price_cents:            v.price_cents,
           additional_price_cents: v.additional_price_cents,
           available_quantity:     v.available_quantity,
-          effective_price_cents:  v.effective_price_cents,
+          effective_price_cents:  v.effective_price_cents
         }
       end
     end

@@ -14,6 +14,6 @@ class CreateCustomerAddresses < ActiveRecord::Migration[7.2]
       t.timestamps
     end
 
-    add_index :customer_addresses, [:customer_id, :is_default]
+    add_index :customer_addresses, [ :customer_id, :is_default ]
   end
 end

@@ -16,7 +16,7 @@ class Order < ApplicationRecord
     "failed"           => %w[pending cancelled],
     "disputed"         => %w[refunded cancelled],
     "cancelled"        => %w[],
-    "refunded"         => %w[],
+    "refunded"         => %w[]
   }.freeze
 
   DELIVERY_METHODS = %w[delivery pickup].freeze

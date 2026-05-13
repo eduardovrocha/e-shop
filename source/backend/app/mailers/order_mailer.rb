@@ -8,7 +8,7 @@ class OrderMailer < ApplicationMailer
     "out_for_delivery" => "🏠 Saiu para entrega",
     "delivered"        => "🎉 Pedido entregue",
     "cancelled"        => "❌ Pedido cancelado",
-    "refunded"         => "💰 Reembolso processado",
+    "refunded"         => "💰 Reembolso processado"
   }.freeze
 
   def status_update(order, status)

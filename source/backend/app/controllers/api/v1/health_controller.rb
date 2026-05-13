@@ -9,7 +9,7 @@ module Api
         render json: {
           status:  all_ok ? "ok" : "degraded",
           checks:  { database: db_ok, redis: redis_ok },
-          version: ENV.fetch("APP_VERSION", "dev"),
+          version: ENV.fetch("APP_VERSION", "dev")
         }, status: all_ok ? :ok : :service_unavailable
       end
 

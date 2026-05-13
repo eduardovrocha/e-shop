@@ -37,7 +37,7 @@ module Api
               )
 
               @product.images.attach(blob)
-              @product.image_order = (@product.image_order + [blob.id]).uniq
+              @product.image_order = (@product.image_order + [ blob.id ]).uniq
               current_count += 1
             end
 
@@ -73,7 +73,7 @@ module Api
             return unless blob
 
             current_order = @product.image_order.presence || @product.images.blobs.pluck(:id)
-            new_order = [blob.id] + current_order.reject { |id| id == blob.id }
+            new_order = [ blob.id ] + current_order.reject { |id| id == blob.id }
             @product.update!(image_order: new_order)
             render json: { images: serialize_images(@product) }
           end

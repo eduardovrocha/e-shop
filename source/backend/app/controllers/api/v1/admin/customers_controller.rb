@@ -23,8 +23,8 @@ module Api
             meta: {
               current_page:  scope.current_page,
               total_pages:   scope.total_pages,
-              total_count:   scope.total_count,
-            },
+              total_count:   scope.total_count
+            }
           }
         end
 
@@ -42,7 +42,7 @@ module Api
             total_spent_cents: customer.orders.sum(:total_cents),
             last_order_at:     customer.orders.maximum(:created_at),
             addresses:         customer.addresses.map { |a| address_json(a) },
-            orders:            orders.map { |o| order_summary(o) },
+            orders:            orders.map { |o| order_summary(o) }
           }
         rescue ActiveRecord::RecordNotFound
           render json: { error: "Cliente não encontrado" }, status: :not_found
@@ -58,7 +58,7 @@ module Api
             phone:             customer.phone,
             orders_count:      stat&.orders_count.to_i,
             total_spent_cents: stat&.total_spent_cents.to_i,
-            last_order_at:     stat&.last_order_at,
+            last_order_at:     stat&.last_order_at
           }
         end
 
@@ -73,7 +73,7 @@ module Api
             city:         addr.city,
             state:        addr.state,
             country:      addr.country,
-            is_default:   addr.is_default,
+            is_default:   addr.is_default
           }
         end
 
@@ -83,7 +83,7 @@ module Api
             number:      order.number,
             status:      order.status,
             total_cents: order.total_cents,
-            created_at:  order.created_at,
+            created_at:  order.created_at
           }
         end
       end

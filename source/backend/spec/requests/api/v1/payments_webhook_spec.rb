@@ -14,7 +14,7 @@ RSpec.describe "Payments Webhook", type: :request do
       "items_total_cents"  => "5000",
       "shipping_fee_cents" => "0",
       "items_snapshot"     => "[]",
-      "shipping_address"   => nil,
+      "shipping_address"   => nil
     }
   end
 

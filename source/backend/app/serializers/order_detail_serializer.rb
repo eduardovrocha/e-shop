@@ -26,7 +26,7 @@ class OrderDetailSerializer
       estimated_delivery:  @order.estimated_delivery,
       created_at:          @order.created_at,
       updated_at:          @order.updated_at,
-      status_histories:    serialize_histories,
+      status_histories:    serialize_histories
     }
   end
 
@@ -40,7 +40,7 @@ class OrderDetailSerializer
         title:       h.title,
         description: h.description,
         created_by:  h.created_by,
-        created_at:  h.created_at,
+        created_at:  h.created_at
       }
     end
   end

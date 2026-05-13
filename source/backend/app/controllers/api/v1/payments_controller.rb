@@ -49,7 +49,7 @@ module Api
             customer_phone:     params[:customer_phone],
             shipping_address:    params[:shipping_address]&.to_json,
             shipping_service_id: params[:shipping_service_id],
-            shipping_cep:        params[:shipping_cep],
+            shipping_cep:        params[:shipping_cep]
           }
         )
 
@@ -57,7 +57,7 @@ module Api
           client_secret:      payment_intent.client_secret,
           total_cents:        total,
           items_total_cents:  items_total,
-          shipping_fee_cents: shipping_fee,
+          shipping_fee_cents: shipping_fee
         }
       rescue ProductVariant::InsufficientStockError => e
         render json: { error: e.message }, status: :unprocessable_entity
@@ -303,7 +303,7 @@ module Api
             "size"             => item["size"] || item[:size] || variant&.size,
             "quantity"         => qty,
             "unit_price_cents" => unit_price_cents,
-            "subtotal_cents"   => unit_price_cents * qty,
+            "subtotal_cents"   => unit_price_cents * qty
           }
         end
       end

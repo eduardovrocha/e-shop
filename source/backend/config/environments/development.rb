@@ -54,7 +54,7 @@ Rails.application.configure do
   _url_opts  = {
     host:     _parts[0],
     port:     _parts[1]&.to_i.presence,
-    protocol: _host_url.start_with?("https") ? "https" : "http",
+    protocol: _host_url.start_with?("https") ? "https" : "http"
   }
 
   config.action_controller.default_url_options   = _url_opts

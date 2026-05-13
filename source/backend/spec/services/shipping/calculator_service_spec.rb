@@ -20,7 +20,7 @@ RSpec.describe Shipping::CalculatorService, type: :service do
 
   let!(:carrier) { create(:shipping_carrier, me_service_id: 1, name: "PAC", company: "Correios") }
   let!(:product) { create(:product, :with_dimensions, price_cents: 8900) }
-  let(:items)    { [{ product_id: product.id, quantity: 1 }] }
+  let(:items)    { [ { product_id: product.id, quantity: 1 } ] }
 
   let(:success_body) do
     [
@@ -226,9 +226,9 @@ RSpec.describe Shipping::CalculatorService, type: :service do
           provider: "Test", service_id: 42, carrier: "Fake", service: "Express",
           price_cents: 500, delivery_days: 1, currency: "BRL", error: nil
         }
-        fake_provider = instance_double("FakeProvider", calculate: [double(to_h: fake_option)])
+        fake_provider = instance_double("FakeProvider", calculate: [ double(to_h: fake_option) ])
 
-        results = described_class.new(providers: [fake_provider])
+        results = described_class.new(providers: [ fake_provider ])
                                  .calculate(to_zipcode: "04568000", items: items)
 
         expect(results.find { |r| r[:service_id] == 42 }).not_to be_nil

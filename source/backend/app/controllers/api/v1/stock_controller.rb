@@ -11,7 +11,7 @@ module Api
 
       def check_item(item)
         variant_id = item[:variant_id].to_i
-        requested  = [item[:quantity].to_i, 1].max
+        requested  = [ item[:quantity].to_i, 1 ].max
         variant    = ProductVariant.includes(:product).find_by(id: variant_id)
 
         unless variant

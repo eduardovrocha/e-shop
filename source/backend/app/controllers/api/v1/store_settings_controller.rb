@@ -1,8 +1,8 @@
 module Api
   module V1
     class StoreSettingsController < Api::V1::Admin::BaseController
-      skip_before_action :authenticate_request!, only: [:show]
-      skip_before_action :require_admin!,        only: [:show]
+      skip_before_action :authenticate_request!, only: [ :show ]
+      skip_before_action :require_admin!,        only: [ :show ]
 
       def show
         render json: headline_json(StoreSetting.instance)
@@ -26,7 +26,7 @@ module Api
           headline_description: settings.headline_description,
           footer_description:   settings.footer_description,
           contact_email:        settings.contact_email,
-          whatsapp_number:      settings.whatsapp_number,
+          whatsapp_number:      settings.whatsapp_number
         }
       end
 

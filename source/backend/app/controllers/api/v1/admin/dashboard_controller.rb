@@ -17,7 +17,7 @@ module Api
             top_products:            top_products_data,
             low_stock_count:         ProductVariant.low_stock.count,
             awaiting_shipment_count: Order.where(status: %w[paid processing producing packed]).count,
-            recent_orders:           recent_orders_data,
+            recent_orders:           recent_orders_data
           }
         end
 
@@ -31,7 +31,7 @@ module Api
               customer_name: o.customer_name,
               status:        o.status,
               total_cents:   o.total_cents,
-              created_at:    o.created_at,
+              created_at:    o.created_at
             }
           end
         end
@@ -49,7 +49,7 @@ module Api
             date = start_date.to_date + offset
             {
               day:    day_labels[date.wday],
-              vendas: (rows[date] || 0) / 100.0,
+              vendas: (rows[date] || 0) / 100.0
             }
           end
         end

@@ -70,7 +70,7 @@ Rails.application.configure do
     connect_timeout:    2,
     read_timeout:       1,
     write_timeout:      1,
-    reconnect_attempts: 1,
+    reconnect_attempts: 1
   }
 
   # Use a real queuing backend for Active Job (and separate queues per environment).
@@ -90,14 +90,14 @@ Rails.application.configure do
     user_name:            ENV.fetch("SMTP_USERNAME"),
     password:             ENV.fetch("SMTP_PASSWORD"),
     authentication:       :plain,
-    enable_starttls_auto: true,
+    enable_starttls_auto: true
   }
   config.action_mailer.default_options = {
-    from: ENV.fetch("SMTP_FROM"),
+    from: ENV.fetch("SMTP_FROM")
   }
   config.action_mailer.default_url_options = {
     host:     ENV.fetch("API_HOST", "api.andrequice.store"),
-    protocol: "https",
+    protocol: "https"
   }
 
   # Enable locale fallbacks for I18n (makes lookups for any locale fall back to
@@ -116,7 +116,7 @@ Rails.application.configure do
   # Force correct host for Active Storage redirect URLs and all url_for calls.
   config.action_controller.default_url_options = {
     host:     ENV.fetch("API_HOST", "api.andrequice.store"),
-    protocol: "https",
+    protocol: "https"
   }
 
   # DNS rebinding protection — whitelist only known hosts.

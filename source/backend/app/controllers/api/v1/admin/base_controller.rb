@@ -8,7 +8,7 @@ module Api
 
         def require_admin!
           @current_admin = User.find_by(id: current_user_id)
-          return unauthorized! unless @current_admin&.role.in?(%w[admin super_admin])
+          unauthorized! unless @current_admin&.role.in?(%w[admin super_admin])
         end
 
         def current_admin

@@ -15,7 +15,7 @@ class OrderStatusHistory < ApplicationRecord
     "cancelled"        => { title: "Cancelado",               icon: "x_circle" },
     "refunded"         => { title: "Reembolsado",             icon: "rotate_ccw" },
     "failed"           => { title: "Pagamento falhou",        icon: "alert_circle" },
-    "disputed"         => { title: "Em disputa",              icon: "alert_triangle" },
+    "disputed"         => { title: "Em disputa",              icon: "alert_triangle" }
   }.freeze
 
   def self.title_for(status)

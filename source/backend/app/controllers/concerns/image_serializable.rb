@@ -14,7 +14,7 @@ module ImageSerializable
       content_type: blob.content_type,
       byte_size:    blob.byte_size,
       url:          rails_blob_url(blob, blob_url_opts),
-      thumb_url:    rails_representation_url(blob.variant(resize_to_limit: [400, 400]), blob_url_opts),
+      thumb_url:    rails_representation_url(blob.variant(resize_to_limit: [ 400, 400 ]), blob_url_opts)
     }
   end
 
@@ -28,7 +28,7 @@ module ImageSerializable
     {
       host:     parts[0],
       port:     parts[1]&.to_i.presence,
-      protocol: host_url.start_with?("https") ? "https" : "http",
+      protocol: host_url.start_with?("https") ? "https" : "http"
     }
   end
 end

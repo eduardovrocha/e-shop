@@ -10,7 +10,7 @@ module Api
             minutes = (ttl / 60.0).ceil
             return render json: {
               error: "Conta bloqueada. Tente novamente em #{minutes} minuto(s).",
-              retry_after: ttl,
+              retry_after: ttl
             }, status: :too_many_requests
           end
 
@@ -24,15 +24,15 @@ module Api
               httponly:  true,
               secure:    Rails.env.production?,
               same_site: :strict,
-              expires:   24.hours.from_now,
+              expires:   24.hours.from_now
             }
             render json: {
               user: {
                 id:    user.id,
                 name:  user.name,
                 email: user.email,
-                role:  user.role,
-              },
+                role:  user.role
+              }
             }
           else
             BruteForceProtection.record_failure(email)

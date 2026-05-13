@@ -14,9 +14,9 @@ if ENV["SMTP_HOST"].present?
     authentication:       ENV.fetch("SMTP_AUTH", "plain").to_sym,
     enable_starttls_auto: ENV.fetch("SMTP_TLS", "true") == "true",
     open_timeout:         5,
-    read_timeout:         10,
+    read_timeout:         10
   }.compact
   Rails.application.config.action_mailer.default_url_options = {
-    host: ENV.fetch("HOST_URL", "http://localhost").sub(%r{^https?://}, ""),
+    host: ENV.fetch("HOST_URL", "http://localhost").sub(%r{^https?://}, "")
   }
 end

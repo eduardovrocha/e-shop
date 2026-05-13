@@ -34,7 +34,7 @@ class BruteForceProtection
   end
 
   def ttl
-    [Sidekiq.redis { |r| r.call("TTL", @locked_key) }, 0].max
+    [ Sidekiq.redis { |r| r.call("TTL", @locked_key) }, 0 ].max
   end
 
   def record_failure

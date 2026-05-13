@@ -21,7 +21,7 @@ class PublicProductSerializer
       images:          @image_urls,
       total_stock:     all_variants.sum(&:available_quantity),
       sizes:           sorted_sizes(all_variants),
-      variant_stock:   sorted_variant_stock(all_variants),
+      variant_stock:   sorted_variant_stock(all_variants)
     }
   end
 
@@ -41,7 +41,7 @@ class PublicProductSerializer
         stock:                 qty,
         price_cents:           v.price_cents,
         effective_price_cents: v.price_cents,
-        available:             qty > 0,
+        available:             qty > 0
       }
     end.sort_by { |v| SIZE_ORDER.index(v[:size]) || 99 }
   end

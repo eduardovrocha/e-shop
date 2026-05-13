@@ -2,7 +2,7 @@ Sentry.init do |config|
   config.dsn = ENV["SENTRY_DSN"]
 
   # Capture breadcrumbs from Rails logs and HTTP calls
-  config.breadcrumbs_logger = [:active_support_logger, :http_logger]
+  config.breadcrumbs_logger = [ :active_support_logger, :http_logger ]
 
   # Trace 20% of production requests for performance monitoring
   config.traces_sample_rate = Rails.env.production? ? 0.2 : 0.0

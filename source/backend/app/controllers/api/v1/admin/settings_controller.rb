@@ -14,7 +14,7 @@ module Api
           render json: {
             mode:                  mode,
             publishable_key_hint:  mask_key(ENV.fetch("VITE_STRIPE_PUBLISHABLE_KEY", "")),
-            secret_key_hint:       mask_key(sk),
+            secret_key_hint:       mask_key(sk)
           }
         end
 

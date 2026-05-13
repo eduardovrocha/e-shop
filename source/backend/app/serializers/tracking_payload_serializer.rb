@@ -18,7 +18,7 @@ class TrackingPayloadSerializer
       items_total_cents:  @order.items_total_cents,
       shipping_fee_cents: @order.shipping_fee_cents,
       total_cents:        @order.total_cents,
-      timeline:           serialize_timeline,
+      timeline:           serialize_timeline
     }
   end
 
@@ -30,7 +30,7 @@ class TrackingPayloadSerializer
       size:             item["size"],
       quantity:         item["quantity"],
       unit_price_cents: item["unit_price_cents"],
-      subtotal_cents:   item["subtotal_cents"],
+      subtotal_cents:   item["subtotal_cents"]
     }
   end
 
@@ -40,7 +40,7 @@ class TrackingPayloadSerializer
         status:      h.status,
         title:       h.title,
         description: h.description,
-        created_at:  h.created_at,
+        created_at:  h.created_at
       }
     end
   end

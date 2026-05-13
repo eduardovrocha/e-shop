@@ -19,7 +19,7 @@ Rails.application.routes.draw do
 
         get "dashboard/stats", to: "dashboard#stats"
 
-        resource  :settings,  only: %i[show update] do
+        resource :settings,  only: %i[show update] do
           get :stripe_info, on: :collection
         end
 

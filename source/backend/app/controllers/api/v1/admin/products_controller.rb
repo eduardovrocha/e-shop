@@ -14,7 +14,7 @@ module Api
 
           render json: {
             products: paginated.map { |p| product_json(p) },
-            meta: pagination_meta(paginated),
+            meta: pagination_meta(paginated)
           }
         end
 
@@ -98,10 +98,10 @@ module Api
                 color:              v.color,
                 stock:              v.stock_quantity,
                 reserved:           v.reserved_quantity,
-                available:          v.available_quantity,
+                available:          v.available_quantity
               }
             },
-            meta: pagination_meta(paginated),
+            meta: pagination_meta(paginated)
           }
         end
 
@@ -124,7 +124,7 @@ module Api
             current_page: collection.current_page,
             total_pages:  collection.total_pages,
             total_count:  collection.total_count,
-            per_page:     collection.limit_value,
+            per_page:     collection.limit_value
           }
         end
       end
