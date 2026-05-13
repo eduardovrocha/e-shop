@@ -32,6 +32,15 @@ export default {
       spacing: {
         safe: 'env(safe-area-inset-bottom)',
       },
+      keyframes: {
+        dropdown: {
+          from: { opacity: '0', transform: 'translateY(-8px) scale(0.97)' },
+          to:   { opacity: '1', transform: 'translateY(0)   scale(1)' },
+        },
+      },
+      animation: {
+        dropdown: 'dropdown 0.15s ease-out forwards',
+      },
     },
   },
   plugins: [],

@@ -1,6 +1,6 @@
-# Andrequicé — Plataforma de E-commerce
+# Plataforma de E-commerce
 
-Monorepo da plataforma de e-commerce Andrequicé. Inclui API Rails, loja pública em Vite/React, painel administrativo em React e infraestrutura Docker Compose para desenvolvimento e produção.
+Monorepo da plataforma de e-commerce. Inclui API Rails, loja pública em Vite/React, painel administrativo em React e infraestrutura Docker Compose para desenvolvimento e produção.
 
 ---
 
@@ -51,10 +51,10 @@ e-shop/
                                       └─────────────┘
 
 Domínios de produção:
-  andrequice.store          → Frontend público
-  dashboard.andrequice.store → Painel admin
-  api.andrequice.store       → API Rails
-  storage.andrequice.store   → MinIO (Object Storage)
+  <nome>.store          → Frontend público
+  dashboard.<nome>.store → Painel admin
+  api.<nome>.store       → API Rails
+  storage.<nome>.store   → MinIO (Object Storage)
 ```
 
 ---
@@ -83,7 +83,7 @@ Domínios de produção:
 
 ### Frontend (`source/frontend/`)
 
-Loja pública acessível em `andrequice.store`. Responsável por:
+Loja pública acessível em `<nome>.store`. Responsável por:
 
 - Catálogo de produtos com filtros e variantes (tamanho/cor)
 - Página de produto com galeria de imagens (Active Storage → MinIO)
@@ -95,7 +95,7 @@ Loja pública acessível em `andrequice.store`. Responsável por:
 
 ### Dashboard (`source/dashboard/`)
 
-Painel administrativo em `dashboard.andrequice.store/admin`. Responsável por:
+Painel administrativo em `dashboard.<nome>.store/admin`. Responsável por:
 
 - Autenticação JWT com proteção de rotas
 - Visão geral com métricas (pedidos, receita, estoque)
@@ -109,7 +109,7 @@ Painel administrativo em `dashboard.andrequice.store/admin`. Responsável por:
 
 ### API (`source/backend/`)
 
-API JSON em `api.andrequice.store/api/v1`. Responsável por:
+API JSON em `api.<nome>.store/api/v1`. Responsável por:
 
 - Catálogo público de produtos (`GET /api/v1/products`)
 - Configurações públicas da loja (`GET /api/v1/store`)
@@ -224,7 +224,7 @@ O GitHub Actions executa automaticamente em push para `main` e em pull requests:
 bash deploy/production/scripts/setup-vps.sh
 
 # 2. Copiar e preencher o .env de produção
-cp deploy/production/.env.production.example /home/deploy/andrequice/.env
+cp deploy/production/.env.production.example /home/deploy/<nome>/.env
 # Editar com credenciais reais
 
 # 3. Emitir certificados SSL (executar com Nginx já respondendo na porta 80)
@@ -255,7 +255,7 @@ Ver `deploy/production/.env.production.example` para a lista completa. As princi
 | `POSTGRES_PASSWORD`     | Senha do PostgreSQL                            |
 | `STORAGE_ACCESS_KEY`    | Credencial MinIO / Active Storage              |
 | `STORAGE_SECRET_KEY`    | Senha MinIO / Active Storage                   |
-| `STORAGE_ENDPOINT`      | URL pública do MinIO (ex: https://storage.andrequice.store) |
+| `STORAGE_ENDPOINT`      | URL pública do MinIO (ex: https://storage.<nome>.store) |
 | `STRIPE_SECRET_KEY`     | Chave secreta Stripe (produção: `sk_live_`)    |
 | `STRIPE_WEBHOOK_SECRET` | Segredo do webhook Stripe                      |
 | `ME_CLIENT_ID`          | Client ID Melhor Envio                         |

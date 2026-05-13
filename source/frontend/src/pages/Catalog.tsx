@@ -1,12 +1,28 @@
+import { useState, useMemo } from 'react'
 import { ProductCard } from '@/components/ProductCard'
-import { SectionTitle } from '@/components/SectionTitle'
 import { ProductCardSkeleton } from '@/components/LoadingSkeleton'
+import { CategoryDropdown } from '@/components/CategoryDropdown'
 import { useProducts } from '@/hooks/useProducts'
 import { useStoreSettings } from '@/hooks/useStoreSettings'
+import { useCategories } from '@/hooks/useCategories'
 
 export default function Catalog() {
   const { products, isLoading, error } = useProducts()
   const settings = useStoreSettings()
+  const categories = useCategories(products)
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+
+  const categoryCounts = useMemo(
+    () => products.reduce<Record<string, number>>((acc, p) => {
+      acc[p.category] = (acc[p.category] ?? 0) + 1
+      return acc
+    }, {}),
+    [products]
+  )
+
+  const visibleProducts = selectedCategory
+    ? products.filter((p) => p.category === selectedCategory)
+    : products
 
   return (
     <div className="min-h-screen bg-white">
@@ -44,12 +60,23 @@ export default function Catalog() {
       </section>
 
       {/* Products */}
-      <section className="max-w-2xl mx-auto px-4 pb-10 pt-8">
-        <SectionTitle
-          title="Coleção"
-          subtitle={isLoading ? 'Carregando...' : `${products.length} peças disponíveis`}
-          className="mb-6"
-        />
+      <section className="max-w-6xl mx-auto px-4 pb-10 pt-8">
+        <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
+          {!isLoading && categories.length > 0 && (
+            <CategoryDropdown
+              categories={categories}
+              selected={selectedCategory}
+              onChange={setSelectedCategory}
+              counts={categoryCounts}
+              totalCount={products.length}
+            />
+          )}
+          <p className="text-sm text-andrequice-border font-sans leading-relaxed text-right">
+            {isLoading
+              ? 'Carregando...'
+              : `${visibleProducts.length} peça${visibleProducts.length !== 1 ? 's' : ''} disponíve${visibleProducts.length !== 1 ? 'is' : 'l'}`}
+          </p>
+        </div>
 
         {error ? (
           <div className="flex flex-col items-center gap-3 py-16 text-center">
@@ -62,10 +89,10 @@ export default function Catalog() {
             </button>
           </div>
         ) : (
-          <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {isLoading
-              ? Array.from({ length: 3 }).map((_, i) => <ProductCardSkeleton key={i} />)
-              : products.map((product) => (
+              ? Array.from({ length: 6 }).map((_, i) => <ProductCardSkeleton key={i} />)
+              : visibleProducts.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
           </div>

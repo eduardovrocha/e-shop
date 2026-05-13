@@ -14,6 +14,7 @@ interface BackendProduct {
   id: number
   name: string
   description: string
+  category: string
   price_cents: number
   min_price_cents: number
   max_price_cents: number
@@ -47,6 +48,7 @@ function toProduct(p: BackendProduct): Product {
     id:          p.id,
     name:        p.name,
     description: p.description,
+    category:    p.category ?? 'outros',
     price:       p.price_cents / 100,
     minPrice,
     maxPrice,
