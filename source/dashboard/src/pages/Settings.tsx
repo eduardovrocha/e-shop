@@ -1,4 +1,13 @@
 import { useState, useEffect, type FormEvent } from 'react'
+
+const maskWhatsApp = (value: string) => {
+  const d = value.replace(/\D/g, '').slice(0, 13)
+  if (d.length === 0) return ''
+  if (d.length <= 2)  return `+${d}`
+  if (d.length <= 4)  return `+${d.slice(0, 2)} ${d.slice(2)}`
+  if (d.length <= 9)  return `+${d.slice(0, 2)} ${d.slice(2, 4)} ${d.slice(4)}`
+  return `+${d.slice(0, 2)} ${d.slice(2, 4)} ${d.slice(4, 9)}-${d.slice(9)}`
+}
 import { Loader2, CheckCircle2, AlertCircle, CreditCard, MessageCircle, Truck } from 'lucide-react'
 import { PageTitle } from '@/components/PageTitle'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -51,7 +60,7 @@ export default function Settings() {
       setPickupComplement(settings.pickup_complement)
       setPickupCity(settings.pickup_city)
       setPickupState(settings.pickup_state)
-      setWhatsappNumber(settings.whatsapp_number)
+      setWhatsappNumber(maskWhatsApp(settings.whatsapp_number))
       setFreeShippingAbove((settings.free_shipping_above_cents / 100).toFixed(2))
       setShippingFee((settings.shipping_fee_cents / 100).toFixed(2))
     }
@@ -377,7 +386,7 @@ export default function Settings() {
                 <Input
                   id="whatsapp"
                   value={whatsappNumber}
-                  onChange={(e) => setWhatsappNumber(e.target.value)}
+                  onChange={(e) => setWhatsappNumber(maskWhatsApp(e.target.value))}
                   placeholder="+55 31 99999-0000"
                   disabled={disabled}
                 />
