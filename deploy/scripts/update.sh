@@ -88,7 +88,7 @@ git fetch origin production
 NEW_COMMIT=$(git rev-parse origin/production)
 NEW_SHORT=$(git rev-parse --short origin/production)
 
-if [ "$PREVIOUS_COMMIT" = "$NEW_COMMIT" ]; then
+if [ "$PREVIOUS_COMMIT" = "$NEW_COMMIT" ] && [ "${FORCE_DEPLOY:-false}" != "true" ]; then
   echo "    Nenhuma atualização disponível. Código já está na versão ${NEW_SHORT}."
   echo ""
   echo "✅ Nada a fazer. Produção já está atualizada."
@@ -200,8 +200,19 @@ fi
 echo ""
 echo "[8/8] Executando smoke tests..."
 
-API_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-  --max-time 10 https://api.andrequice.store/up 2>/dev/null || echo "000")
+# Nginx pode reter IP antigo após recriação de containers — recarrega antes dos testes
+$COMPOSE exec -T nginx nginx -s reload 2>/dev/null || true
+sleep 3
+
+API_STATUS="000"
+for attempt in 1 2 3; do
+  API_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+    --max-time 10 https://api.andrequice.store/up 2>/dev/null || echo "000")
+  [ "$API_STATUS" = "200" ] && break
+  echo "    ⏳ Tentativa ${attempt}/3 — API retornou HTTP ${API_STATUS}, recarregando nginx..."
+  $COMPOSE exec -T nginx nginx -s reload 2>/dev/null || true
+  sleep 5
+done
 
 if [ "$API_STATUS" = "200" ]; then
   echo "    ✅ API respondendo (HTTP ${API_STATUS})"

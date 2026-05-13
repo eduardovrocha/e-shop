@@ -44,7 +44,7 @@ jobs:
           ssh -i ~/.ssh/deploy_key \
               -o BatchMode=yes \
               "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
-              "bash /home/deploy/andrequice/deploy/scripts/update.sh"
+              "cd /home/deploy/andrequice && git fetch origin production && git checkout production && git reset --hard origin/production && FORCE_DEPLOY=true bash deploy/scripts/update.sh"
 
       - name: Notify success
         run: |
