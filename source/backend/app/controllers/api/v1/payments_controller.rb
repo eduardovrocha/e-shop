@@ -279,6 +279,7 @@ module Api
 
         deduct_stock!(items_snapshot)
         CustomerUpsertService.call(order)
+        OrderBroadcastService.call(order) if newly_created
 
         Rails.logger.info "[Stripe] Order #{order.number || order.id} paid — intent=#{intent.id} total=#{intent.amount}"
       end
@@ -368,6 +369,7 @@ module Api
 
         DisputeNotificationJob.perform_later(order_id: order.id, dispute_id: dispute.id)
       end
+
     end
   end
 end

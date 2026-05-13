@@ -1,13 +1,20 @@
+import { useRef, useState } from 'react'
 import { Menu, Bell, LogOut, ChevronDown } from 'lucide-react'
 import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
 import api from '@/services/api'
+import { useOrderNotifications } from '@/hooks/useOrderNotifications'
+import { NotificationDropdown } from './NotificationDropdown'
 
 export function AdminHeader() {
   const { toggleSidebar } = useUIStore()
   const { user, logout } = useAuthStore()
+
+  const { orders, unreadCount, markAsRead, markAllAsRead, connectionStatus } = useOrderNotifications()
+  const [notifOpen, setNotifOpen] = useState(false)
+  const bellRef = useRef<HTMLButtonElement>(null)
 
   const handleLogout = async () => {
     try {
@@ -34,16 +41,54 @@ export function AdminHeader() {
       </div>
 
       <div className="flex items-center gap-2">
+        {/* Connection status pill */}
+        {connectionStatus !== 'connected' && (
+          <span className="hidden sm:flex items-center gap-1.5 rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground">
+            <span className={[
+              'h-1.5 w-1.5 rounded-full',
+              connectionStatus === 'connecting' ? 'bg-yellow-400 animate-pulse' : 'bg-red-400',
+            ].join(' ')} />
+            {connectionStatus === 'connecting' ? 'conectando...' : 'desconectado'}
+          </span>
+        )}
+
         {/* Notifications */}
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-4 w-4" />
-          <Badge
-            variant="destructive"
-            className="absolute -right-1 -top-1 h-4 w-4 items-center justify-center p-0 text-[9px]"
+        <div className="relative">
+          <Button
+            ref={bellRef}
+            variant="ghost"
+            size="icon"
+            className="relative"
+            aria-label="Notificações"
+            aria-expanded={notifOpen}
+            aria-haspopup="dialog"
+            onClick={() => setNotifOpen((v) => !v)}
           >
-            3
-          </Badge>
-        </Button>
+            <Bell className={[
+              'h-4 w-4 transition-transform',
+              unreadCount > 0 && !notifOpen ? 'animate-[wiggle_0.4s_ease-in-out]' : '',
+            ].join(' ')} />
+            {unreadCount > 0 && (
+              <Badge
+                variant="destructive"
+                className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center p-0 text-[9px]"
+              >
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </Badge>
+            )}
+          </Button>
+
+          <NotificationDropdown
+            open={notifOpen}
+            onClose={() => setNotifOpen(false)}
+            orders={orders}
+            unreadCount={unreadCount}
+            connectionStatus={connectionStatus}
+            markAsRead={markAsRead}
+            markAllAsRead={markAllAsRead}
+            triggerRef={bellRef}
+          />
+        </div>
 
         {/* User menu */}
         <div className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted">

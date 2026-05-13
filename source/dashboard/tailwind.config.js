@@ -59,10 +59,17 @@ export default {
           from: { height: 'var(--radix-accordion-content-height)' },
           to: { height: '0' },
         },
+        wiggle: {
+          '0%, 100%': { transform: 'rotate(0deg)' },
+          '20%':       { transform: 'rotate(-15deg)' },
+          '60%':       { transform: 'rotate(12deg)' },
+          '80%':       { transform: 'rotate(-8deg)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
-        'accordion-up': 'accordion-up 0.2s ease-out',
+        'accordion-up':   'accordion-up 0.2s ease-out',
+        wiggle:           'wiggle 0.4s ease-in-out',
       },
     },
   },

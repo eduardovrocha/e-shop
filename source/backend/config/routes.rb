@@ -1,5 +1,6 @@
 Rails.application.routes.draw do
   get "up" => "rails/health#show", as: :rails_health_check
+  mount ActionCable.server => '/cable'
 
   namespace :api do
     namespace :v1 do
@@ -38,6 +39,10 @@ Rails.application.routes.draw do
           end
         end
         resources :coupons
+
+        resources :categories, only: %i[index create update destroy] do
+          collection { patch :reorder }
+        end
 
         resource  :shipping_settings, only: %i[show update] do
           post :test_connection, on: :collection

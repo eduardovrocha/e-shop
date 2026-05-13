@@ -15,7 +15,10 @@ export default defineConfig({
     port: 3092,
     allowedHosts: true,
     hmr: {
-      clientPort: 80,
+      // Connect HMR directly to the Vite dev server (3092), not through
+      // nginx (80). Without this, the dashboard HMR WebSocket goes to nginx
+      // port 80 which routes '/' to the frontend container → wrong target.
+      clientPort: 3092,
     },
     watch: {
       usePolling: true,
@@ -24,6 +27,11 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: 'http://backend:3000',
+        changeOrigin: true,
+      },
+      '/cable': {
+        target: 'ws://backend:3000',
+        ws: true,
         changeOrigin: true,
       },
     },
