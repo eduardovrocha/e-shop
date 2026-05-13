@@ -25,6 +25,8 @@ module Api
           headline_secondary:   settings.headline_secondary,
           headline_description: settings.headline_description,
           footer_description:   settings.footer_description,
+          contact_email:        settings.contact_email,
+          whatsapp_number:      settings.whatsapp_number,
         }
       end
 

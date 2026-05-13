@@ -6,6 +6,8 @@ const DEFAULTS = {
   headline_secondary:   'nossa devoção.',
   headline_description: 'Camisetas artesanais da Festa de Andrequicé. Arte, fé e tradição em cada peça.',
   footer_description:   'Camisetas artesanais da Festa de Andrequicé — fé, tradição e arte do interior de Minas Gerais.',
+  contact_email:        'contato@andrequice.com.br',
+  whatsapp_number:      '553800000000',
 }
 
 export function useStoreSettings() {

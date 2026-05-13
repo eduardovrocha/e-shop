@@ -18,6 +18,8 @@ export interface StoreHeadline {
   headline_secondary: string
   headline_description: string
   footer_description: string
+  contact_email: string
+  whatsapp_number: string
 }
 
 export const storeService = {

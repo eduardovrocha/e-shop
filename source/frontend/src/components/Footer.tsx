@@ -4,6 +4,9 @@ import { useStoreSettings } from '@/hooks/useStoreSettings'
 export function Footer() {
   const settings = useStoreSettings()
 
+  const whatsappUrl = `https://wa.me/${settings.whatsapp_number.replace(/\D/g, '')}`
+  const mailtoUrl   = `mailto:${settings.contact_email}`
+
   return (
     <footer className="bg-andrequice-navy text-white/70">
       <div className="max-w-2xl mx-auto px-6 py-10 flex flex-col gap-8">
@@ -24,8 +27,8 @@ export function Footer() {
           </div>
           <div className="flex flex-col gap-2">
             <span className="text-xs font-semibold uppercase tracking-widest text-white/40">Contato</span>
-            <a href="https://wa.me/553800000000" className="hover:text-white transition-colors">WhatsApp</a>
-            <a href="mailto:contato@andrequice.com.br" className="hover:text-white transition-colors">E-mail</a>
+            <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">WhatsApp</a>
+            <a href={mailtoUrl} className="hover:text-white transition-colors">E-mail</a>
           </div>
         </div>
 
