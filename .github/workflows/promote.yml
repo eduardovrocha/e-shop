@@ -32,6 +32,20 @@ jobs:
           git merge --ff-only origin/main
           git push origin production
 
+      - name: Setup SSH key
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "${{ secrets.SSH_DEPLOY_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Deploy to VPS
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+              -o BatchMode=yes \
+              "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+              "bash /home/deploy/andrequice/deploy/scripts/update.sh"
+
       - name: Notify success
         run: |
-          echo "✅ Branch production atualizada para $(git rev-parse --short HEAD)"
+          echo "✅ Branch production atualizada e deploy iniciado em $(git rev-parse --short HEAD)"
