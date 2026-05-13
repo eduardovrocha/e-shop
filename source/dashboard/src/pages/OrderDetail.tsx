@@ -4,6 +4,7 @@ import {
   ArrowLeft, Loader2, Copy, Check, Mail, ExternalLink,
   Truck, Package, Clock
 } from 'lucide-react'
+import { AdminPageGrid } from '@/components/AdminPageGrid'
 import { PageTitle } from '@/components/PageTitle'
 import { StatusBadge } from '@/components/StatusBadge'
 import { LoadingState } from '@/components/LoadingState'
@@ -122,7 +123,7 @@ export default function OrderDetail() {
   const trackingUrl = order.tracking_url
 
   return (
-    <div className="max-w-2xl mx-auto px-4 space-y-6">
+    <div className="space-y-6">
       <PageTitle
         title={`Pedido ${order.number ?? `#${order.id}`}`}
         subtitle={formatDateTime(order.created_at)}
@@ -134,59 +135,58 @@ export default function OrderDetail() {
         }
       />
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        {/* Left column */}
-        <div className="space-y-4 lg:col-span-2">
-
-          {/* Items */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Package className="h-4 w-4 text-muted-foreground" />
-                Itens do Pedido
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              {order.items.length === 0 ? (
-                <p className="px-5 py-4 text-sm text-muted-foreground">Nenhum item disponível.</p>
-              ) : (
-                <div className="divide-y divide-border">
-                  {order.items.map((item, i) => (
-                    <div key={i} className="flex items-center justify-between px-5 py-3">
-                      <div>
-                        <p className="text-sm font-medium">{item.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          Tamanho {item.size} · Qtd {item.quantity}
-                        </p>
-                      </div>
-                      <span className="text-sm font-semibold">
-                        {formatCurrency(item.subtotal_cents)}
-                      </span>
+      <AdminPageGrid>
+        {/* Itens — col-span-full obrigatório */}
+        <Card className="col-span-full">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Package className="h-4 w-4 text-muted-foreground" />
+              Itens do Pedido
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {order.items.length === 0 ? (
+              <p className="px-5 py-4 text-sm text-muted-foreground">Nenhum item disponível.</p>
+            ) : (
+              <div className="divide-y divide-border">
+                {order.items.map((item, i) => (
+                  <div key={i} className="flex items-center justify-between px-5 py-3">
+                    <div>
+                      <p className="text-sm font-medium">{item.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Tamanho {item.size} · Qtd {item.quantity}
+                      </p>
                     </div>
-                  ))}
+                    <span className="text-sm font-semibold">
+                      {formatCurrency(item.subtotal_cents)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <Separator />
+            <div className="space-y-1.5 px-5 py-4">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Subtotal</span>
+                <span>{formatCurrency(order.items_total_cents)}</span>
+              </div>
+              {order.shipping_fee_cents > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Frete</span>
+                  <span>{formatCurrency(order.shipping_fee_cents)}</span>
                 </div>
               )}
-              <Separator />
-              <div className="space-y-1.5 px-5 py-4">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Subtotal</span>
-                  <span>{formatCurrency(order.items_total_cents)}</span>
-                </div>
-                {order.shipping_fee_cents > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Frete</span>
-                    <span>{formatCurrency(order.shipping_fee_cents)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between font-semibold">
-                  <span>Total</span>
-                  <span>{formatCurrency(order.total_cents)}</span>
-                </div>
+              <div className="flex justify-between font-semibold">
+                <span>Total</span>
+                <span>{formatCurrency(order.total_cents)}</span>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* Customer */}
+        {/* Cliente */}
+        {/* Cliente + Entrega — dividem a linha em 2 colunas iguais */}
+        <div className="col-span-full grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Cliente</CardTitle>
@@ -200,7 +200,6 @@ export default function OrderDetail() {
             </CardContent>
           </Card>
 
-          {/* Delivery */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
@@ -226,122 +225,11 @@ export default function OrderDetail() {
               )}
             </CardContent>
           </Card>
-
-          {/* Tracking info (editable) */}
-          {order.delivery_method === 'delivery' && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Rastreio</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="tracking-code">Código de rastreio</Label>
-                    <Input
-                      id="tracking-code"
-                      value={trackingCode}
-                      onChange={(e) => setTrackingCode(e.target.value)}
-                      placeholder="BR123456789BR"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="estimated-delivery">Previsão de entrega</Label>
-                    <Input
-                      id="estimated-delivery"
-                      type="date"
-                      value={estimatedDelivery}
-                      onChange={(e) => setEstimatedDelivery(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="carrier">Transportadora</Label>
-                    <Input
-                      id="carrier"
-                      value={carrier}
-                      onChange={(e) => setCarrier(e.target.value)}
-                      placeholder="Correios, JADLOG..."
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="shipping-service">Serviço</Label>
-                    <Input
-                      id="shipping-service"
-                      value={shippingService}
-                      onChange={(e) => setShippingService(e.target.value)}
-                      placeholder="PAC, SEDEX..."
-                    />
-                  </div>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={updateMutation.isPending}
-                  onClick={handleTrackingSave}
-                >
-                  {updateMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    'Salvar rastreio'
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Status History Timeline */}
-          {order.status_histories && order.status_histories.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  Histórico de Status
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="divide-y divide-border">
-                  {[...order.status_histories].reverse().map((entry, i) => (
-                    <div key={entry.id} className="flex gap-3 px-5 py-3">
-                      <div className="flex flex-col items-center pt-0.5">
-                        <div
-                          className={[
-                            'w-5 h-5 rounded-full flex items-center justify-center text-[10px] flex-shrink-0',
-                            i === 0
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-muted text-muted-foreground',
-                          ].join(' ')}
-                        >
-                          ✓
-                        </div>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className={['text-sm', i === 0 ? 'font-semibold' : 'text-muted-foreground'].join(' ')}>
-                            {entry.title}
-                          </p>
-                          <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
-                            {formatDateTime(entry.created_at)}
-                          </span>
-                        </div>
-                        {entry.description && (
-                          <p className="text-xs text-muted-foreground mt-0.5">{entry.description}</p>
-                        )}
-                        {entry.created_by && entry.created_by !== 'system' && entry.created_by !== 'stripe' && (
-                          <p className="text-xs text-muted-foreground mt-0.5">por {entry.created_by}</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
 
-        {/* Right column */}
-        <div className="space-y-4">
-
-          {/* Status */}
-          <Card>
+        {/* Status + Link Público — dividem a linha em 2 colunas iguais */}
+        <div className="col-span-full grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card className={!trackingUrl ? 'md:col-span-2' : undefined}>
             <CardHeader>
               <CardTitle className="text-base">Status</CardTitle>
             </CardHeader>
@@ -383,7 +271,6 @@ export default function OrderDetail() {
             </CardContent>
           </Card>
 
-          {/* Tracking link */}
           {trackingUrl && (
             <Card>
               <CardHeader>
@@ -426,44 +313,152 @@ export default function OrderDetail() {
               </CardContent>
             </Card>
           )}
-
-          {/* Tracking token (dev reference) */}
-          {order.tracking_token && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Token de Rastreio</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-1 rounded-md border bg-muted/40 px-3 py-2">
-                  <span className="flex-1 font-mono text-[10px] text-muted-foreground truncate">
-                    {order.tracking_token}
-                  </span>
-                  <CopyButton text={order.tracking_token} />
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Token seguro único. Nunca expor em locais públicos além da URL de rastreio.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Estimated delivery badge */}
-          {order.estimated_delivery && (
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-2">
-                  <Truck className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Previsão de entrega</p>
-                    <p className="text-sm font-medium">{formatDate(order.estimated_delivery)}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
         </div>
-      </div>
+
+        {/* Rastreio (editável) — col-span-full pelo sub-grid interno */}
+        {order.delivery_method === 'delivery' && (
+          <Card className="col-span-full">
+            <CardHeader>
+              <CardTitle className="text-base">Rastreio</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="tracking-code">Código de rastreio</Label>
+                  <Input
+                    id="tracking-code"
+                    value={trackingCode}
+                    onChange={(e) => setTrackingCode(e.target.value)}
+                    placeholder="BR123456789BR"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="estimated-delivery">Previsão de entrega</Label>
+                  <Input
+                    id="estimated-delivery"
+                    type="date"
+                    value={estimatedDelivery}
+                    onChange={(e) => setEstimatedDelivery(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="carrier">Transportadora</Label>
+                  <Input
+                    id="carrier"
+                    value={carrier}
+                    onChange={(e) => setCarrier(e.target.value)}
+                    placeholder="Correios, JADLOG..."
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="shipping-service">Serviço</Label>
+                  <Input
+                    id="shipping-service"
+                    value={shippingService}
+                    onChange={(e) => setShippingService(e.target.value)}
+                    placeholder="PAC, SEDEX..."
+                  />
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={updateMutation.isPending}
+                onClick={handleTrackingSave}
+              >
+                {updateMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  'Salvar rastreio'
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Histórico de Status — col-span-full pela natureza de timeline */}
+        {order.status_histories && order.status_histories.length > 0 && (
+          <Card className="col-span-full">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                Histórico de Status
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y divide-border">
+                {[...order.status_histories].reverse().map((entry, i) => (
+                  <div key={entry.id} className="flex gap-3 px-5 py-3">
+                    <div className="flex flex-col items-center pt-0.5">
+                      <div
+                        className={[
+                          'w-5 h-5 rounded-full flex items-center justify-center text-[10px] flex-shrink-0',
+                          i === 0
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted text-muted-foreground',
+                        ].join(' ')}
+                      >
+                        ✓
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className={['text-sm', i === 0 ? 'font-semibold' : 'text-muted-foreground'].join(' ')}>
+                          {entry.title}
+                        </p>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
+                          {formatDateTime(entry.created_at)}
+                        </span>
+                      </div>
+                      {entry.description && (
+                        <p className="text-xs text-muted-foreground mt-0.5">{entry.description}</p>
+                      )}
+                      {entry.created_by && entry.created_by !== 'system' && entry.created_by !== 'stripe' && (
+                        <p className="text-xs text-muted-foreground mt-0.5">por {entry.created_by}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Token de Rastreio */}
+        {order.tracking_token && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Token de Rastreio</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-1 rounded-md border bg-muted/40 px-3 py-2">
+                <span className="flex-1 font-mono text-[10px] text-muted-foreground truncate">
+                  {order.tracking_token}
+                </span>
+                <CopyButton text={order.tracking_token} />
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Token seguro único. Nunca expor em locais públicos além da URL de rastreio.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Previsão de entrega */}
+        {order.estimated_delivery && (
+          <Card>
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-2">
+                <Truck className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Previsão de entrega</p>
+                  <p className="text-sm font-medium">{formatDate(order.estimated_delivery)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </AdminPageGrid>
     </div>
   )
 }

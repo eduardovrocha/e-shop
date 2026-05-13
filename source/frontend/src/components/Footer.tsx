@@ -10,8 +10,8 @@ export function Footer() {
   return (
     <footer className="bg-andrequice-navy text-white/70">
       <div className="max-w-6xl mx-auto px-6 py-10 flex flex-col gap-8">
-        {/* Content columns — 1 col mobile · 2 cols tablet · 3 cols desktop */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6 text-sm">
+        {/* Content columns */}
+        <div className="flex flex-col gap-6 text-sm">
           {/* Brand */}
           <div className="flex flex-col gap-2">
             <span className="font-serif text-xl font-semibold text-white">Andrequicé</span>
@@ -20,18 +20,21 @@ export function Footer() {
             </p>
           </div>
 
-          {/* Loja */}
-          <div className="flex flex-col gap-2">
-            <span className="text-xs font-semibold uppercase tracking-widest text-white/40">Loja</span>
-            <Link to="/catalog" className="hover:text-white transition-colors">Catálogo</Link>
-            <Link to="/cart" className="hover:text-white transition-colors">Carrinho</Link>
-          </div>
+          {/* Contato + Loja — lado a lado abaixo do brand */}
+          <div className="grid grid-cols-2 gap-x-8">
+            {/* Contato */}
+            <div className="flex flex-col gap-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-white/40">Contato</span>
+              <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">WhatsApp</a>
+              <a href={mailtoUrl} className="hover:text-white transition-colors">E-mail</a>
+            </div>
 
-          {/* Contato */}
-          <div className="flex flex-col gap-2">
-            <span className="text-xs font-semibold uppercase tracking-widest text-white/40">Contato</span>
-            <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">WhatsApp</a>
-            <a href={mailtoUrl} className="hover:text-white transition-colors">E-mail</a>
+            {/* Loja */}
+            <div className="flex flex-col gap-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-white/40">Loja</span>
+              <Link to="/catalog" className="hover:text-white transition-colors">Catálogo</Link>
+              <Link to="/cart" className="hover:text-white transition-colors">Carrinho</Link>
+            </div>
           </div>
         </div>
 
