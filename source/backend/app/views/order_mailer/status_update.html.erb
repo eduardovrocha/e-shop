@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= @subject_base %></title>
+</head>
+<body style="margin:0;padding:0;background-color:#f8f5f0;font-family:Georgia,serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8f5f0;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#1a2744;padding:28px 40px;text-align:center;">
+              <h1 style="margin:0;font-family:Georgia,serif;font-size:22px;color:#c9a84c;letter-spacing:1px;">
+                <%= @store_name.upcase %>
+              </h1>
+              <p style="margin:6px 0 0;font-family:Arial,sans-serif;font-size:12px;color:#8899bb;letter-spacing:2px;text-transform:uppercase;">
+                Acompanhamento de Pedido
+              </p>
+            </td>
+          </tr>
+
+          <!-- Status Banner -->
+          <tr>
+            <td style="background-color:#f8f5f0;padding:24px 40px 0;text-align:center;">
+              <p style="margin:0 0 4px;font-family:Arial,sans-serif;font-size:12px;color:#8a7560;text-transform:uppercase;letter-spacing:1px;">
+                Status atual
+              </p>
+              <h2 style="margin:0;font-family:Georgia,serif;font-size:24px;color:#1a2744;">
+                <%= OrderStatusHistory.title_for(@status) %>
+              </h2>
+              <p style="margin:8px 0 0;font-family:Arial,sans-serif;font-size:13px;color:#8a7560;">
+                Pedido <strong style="color:#1a2744;"><%= @order.number %></strong>
+                &nbsp;·&nbsp;
+                <%= @order.created_at.strftime("%d/%m/%Y") %>
+              </p>
+            </td>
+          </tr>
+
+          <!-- CTA Button -->
+          <tr>
+            <td style="padding:24px 40px;text-align:center;">
+              <a href="<%= @public_url %>"
+                 style="display:inline-block;background-color:#c9a84c;color:#1a2744;font-family:Arial,sans-serif;font-size:14px;font-weight:bold;text-decoration:none;padding:14px 32px;border-radius:8px;letter-spacing:0.5px;">
+                Acompanhar Pedido
+              </a>
+            </td>
+          </tr>
+
+          <!-- Divider -->
+          <tr>
+            <td style="padding:0 40px;">
+              <hr style="border:none;border-top:1px solid #e8e0d4;margin:0;">
+            </td>
+          </tr>
+
+          <!-- Timeline -->
+          <% if @history.any? %>
+          <tr>
+            <td style="padding:24px 40px;">
+              <p style="margin:0 0 16px;font-family:Arial,sans-serif;font-size:12px;color:#8a7560;text-transform:uppercase;letter-spacing:1px;font-weight:bold;">
+                Histórico
+              </p>
+              <% @history.reverse.each_with_index do |entry, i| %>
+              <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:12px;">
+                <tr>
+                  <td width="32" valign="top" style="padding-top:2px;">
+                    <div style="width:20px;height:20px;border-radius:50%;background-color:<%= i == 0 ? '#c9a84c' : '#e8e0d4' %>;display:inline-block;text-align:center;line-height:20px;">
+                      <span style="font-size:10px;color:<%= i == 0 ? '#1a2744' : '#8a7560' %>;font-weight:bold;">✓</span>
+                    </div>
+                  </td>
+                  <td style="padding-left:8px;">
+                    <p style="margin:0;font-family:Arial,sans-serif;font-size:13px;color:<%= i == 0 ? '#1a2744' : '#8a7560' %>;font-weight:<%= i == 0 ? 'bold' : 'normal' %>;">
+                      <%= entry.title %>
+                    </p>
+                    <p style="margin:2px 0 0;font-family:Arial,sans-serif;font-size:11px;color:#aaa099;">
+                      <%= entry.created_at.strftime("%d/%m/%Y às %H:%M") %>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              <% end %>
+            </td>
+          </tr>
+          <% end %>
+
+          <!-- Divider -->
+          <tr>
+            <td style="padding:0 40px;">
+              <hr style="border:none;border-top:1px solid #e8e0d4;margin:0;">
+            </td>
+          </tr>
+
+          <!-- Order Summary -->
+          <tr>
+            <td style="padding:24px 40px;">
+              <p style="margin:0 0 16px;font-family:Arial,sans-serif;font-size:12px;color:#8a7560;text-transform:uppercase;letter-spacing:1px;font-weight:bold;">
+                Resumo do Pedido
+              </p>
+              <% @order.items.each do |item| %>
+              <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:8px;">
+                <tr>
+                  <td style="font-family:Arial,sans-serif;font-size:13px;color:#1a2744;">
+                    <%= item["name"] %>
+                    <span style="color:#8a7560;font-size:12px;">Tam. <%= item["size"] %> · <%= item["quantity"] %>x</span>
+                  </td>
+                  <td align="right" style="font-family:Arial,sans-serif;font-size:13px;color:#1a2744;white-space:nowrap;">
+                    R$ <%= format("%.2f", item["subtotal_cents"].to_i / 100.0) %>
+                  </td>
+                </tr>
+              </table>
+              <% end %>
+
+              <hr style="border:none;border-top:1px dashed #e8e0d4;margin:12px 0;">
+
+              <table cellpadding="0" cellspacing="0" width="100%">
+                <% if @order.shipping_fee_cents > 0 %>
+                <tr>
+                  <td style="font-family:Arial,sans-serif;font-size:12px;color:#8a7560;padding-bottom:4px;">Frete</td>
+                  <td align="right" style="font-family:Arial,sans-serif;font-size:12px;color:#8a7560;padding-bottom:4px;">
+                    R$ <%= format("%.2f", @order.shipping_fee_cents / 100.0) %>
+                  </td>
+                </tr>
+                <% end %>
+                <tr>
+                  <td style="font-family:Arial,sans-serif;font-size:14px;color:#1a2744;font-weight:bold;">Total</td>
+                  <td align="right" style="font-family:Arial,sans-serif;font-size:14px;color:#1a2744;font-weight:bold;">
+                    R$ <%= format("%.2f", @order.total_cents / 100.0) %>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Shipping / Tracking -->
+          <% if @order.tracking_code.present? %>
+          <tr>
+            <td style="padding:0 40px 24px;">
+              <div style="background:#f8f5f0;border-radius:8px;padding:16px;">
+                <p style="margin:0 0 8px;font-family:Arial,sans-serif;font-size:12px;color:#8a7560;text-transform:uppercase;letter-spacing:1px;font-weight:bold;">
+                  Rastreio
+                </p>
+                <p style="margin:0;font-family:'Courier New',monospace;font-size:14px;color:#1a2744;font-weight:bold;">
+                  <%= @order.tracking_code %>
+                </p>
+                <% if @order.carrier.present? %>
+                <p style="margin:4px 0 0;font-family:Arial,sans-serif;font-size:12px;color:#8a7560;">
+                  <%= @order.carrier %><%= " – #{@order.shipping_service}" if @order.shipping_service.present? %>
+                </p>
+                <% end %>
+              </div>
+            </td>
+          </tr>
+          <% end %>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#f8f5f0;padding:20px 40px;text-align:center;border-top:1px solid #e8e0d4;">
+              <p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#aaa099;line-height:1.6;">
+                Você está recebendo este email porque realizou uma compra em <strong><%= @store_name %></strong>.<br>
+                Para dúvidas, responda este email ou acesse o link de acompanhamento.
+              </p>
+              <p style="margin:12px 0 0;font-family:Arial,sans-serif;font-size:10px;color:#c8bfb4;">
+                <%= @store_name %> — <%= ENV.fetch("SUPPORT_EMAIL", "suporte@andrequice.com.br") %>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

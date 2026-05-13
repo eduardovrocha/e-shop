@@ -1,0 +1,137 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: RSpec
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: andrequice_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      RAILS_ENV: test
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB_TEST: andrequice_test
+      RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
+      JWT_SECRET: test_jwt_secret_ci
+      STRIPE_WEBHOOK_SECRET: whsec_test_ci
+      SUPPORT_EMAIL: ci@example.com
+      HOST_URL: http://localhost
+
+    defaults:
+      run:
+        working-directory: source/backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3.0"
+          bundler-version: "2.6.7"
+          working-directory: source/backend
+          bundler-cache: true
+
+      - name: Set up database
+        run: |
+          bin/rails db:create
+          bin/rails db:schema:load
+
+      - name: Run RSpec
+        run: bundle exec rspec --format progress --format json --out tmp/rspec_results.json
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rspec-results
+          path: source/backend/tmp/rspec_results.json
+
+  lint:
+    name: RuboCop
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: source/backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3.0"
+          bundler-version: "2.6.7"
+          working-directory: source/backend
+          bundler-cache: true
+
+      - name: Run RuboCop
+        run: bundle exec rubocop --parallel
+
+  security:
+    name: Brakeman
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: source/backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3.0"
+          bundler-version: "2.6.7"
+          working-directory: source/backend
+          bundler-cache: true
+
+      - name: Run Brakeman
+        run: bundle exec brakeman -q --no-pager
+
+  frontend:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app:
+          - { name: "frontend", path: "source/frontend" }
+          - { name: "dashboard", path: "source/dashboard" }
+
+    defaults:
+      run:
+        working-directory: ${{ matrix.app.path }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: ${{ matrix.app.path }}/package-lock.json
+
+      - name: Install dependencies (${{ matrix.app.name }})
+        run: npm ci
+
+      - name: Build (${{ matrix.app.name }})
+        run: npm run build

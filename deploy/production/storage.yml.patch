@@ -1,0 +1,23 @@
+# config/storage.yml — adicionar ao arquivo existente do projeto
+# ─────────────────────────────────────────────────────────────────────────────
+# Hostinger Object Storage é S3-compatible.
+# As credenciais são injetadas via variáveis de ambiente (x-rails-env no compose).
+# ─────────────────────────────────────────────────────────────────────────────
+
+test:
+  service: Disk
+  root: <%= Rails.root.join("tmp/storage") %>
+
+local:
+  service: Disk
+  root: <%= Rails.root.join("storage") %>
+
+# ── Hostinger Object Storage (produção) ──────────────────────────────────────
+amazon:
+  service: S3
+  access_key_id:     <%= ENV["AWS_ACCESS_KEY_ID"] %>
+  secret_access_key: <%= ENV["AWS_SECRET_ACCESS_KEY"] %>
+  region:            <%= ENV["AWS_REGION"] %>
+  bucket:            <%= ENV["AWS_BUCKET"] %>
+  endpoint:          <%= ENV["AWS_ENDPOINT"] %>
+  force_path_style:  true   # necessário para endpoints S3-compatible não-AWS

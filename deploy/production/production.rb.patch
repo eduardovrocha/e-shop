@@ -1,0 +1,40 @@
+# ─── config/environments/production.rb — patches necessários ────────────────
+# Aplicar as alterações abaixo ao arquivo existente do projeto.
+# Marcado com # [PATCH] para facilitar localização.
+# ────────────────────────────────────────────────────────────────────────────
+
+Rails.application.configure do
+
+  # [PATCH 1] Descomentar — impede a app de subir sem RAILS_MASTER_KEY
+  config.require_master_key = true
+
+  # [PATCH 2] ActiveStorage → Hostinger Object Storage (S3-compatible)
+  # Remover ou comentar: config.active_storage.service = :local
+  config.active_storage.service = :amazon
+
+  # [PATCH 3] SMTP — adicionar bloco completo
+  config.action_mailer.delivery_method = :smtp
+  config.action_mailer.perform_deliveries = true
+  config.action_mailer.raise_delivery_errors = false
+  config.action_mailer.smtp_settings = {
+    address:              ENV.fetch("SMTP_HOST"),
+    port:                 ENV.fetch("SMTP_PORT", 587).to_i,
+    user_name:            ENV.fetch("SMTP_USERNAME"),
+    password:             ENV.fetch("SMTP_PASSWORD"),
+    authentication:       :plain,
+    enable_starttls_auto: true
+  }
+  config.action_mailer.default_options = {
+    from: ENV.fetch("SMTP_FROM", "noreply@andrequice.com.br")
+  }
+
+  # ── Demais configurações padrão de produção (manter as existentes) ──────────
+  config.cache_classes = true
+  config.eager_load = true
+  config.consider_all_requests_local = false
+  config.public_file_server.enabled = ENV["RAILS_SERVE_STATIC_FILES"].present?
+  config.log_level = :info
+  config.log_tags = [:request_id]
+  config.force_ssl = true   # já existia — manter
+
+end

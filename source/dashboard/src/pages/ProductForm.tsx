@@ -1,0 +1,548 @@
+import { useState, useEffect, type FormEvent } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { ArrowLeft, Loader2, Plus, Trash2, Package } from 'lucide-react'
+import { PageTitle } from '@/components/PageTitle'
+import { LoadingState } from '@/components/LoadingState'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { ProductImageUploader } from '@/components/ProductImageUploader'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { useProduct, useCreateProduct, useUpdateProduct } from '@/hooks/useProducts'
+import { useToast } from '@/hooks/useToast'
+import type { VariantPayload } from '@/types/product'
+
+const CATEGORIES = ['camisetas', 'acessorios', 'kits', 'outros']
+const SIZES = ['PP', 'P', 'M', 'G', 'GG', 'GGG', 'U']
+
+interface VariantRow extends VariantPayload {
+  _key: string
+  _priceInput: string
+  _destroy?: boolean
+}
+
+function generateSku(productName: string, size: string): string {
+  const base = productName
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9\s]/g, '')
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .join('')
+    .slice(0, 8)
+  return `${base}-${size}-${Date.now().toString(36).toUpperCase().slice(-4)}`
+}
+
+function stockBadge(qty: number) {
+  if (qty === 0) return <Badge variant="destructive">Zerado</Badge>
+  if (qty <= 5) return <Badge variant="warning">Crítico</Badge>
+  return <Badge variant="success">{qty} un.</Badge>
+}
+
+function parsePriceInput(raw: string): number | null {
+  const clean = raw.trim().replace(',', '.')
+  if (!clean) return null
+  const parsed = parseFloat(clean)
+  if (isNaN(parsed) || parsed < 0) return null
+  return Math.round(parsed * 100)
+}
+
+function formatPriceInput(cents: number | null | undefined): string {
+  if (cents == null || cents === 0) return ''
+  return (cents / 100).toFixed(2).replace('.', ',')
+}
+
+interface VariantTableProps {
+  variants: VariantRow[]
+  productName: string
+  onChange: (rows: VariantRow[]) => void
+}
+
+function VariantTable({ variants, productName, onChange }: VariantTableProps) {
+  const [pendingRemoveKey, setPendingRemoveKey] = useState<string | null>(null)
+  const active = variants.filter((v) => !v._destroy)
+  const pendingVariant = pendingRemoveKey ? active.find((v) => v._key === pendingRemoveKey) : null
+
+  function addSize(size: string) {
+    if (active.some((v) => v.size === size)) return
+    const newRow: VariantRow = {
+      _key: `new-${Date.now()}`,
+      size,
+      sku: generateSku(productName || 'PRODUTO', size),
+      stock_quantity: 0,
+      price_cents: null,
+      _priceInput: '',
+      additional_price_cents: 0,
+    }
+    onChange([...variants, newRow])
+  }
+
+  function updateRow(key: string, field: keyof VariantRow, value: string | number | boolean | null) {
+    onChange(
+      variants.map((v) => (v._key === key ? { ...v, [field]: value } : v))
+    )
+  }
+
+  function handlePriceBlur(key: string, raw: string) {
+    const cents = parsePriceInput(raw)
+    onChange(
+      variants.map((v) =>
+        v._key === key
+          ? { ...v, _priceInput: cents != null ? formatPriceInput(cents) : '', price_cents: cents }
+          : v
+      )
+    )
+  }
+
+  function removeRow(key: string) {
+    onChange(
+      variants.map((v) =>
+        v._key === key
+          ? v.id
+            ? { ...v, _destroy: true }
+            : null
+          : v
+      ).filter(Boolean) as VariantRow[]
+    )
+  }
+
+  const usedSizes = new Set(active.map((v) => v.size))
+
+  return (
+    <div className="space-y-4">
+      {/* Quick-add buttons */}
+      <div className="flex flex-wrap gap-2">
+        {SIZES.map((size) => (
+          <button
+            key={size}
+            type="button"
+            onClick={() => addSize(size)}
+            disabled={usedSizes.has(size)}
+            className={[
+              'h-8 w-10 rounded border text-xs font-semibold transition-colors',
+              usedSizes.has(size)
+                ? 'border-border bg-muted text-muted-foreground cursor-not-allowed'
+                : 'border-border hover:border-primary hover:text-primary',
+            ].join(' ')}
+          >
+            {size}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={() => {
+            const custom = prompt('Tamanho personalizado:')
+            if (custom?.trim()) addSize(custom.trim().toUpperCase())
+          }}
+          className="h-8 px-2 rounded border border-dashed border-border text-xs text-muted-foreground hover:border-primary hover:text-primary transition-colors flex items-center gap-1"
+        >
+          <Plus className="h-3 w-3" />
+          Outro
+        </button>
+      </div>
+
+      {active.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-4 text-center">
+          Clique nos tamanhos acima para adicionar variantes
+        </p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border text-left">
+                <th className="pb-2 pr-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">Tamanho</th>
+                <th className="pb-2 pr-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">SKU</th>
+                <th className="pb-2 pr-3 font-medium text-muted-foreground text-xs uppercase tracking-wide w-28">Estoque</th>
+                <th className="pb-2 pr-3 font-medium text-muted-foreground text-xs uppercase tracking-wide w-32">
+                  Preço (R$) <span className="text-destructive">*</span>
+                </th>
+                <th className="pb-2 font-medium text-muted-foreground text-xs uppercase tracking-wide text-center">Status</th>
+                <th className="pb-2 w-8" />
+              </tr>
+            </thead>
+            <tbody>
+              {active.map((v) => (
+                <tr key={v._key} className="border-b border-border/50 last:border-0">
+                  <td className="py-2 pr-3">
+                    <span className="inline-flex h-7 w-9 items-center justify-center rounded border border-border text-xs font-semibold">
+                      {v.size}
+                    </span>
+                  </td>
+                  <td className="py-2 pr-3">
+                    <Input
+                      value={v.sku}
+                      onChange={(e) => updateRow(v._key, 'sku', e.target.value)}
+                      className="h-8 font-mono text-xs w-40"
+                      placeholder="SKU"
+                      required
+                    />
+                  </td>
+                  <td className="py-2 pr-3">
+                    <Input
+                      type="number"
+                      min={0}
+                      value={v.stock_quantity}
+                      onChange={(e) =>
+                        updateRow(v._key, 'stock_quantity', Math.max(0, parseInt(e.target.value) || 0))
+                      }
+                      className="h-8 w-24"
+                    />
+                  </td>
+                  <td className="py-2 pr-3">
+                    <Input
+                      value={v._priceInput}
+                      onChange={(e) => updateRow(v._key, '_priceInput', e.target.value)}
+                      onBlur={(e) => handlePriceBlur(v._key, e.target.value)}
+                      placeholder="0,00"
+                      required
+                      className={[
+                        'h-8 w-28 text-right tabular-nums font-medium',
+                        !v._priceInput ? 'border-destructive/60 focus-visible:ring-destructive/30' : '',
+                      ].join(' ')}
+                      inputMode="decimal"
+                    />
+                  </td>
+                  <td className="py-2 text-center">
+                    {stockBadge(v.stock_quantity)}
+                  </td>
+                  <td className="py-2 pl-2">
+                    <button
+                      type="button"
+                      onClick={() => setPendingRemoveKey(v._key)}
+                      className="text-muted-foreground hover:text-destructive transition-colors"
+                      aria-label={`Remover tamanho ${v.size}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {active.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <p className="text-xs text-muted-foreground">
+            Total em estoque:{' '}
+            <strong>{active.reduce((sum, v) => sum + v.stock_quantity, 0)}</strong> unidades
+            em <strong>{active.length}</strong> tamanho{active.length !== 1 ? 's' : ''}.
+          </p>
+          {active.some((v) => !v._priceInput) && (
+            <p className="text-xs text-destructive font-medium">
+              Tamanhos sem preço: {active.filter((v) => !v._priceInput).map((v) => v.size).join(', ')}
+            </p>
+          )}
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={pendingRemoveKey !== null}
+        onOpenChange={(open) => !open && setPendingRemoveKey(null)}
+        title="Remover variante"
+        description={`Tem certeza que deseja excluir o tamanho "${pendingVariant?.size ?? ''}"? Esta ação não pode ser desfeita.`}
+        confirmLabel="Excluir"
+        destructive
+        onConfirm={() => {
+          if (pendingRemoveKey) removeRow(pendingRemoveKey)
+          setPendingRemoveKey(null)
+        }}
+      />
+    </div>
+  )
+}
+
+export default function ProductForm() {
+  const { id } = useParams()
+  const isEdit = !!id
+  const navigate = useNavigate()
+  const toast = useToast()
+
+  const { data: existing, isLoading } = useProduct(isEdit ? parseInt(id) : 0)
+  const createMutation = useCreateProduct()
+  const updateMutation = useUpdateProduct()
+
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [category, setCategory] = useState('camisetas')
+  const [active, setActive] = useState(true)
+  const [variants, setVariants] = useState<VariantRow[]>([])
+
+  // Dimensões logísticas
+  const [weightG, setWeightG] = useState('')
+  const [heightMm, setHeightMm] = useState('')
+  const [widthMm, setWidthMm] = useState('')
+  const [lengthMm, setLengthMm] = useState('')
+
+  useEffect(() => {
+    if (existing) {
+      setName(existing.name ?? '')
+      setDescription(existing.description ?? '')
+      setCategory(existing.category ?? 'camisetas')
+      setActive(existing.active)
+      setVariants(
+        (existing.variants ?? []).map((v) => ({
+          ...v,
+          _key: String(v.id),
+          _priceInput: formatPriceInput(v.price_cents),
+        }))
+      )
+      setWeightG(existing.weight_g != null ? String(existing.weight_g) : '')
+      setHeightMm(existing.height_mm != null ? String(existing.height_mm) : '')
+      setWidthMm(existing.width_mm != null ? String(existing.width_mm) : '')
+      setLengthMm(existing.length_mm != null ? String(existing.length_mm) : '')
+    }
+  }, [existing])
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+
+    const activeVariants = variants.filter((v) => !v._destroy)
+
+    const skus = activeVariants.map((v) => v.sku.trim())
+    const uniqueSkus = new Set(skus)
+    if (uniqueSkus.size !== skus.length) {
+      toast.error('SKUs duplicados — cada variante precisa ter um SKU único')
+      return
+    }
+
+    const missingSkus = activeVariants.some((v) => !v.sku.trim())
+    if (missingSkus) {
+      toast.error('Todas as variantes precisam ter um SKU')
+      return
+    }
+
+    const missingPrices = activeVariants.filter((v) => !v._priceInput || v.price_cents == null)
+    if (missingPrices.length > 0) {
+      toast.error(`Defina o preço para: ${missingPrices.map((v) => v.size).join(', ')}`)
+      return
+    }
+
+    const variants_attributes = variants.map(({ _key: _k, _priceInput: _pi, ...rest }) => rest)
+
+    // price_cents on the product is derived from the minimum variant price (backend compat)
+    const price_cents = Math.min(...activeVariants.map((v) => v.price_cents ?? 0).filter(Boolean))
+
+    const payload = {
+      name, description, price_cents, category, active, variants_attributes,
+      weight_g:  weightG  ? parseInt(weightG)  : null,
+      height_mm: heightMm ? parseInt(heightMm) : null,
+      width_mm:  widthMm  ? parseInt(widthMm)  : null,
+      length_mm: lengthMm ? parseInt(lengthMm) : null,
+    }
+
+    try {
+      if (isEdit && id) {
+        await updateMutation.mutateAsync({ id: parseInt(id), data: payload })
+        toast.success('Produto atualizado com sucesso')
+      } else {
+        const created = await createMutation.mutateAsync(payload)
+        toast.success('Produto criado — adicione imagens abaixo')
+        navigate(`/products/${created.id}/edit`)
+        return
+      }
+    } catch {
+      toast.error('Erro ao salvar produto')
+    }
+  }
+
+  const isPending = createMutation.isPending || updateMutation.isPending
+
+  if (isEdit && isLoading) return <LoadingState />
+
+  return (
+    <div className="max-w-3xl mx-auto px-4 space-y-6">
+      <PageTitle
+        title={isEdit ? 'Editar Produto' : 'Novo Produto'}
+        subtitle={isEdit ? existing?.name : 'Preencha os dados do produto'}
+        actions={
+          <Button variant="outline" size="sm" onClick={() => navigate('/products')}>
+            <ArrowLeft className="h-4 w-4" />
+            Voltar
+          </Button>
+        }
+      />
+
+      {/* Product details + variants in single form */}
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <Card className="w-full">
+          <CardContent className="pt-6 space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="name">Nome</Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Nome do produto"
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="description">Descrição</Label>
+              <Input
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Descrição curta"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Categoria</Label>
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES.map((c) => (
+                    <SelectItem key={c} value={c} className="capitalize">
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Status</Label>
+              <Select
+                value={active ? 'active' : 'inactive'}
+                onValueChange={(v) => setActive(v === 'active')}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Ativo</SelectItem>
+                  <SelectItem value="inactive">Inativo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Variants */}
+        <Card className="w-full">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              Variantes e Estoque Inicial
+            </CardTitle>
+          </CardHeader>
+          <Separator />
+          <CardContent className="pt-4">
+            <VariantTable
+              variants={variants}
+              productName={name}
+              onChange={setVariants}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Dimensões logísticas */}
+        <Card className="w-full">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Dimensões para Frete</CardTitle>
+          </CardHeader>
+          <Separator />
+          <CardContent className="pt-4 space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Necessário para cálculo automático via Melhor Envio.
+              Peso em gramas (g), dimensões em milímetros (mm).
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Peso (g)</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  placeholder="ex: 250"
+                  value={weightG}
+                  onChange={(e) => setWeightG(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Altura (mm)</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  placeholder="ex: 30"
+                  value={heightMm}
+                  onChange={(e) => setHeightMm(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Largura (mm)</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  placeholder="ex: 200"
+                  value={widthMm}
+                  onChange={(e) => setWidthMm(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Comprimento (mm)</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  placeholder="ex: 300"
+                  value={lengthMm}
+                  onChange={(e) => setLengthMm(e.target.value)}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="flex gap-3">
+          <Button type="submit" disabled={isPending}>
+            {isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Salvando...
+              </>
+            ) : isEdit ? (
+              'Salvar alterações'
+            ) : (
+              'Criar produto'
+            )}
+          </Button>
+          <Button type="button" variant="outline" onClick={() => navigate('/products')}>
+            Cancelar
+          </Button>
+        </div>
+      </form>
+
+      {/* Image management — only available after product is saved */}
+      {isEdit && existing && (
+        <Card className="w-full">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Imagens do Produto</CardTitle>
+          </CardHeader>
+          <Separator />
+          <CardContent className="pt-4">
+            <ProductImageUploader
+              productId={existing.id}
+              images={existing.images}
+            />
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  )
+}

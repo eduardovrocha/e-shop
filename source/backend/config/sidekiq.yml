@@ -1,0 +1,10 @@
+:concurrency: 5
+
+:queues:
+  - critical
+  - default
+  - mailers
+
+# Dead queue: keep failed jobs for 30 days, cap at 1 000 entries
+:dead_max_jobs: 1000
+:dead_timeout_in_seconds: 2592000

@@ -1,0 +1,48 @@
+<%= @store_name %> — Acompanhamento de Pedido
+==========================================
+
+<%= @subject_base %>
+
+Pedido: <%= @order.number %>
+Data: <%= @order.created_at.strftime("%d/%m/%Y") %>
+Status: <%= OrderStatusHistory.title_for(@status) %>
+
+Acompanhe seu pedido em:
+<%= @public_url %>
+
+---
+
+HISTÓRICO
+---------
+<% @history.reverse.each do |entry| %>
+✓ <%= entry.title %> — <%= entry.created_at.strftime("%d/%m/%Y %H:%M") %>
+<% end %>
+
+---
+
+RESUMO DO PEDIDO
+----------------
+<% @order.items.each do |item| %>
+• <%= item["name"] %> (Tam. <%= item["size"] %>) x<%= item["quantity"] %> — R$ <%= format("%.2f", item["subtotal_cents"].to_i / 100.0) %>
+<% end %>
+
+Subtotal: R$ <%= format("%.2f", @order.items_total_cents / 100.0) %>
+<% if @order.shipping_fee_cents > 0 %>
+Frete:    R$ <%= format("%.2f", @order.shipping_fee_cents / 100.0) %>
+<% end %>
+Total:    R$ <%= format("%.2f", @order.total_cents / 100.0) %>
+
+<% if @order.tracking_code.present? %>
+---
+
+RASTREIO
+--------
+Código: <%= @order.tracking_code %>
+<% if @order.carrier.present? %>
+Transportadora: <%= @order.carrier %><%= " (#{@order.shipping_service})" if @order.shipping_service.present? %>
+<% end %>
+<% end %>
+
+---
+
+<%= @store_name %> — <%= ENV.fetch("SUPPORT_EMAIL", "suporte@andrequice.com.br") %>

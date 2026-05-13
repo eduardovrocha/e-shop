@@ -1,0 +1,87 @@
+import { Link, useNavigate } from 'react-router-dom'
+import { useCartStore } from '@/store/cartStore'
+
+interface HeaderProps {
+  showBack?: boolean
+  title?: string
+  transparent?: boolean
+}
+
+export function Header({ showBack = false, title, transparent = false }: HeaderProps) {
+  const navigate = useNavigate()
+  const itemCount = useCartStore((s) => s.itemCount())
+
+  return (
+    <header
+      className={`sticky top-0 z-40 ${
+        transparent
+          ? 'bg-andrequice-cream/80 backdrop-blur-md'
+          : 'bg-andrequice-cream'
+      } border-b border-andrequice-sand`}
+    >
+      <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
+        {/* Left */}
+        <div className="flex items-center gap-3 min-w-[40px]">
+          {showBack ? (
+            <button
+              onClick={() => navigate(-1)}
+              aria-label="Voltar"
+              className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-andrequice-sand transition-colors"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-andrequice-navy"
+              >
+                <path d="M19 12H5M12 5l-7 7 7 7" />
+              </svg>
+            </button>
+          ) : null}
+        </div>
+
+        {/* Center */}
+        <Link
+          to="/"
+          className="absolute left-1/2 -translate-x-1/2 font-serif text-2xl font-semibold text-andrequice-navy hover:text-andrequice-copper transition-colors"
+          aria-label="Ir para início"
+        >
+          {title ?? 'Andrequicé'}
+        </Link>
+
+        {/* Right — Cart */}
+        <Link
+          to="/cart"
+          aria-label={`Carrinho com ${itemCount} ${itemCount === 1 ? 'item' : 'itens'}`}
+          className="relative w-9 h-9 flex items-center justify-center rounded-full hover:bg-andrequice-sand transition-colors ml-auto"
+        >
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-andrequice-navy"
+          >
+            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <path d="M16 10a4 4 0 01-8 0" />
+          </svg>
+          {itemCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-andrequice-gold text-white text-[10px] font-semibold rounded-full flex items-center justify-center">
+              {itemCount > 9 ? '9+' : itemCount}
+            </span>
+          )}
+        </Link>
+      </div>
+    </header>
+  )
+}

@@ -1,0 +1,10 @@
+.bundle/
+log/*.log
+tmp/
+*.sqlite3
+.env
+storage/
+public/assets
+public/vite
+vendor/bundle
+.byebug_history

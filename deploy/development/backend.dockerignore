@@ -1,0 +1,9 @@
+.bundle/
+log/*.log
+tmp/
+.env
+storage/
+public/assets
+vendor/bundle
+spec/
+.rspec

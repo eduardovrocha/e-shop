@@ -1,0 +1,232 @@
+version: "3.9"
+
+# ─── Andrequicé — Production Docker Compose ────────────────────────────────
+# VPS: Hostinger KVM 4 (4 vCPU / 16 GB RAM)
+# Object Storage: MinIO (self-hosted, rede interna)
+# Atualizado: 2026-05-12
+# ────────────────────────────────────────────────────────────────────────────
+
+x-rails-env: &rails-env
+  RAILS_ENV: production
+  RAILS_LOG_TO_STDOUT: "true"
+  RAILS_MASTER_KEY: ${RAILS_MASTER_KEY}
+  DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+  POSTGRES_HOST: postgres
+  REDIS_URL: redis://redis:6379/0
+  REDIS_HOST: redis
+  # ActiveRecord Encryption
+  ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY: ${ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY}
+  ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY: ${ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY}
+  ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT: ${ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT}
+  # Auth
+  JWT_SECRET: ${JWT_SECRET}
+  # App
+  HOST_URL: ${HOST_URL}
+  SUPPORT_EMAIL: ${SUPPORT_EMAIL}
+  # ActiveStorage → MinIO (self-hosted, rede interna Docker)
+  STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY}
+  STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY}
+  STORAGE_BUCKET: ${STORAGE_BUCKET}
+  STORAGE_ENDPOINT: ${STORAGE_ENDPOINT:-https://storage.andrequice.store}
+  # Stripe
+  STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+  STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+  # Melhor Envio
+  ME_CLIENT_ID: ${ME_CLIENT_ID}
+  ME_CLIENT_SECRET: ${ME_CLIENT_SECRET}
+  # SMTP
+  SMTP_HOST: ${SMTP_HOST}
+  SMTP_PORT: ${SMTP_PORT}
+  SMTP_USERNAME: ${SMTP_USERNAME}
+  SMTP_PASSWORD: ${SMTP_PASSWORD}
+  SMTP_FROM: ${SMTP_FROM}
+  # App
+  FRONTEND_URL: ${FRONTEND_URL}
+  CORS_ORIGINS: ${CORS_ORIGINS}
+  SENTRY_DSN: ${SENTRY_DSN}
+  ADMIN_SEED_PASSWORD: ${ADMIN_SEED_PASSWORD}
+
+services:
+  # ── PostgreSQL ─────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal
+
+  # ── Redis ──────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal
+
+  # ── MinIO (Object Storage interno) ────────────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio_data:/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Rails API ──────────────────────────────────────────────────────────────
+  api:
+    image: andrequice/api:${APP_VERSION:-latest}
+    build:
+      context: ../../source/backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      <<: *rails-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    # Puma escuta em socket Unix para comunicação com Nginx
+    volumes:
+      - puma_socket:/app/tmp/sockets
+    command: >
+      sh -c "
+        bundle exec rails db:migrate &&
+        bundle exec puma -C config/puma.rb
+      "
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:3000/up || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - internal
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+
+  # ── Sidekiq ────────────────────────────────────────────────────────────────
+  sidekiq:
+    image: andrequice/api:${APP_VERSION:-latest}
+    restart: unless-stopped
+    environment:
+      <<: *rails-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: bundle exec sidekiq -C config/sidekiq.yml
+    networks:
+      - internal
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1G
+
+  # ── Frontend público (Vite + Nginx) ────────────────────────────────────────
+  frontend:
+    image: andrequice/frontend:${APP_VERSION:-latest}
+    build:
+      context: ../..
+      dockerfile: deploy/production/frontend.Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+        VITE_STRIPE_PUBLISHABLE_KEY: ${VITE_STRIPE_PUBLISHABLE_KEY}
+        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
+    restart: unless-stopped
+    networks:
+      - internal
+
+  # ── Dashboard admin (React + Nginx) ────────────────────────────────────────
+  dashboard:
+    image: andrequice/dashboard:${APP_VERSION:-latest}
+    build:
+      context: ../..
+      dockerfile: deploy/production/dashboard.Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+    restart: unless-stopped
+    networks:
+      - internal
+
+  # ── Nginx reverse proxy ────────────────────────────────────────────────────
+  nginx:
+    image: nginx:1.25-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - puma_socket:/app/tmp/sockets:ro
+      - certbot_www:/var/www/certbot:ro
+      - certbot_conf:/etc/letsencrypt:ro
+    depends_on:
+      - api
+      - frontend
+      - dashboard
+    networks:
+      - internal
+      - external
+
+  # ── Certbot (renovação automática SSL) ─────────────────────────────────────
+  certbot:
+    image: certbot/certbot:latest
+    restart: unless-stopped
+    volumes:
+      - certbot_www:/var/www/certbot
+      - certbot_conf:/etc/letsencrypt
+    entrypoint: >
+      sh -c "trap exit TERM;
+             while :; do
+               certbot renew --webroot -w /var/www/certbot --quiet;
+               sleep 12h & wait $${!};
+             done"
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  puma_socket:
+  certbot_www:
+  certbot_conf:
+
+networks:
+  internal:
+    driver: bridge
+  external:
+    driver: bridge

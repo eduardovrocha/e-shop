@@ -1,0 +1,96 @@
+# ── Documentação interna (nunca versionar) ───────────────────────────
+docs/
+
+# ── Variáveis de ambiente e segredos ─────────────────────────────────
+.env
+.env.*
+!.env.*.example
+**/.env
+**/.env.local
+**/.env.production
+**/.env.staging
+**/.env.*.local
+!**/.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# ── Rails ─────────────────────────────────────────────────────────────
+config/master.key
+config/credentials/*.key
+/log/*
+!/log/.keep
+/tmp/*
+!/tmp/.keep
+/storage/*
+!/storage/.keep
+/public/assets
+/public/packs
+/public/packs-test
+*.sqlite3
+*.sqlite3-journal
+*.sqlite3-shm
+*.sqlite3-wal
+source/backend/log/
+source/backend/tmp/
+source/backend/storage/
+source/backend/*.sqlite3
+source/backend/*.sqlite3-journal
+source/backend/public/uploads/
+
+# ── Node / Frontend / Dashboard ───────────────────────────────────────
+node_modules/
+**/node_modules/
+frontend/node_modules/
+dashboard/node_modules/
+dist/
+**/dist/
+**/build/
+**/.next/
+**/.nuxt/
+frontend/dist/
+dashboard/dist/
+.pnp
+.pnp.js
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# ── Deploy / infraestrutura ───────────────────────────────────────────
+deploy/production/.env
+deploy/production/.env.*
+!deploy/production/.env.*.example
+deploy/**/.env
+!deploy/**/.env.example
+deploy/production/ssl/
+deploy/production/certbot/
+
+# ── Docker ────────────────────────────────────────────────────────────
+.docker-sync/
+docker-sync.yml
+
+# ── Claude Code (state local, analytics) ────────────────────────────
+.claude/
+
+# ── Editores e IDEs ───────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+
+# ── Cobertura de testes e relatórios ─────────────────────────────────
+coverage/
+.nyc_output/
+spec/reports/
+test/reports/
+
+# ── Gems compiladas localmente ────────────────────────────────────────
+vendor/bundle/
+**/vendor/bundle/
