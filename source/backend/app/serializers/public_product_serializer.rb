@@ -14,6 +14,7 @@ class PublicProductSerializer
       id:              @product.id,
       name:            @product.name,
       description:     @product.description,
+      category:        @product.category,
       price_cents:     @product.price_cents,
       min_price_cents: prices.min || @product.price_cents,
       max_price_cents: prices.max || @product.price_cents,
