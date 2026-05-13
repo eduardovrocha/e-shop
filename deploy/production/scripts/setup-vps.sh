@@ -42,6 +42,8 @@ fi
 
 echo "==> [5/8] Criando estrutura de diretórios..."
 mkdir -p "${APP_DIR}/deploy/production/ssl"
+mkdir -p "${APP_DIR}/deploy/logs"
+mkdir -p "${APP_DIR}/deploy/backups"
 chown -R "${DEPLOY_USER}:${DEPLOY_USER}" "${APP_DIR}"
 
 echo "==> [6/8] Configurando firewall (UFW)..."
@@ -77,12 +79,61 @@ else
   echo "  → Swap já existe."
 fi
 
+echo "==> [+] Configurando repositório git..."
+if [ ! -d "${APP_DIR}/.git" ]; then
+  git config --global --add safe.directory "${APP_DIR}"
+  cd "${APP_DIR}"
+  git init
+  git remote add origin git@github.com:eduardovrocha/e-shop.git
+  git fetch origin production
+  git checkout -b production --track origin/production
+  echo "  → Repositório clonado na branch production."
+else
+  echo "  → Repositório git já configurado."
+  git -C "${APP_DIR}" remote set-url origin git@github.com:eduardovrocha/e-shop.git
+fi
+
+echo "==> [+] Verificando GitHub deploy key..."
+if [ ! -f /root/.ssh/github_deploy ]; then
+  echo "  ⚠️  Nenhuma deploy key encontrada em /root/.ssh/github_deploy."
+  echo "  → Gere uma com: ssh-keygen -t ed25519 -C 'deploy@andrequice' -f /root/.ssh/github_deploy -N ''"
+  echo "  → Adicione a chave pública no GitHub: Settings → Deploy keys → Add deploy key"
+else
+  echo "  → Deploy key presente."
+  # Garante que o SSH usa a deploy key para github.com
+  if ! grep -q "github.com" /root/.ssh/config 2>/dev/null; then
+    cat >> /root/.ssh/config <<'SSHCONF'
+
+Host github.com
+  HostName github.com
+  User git
+  IdentityFile /root/.ssh/github_deploy
+  StrictHostKeyChecking no
+SSHCONF
+    chmod 600 /root/.ssh/config
+    echo "  → SSH config atualizado para usar deploy key."
+  fi
+fi
+
+echo "==> [+] Executando migrations iniciais..."
+COMPOSE="docker compose -f ${APP_DIR}/deploy/production/docker-compose.yml --env-file ${APP_DIR}/.env"
+if $COMPOSE ps api 2>/dev/null | grep -q "Up"; then
+  $COMPOSE exec -T api bundle exec rails db:migrate RAILS_ENV=production \
+    && echo "  → Migrations aplicadas." \
+    || echo "  ⚠️  Migrations falharam. Execute manualmente após subir os containers."
+else
+  echo "  → Containers não estão rodando. Execute db:migrate após subir com deploy.sh."
+fi
+
 echo ""
 echo "╔══════════════════════════════════════════════════════════════╗"
 echo "║  Setup da VPS concluído!                                     ║"
 echo "║                                                              ║"
 echo "║  Próximos passos:                                            ║"
 echo "║  1. Copiar .env.production.example → .env e preencher        ║"
+echo "║     ATENÇÃO: HOST_URL deve ser https://api.andrequice.store  ║"
+echo "║              não https://andrequice.store (frontend)         ║"
 echo "║  2. Executar scripts/ssl-init.sh para emitir certificados    ║"
 echo "║  3. Executar scripts/deploy.sh para subir os containers      ║"
+echo "║  4. Executar deploy/scripts/update.sh para deploys futuros   ║"
 echo "╚══════════════════════════════════════════════════════════════╝"

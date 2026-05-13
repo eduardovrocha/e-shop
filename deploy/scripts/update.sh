@@ -152,6 +152,10 @@ $COMPOSE build --no-cache --parallel \
 $COMPOSE up -d \
   || rollback "falha ao subir os containers"
 
+# Nginx retém o IP do container anterior após recriação — reload resolve DNS
+echo "    Recarregando nginx para resolver novo IP dos containers..."
+$COMPOSE exec -T nginx nginx -s reload 2>/dev/null || true
+
 # ── [6/8] Executar migrations (se necessário) ────────────────────────────────
 echo ""
 echo "[6/8] Executando migrations..."
@@ -160,6 +164,13 @@ if [ "$NEEDS_MIGRATION" = true ]; then
   $COMPOSE exec -T api bundle exec rails db:migrate \
     || rollback "falha ao executar migrations"
   echo "    ✅ Migrations aplicadas."
+
+  # Após migrations, caches Rails que serializam modelos podem estar com
+  # schema desatualizado — limpar caches conhecidos para forçar recarregamento
+  echo "    Limpando caches Rails afetados por schema change..."
+  $COMPOSE exec -T api bundle exec rails runner \
+    "Rails.cache.delete(StoreSetting::CACHE_KEY) rescue nil; puts 'cache limpo'" \
+    2>/dev/null || true
 else
   echo "    Nenhuma migration a executar."
 fi

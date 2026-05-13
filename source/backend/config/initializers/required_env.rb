@@ -29,6 +29,16 @@ if Rails.env.production?
     raise "Variáveis de ambiente de produção ausentes: #{missing_prod.join(', ')}. " \
           "Configure-as no servidor antes de iniciar a aplicação."
   end
+
+  # HOST_URL deve apontar para a API, não para o frontend.
+  # Erro comum: configurar HOST_URL=https://andrequice.store (frontend) em vez
+  # de https://api.andrequice.store, fazendo Active Storage gerar URLs erradas.
+  host_url = ENV.fetch("HOST_URL", "")
+  unless host_url.include?("api.")
+    raise "HOST_URL mal configurado: '#{host_url}'. " \
+          "Em produção HOST_URL deve apontar para a API (ex: https://api.andrequice.store), " \
+          "não para o frontend."
+  end
 else
   missing_prod = REQUIRED_IN_PRODUCTION.select { |k| ENV[k].blank? }
   if missing_prod.any?
