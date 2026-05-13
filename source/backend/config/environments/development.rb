@@ -44,19 +44,22 @@ Rails.application.configure do
   # caching is enabled.
   config.action_mailer.perform_caching = false
 
-  config.action_mailer.default_url_options = { host: "localhost", port: 3000 }
+  # HOST_URL controls Active Storage redirect URLs and action mailer links.
+  # docker-compose injects HOST_URL=http://localhost; start.sh overrides with
+  # the detected LAN IP so mobile/tablet clients can reach image URLs directly.
+  # Defaults to http://localhost so Active Storage never falls back to the
+  # Docker-internal service name "backend" when HOST_URL is absent.
+  _host_url  = ENV.fetch("HOST_URL", "http://localhost")
+  _parts     = _host_url.sub(%r{\Ahttps?://}, "").split(":")
+  _url_opts  = {
+    host:     _parts[0],
+    port:     _parts[1]&.to_i.presence,
+    protocol: _host_url.start_with?("https") ? "https" : "http",
+  }
 
-  # Use HOST_URL env var for ActiveStorage redirect URL generation.
-  # docker-compose sets HOST_URL to http://localhost:3091 by default;
-  # start.sh overrides it with the detected LAN IP for mobile/tablet access.
-  if (host_url = ENV["HOST_URL"])
-    host_parts = host_url.sub(%r{\Ahttps?://}, "").split(":")
-    Rails.application.routes.default_url_options = {
-      host:     host_parts[0],
-      port:     host_parts[1]&.to_i,
-      protocol: host_url.start_with?("https") ? "https" : "http"
-    }
-  end
+  config.action_controller.default_url_options   = _url_opts
+  config.action_mailer.default_url_options        = { host: _parts[0], port: _parts[1]&.to_i.presence }
+  Rails.application.routes.default_url_options    = _url_opts
 
   # Print deprecation notices to the Rails logger.
   config.active_support.deprecation = :log

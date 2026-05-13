@@ -95,6 +95,10 @@ Rails.application.configure do
   config.action_mailer.default_options = {
     from: ENV.fetch("SMTP_FROM"),
   }
+  config.action_mailer.default_url_options = {
+    host:     ENV.fetch("API_HOST", "api.andrequice.store"),
+    protocol: "https",
+  }
 
   # Enable locale fallbacks for I18n (makes lookups for any locale fall back to
   # the I18n.default_locale when a translation cannot be found).
