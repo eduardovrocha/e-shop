@@ -13,6 +13,13 @@ export interface StoreInfo {
   pickup_state: string
 }
 
+export interface StoreHeadline {
+  headline_primary: string
+  headline_secondary: string
+  headline_description: string
+}
+
 export const storeService = {
   get: () => api.get<StoreInfo>('/store').then((r) => r.data),
+  getHeadline: () => api.get<StoreHeadline>('/store_settings').then((r) => r.data),
 }

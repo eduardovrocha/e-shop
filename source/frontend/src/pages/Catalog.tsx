@@ -2,9 +2,11 @@ import { ProductCard } from '@/components/ProductCard'
 import { SectionTitle } from '@/components/SectionTitle'
 import { ProductCardSkeleton } from '@/components/LoadingSkeleton'
 import { useProducts } from '@/hooks/useProducts'
+import { useStoreSettings } from '@/hooks/useStoreSettings'
 
 export default function Catalog() {
   const { products, isLoading, error } = useProducts()
+  const settings = useStoreSettings()
 
   return (
     <div className="min-h-screen bg-white">
@@ -30,13 +32,13 @@ export default function Catalog() {
           </div>
 
           <h1 className="font-serif text-4xl font-semibold text-andrequice-navy tracking-display leading-tight">
-            Nossa história,
+            {settings.headline_primary}
             <br />
-            <span className="font-light">nossa devoção.</span>
+            <span className="font-light">{settings.headline_secondary}</span>
           </h1>
 
           <p className="font-sans text-sm text-andrequice-brown/80 max-w-xs leading-relaxed">
-            Camisetas artesanais da Festa de Andrequicé. Arte, fé e tradição em cada peça.
+            {settings.headline_description}
           </p>
         </div>
       </section>

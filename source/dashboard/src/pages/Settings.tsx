@@ -7,15 +7,21 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
-import { useSettings, useUpdateSettings, useStripeInfo } from '@/hooks/useSettings'
+import { useSettings, useUpdateSettings, useUpdateHeadline, useStripeInfo } from '@/hooks/useSettings'
 import { useToast } from '@/hooks/useToast'
-import type { StoreSettings } from '@/services/settingsService'
+import type { StoreSettings, HeadlineSettings } from '@/services/settingsService'
 
 export default function Settings() {
   const toast = useToast()
   const { data: settings, isLoading } = useSettings()
   const updateMutation = useUpdateSettings()
+  const updateHeadlineMutation = useUpdateHeadline()
   const { data: stripeInfo } = useStripeInfo()
+
+  const [headlinePrimary, setHeadlinePrimary] = useState('')
+  const [headlineSecondary, setHeadlineSecondary] = useState('')
+  const [headlineDescription, setHeadlineDescription] = useState('')
+  const [headlineErrors, setHeadlineErrors] = useState<Partial<HeadlineSettings>>({})
 
   const [contactEmail, setContactEmail] = useState('')
   const [pickupZipcode, setPickupZipcode] = useState('')
@@ -31,6 +37,9 @@ export default function Settings() {
 
   useEffect(() => {
     if (settings) {
+      setHeadlinePrimary(settings.headline_primary ?? '')
+      setHeadlineSecondary(settings.headline_secondary ?? '')
+      setHeadlineDescription(settings.headline_description ?? '')
       setContactEmail(settings.contact_email)
       setPickupZipcode(settings.pickup_zipcode)
       setPickupStreet(settings.pickup_street)
@@ -79,7 +88,24 @@ export default function Settings() {
     saveSection({ free_shipping_above_cents: fsa, shipping_fee_cents: sf })
   }
 
-  const isSaving = updateMutation.isPending
+  const handleHeadlineSave = async (e: FormEvent) => {
+    e.preventDefault()
+    setHeadlineErrors({})
+    try {
+      await updateHeadlineMutation.mutateAsync({
+        headline_primary:     headlinePrimary,
+        headline_secondary:   headlineSecondary,
+        headline_description: headlineDescription,
+      })
+      toast.success('Apresentação atualizada')
+    } catch (err: any) {
+      const errs = err?.response?.data?.errors ?? {}
+      setHeadlineErrors(errs)
+      toast.error('Erro ao salvar apresentação')
+    }
+  }
+
+  const isSaving = updateMutation.isPending || updateHeadlineMutation.isPending
   const disabled = isSaving || isLoading
 
   return (
@@ -87,6 +113,79 @@ export default function Settings() {
       <PageTitle title="Configurações" subtitle="Gerencie as configurações da loja" />
 
       <div className="space-y-6">
+        {/* Headline */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Apresentação da Loja</CardTitle>
+            <CardDescription>Textos exibidos na página inicial e no catálogo.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleHeadlineSave} className="space-y-4">
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="headline-primary">Mensagem principal</Label>
+                  <span className="text-xs text-muted-foreground">{headlinePrimary.length}/80</span>
+                </div>
+                <Input
+                  id="headline-primary"
+                  value={headlinePrimary}
+                  onChange={(e) => setHeadlinePrimary(e.target.value)}
+                  maxLength={80}
+                  disabled={disabled}
+                />
+                {headlineErrors.headline_primary && (
+                  <p className="text-xs text-destructive">{headlineErrors.headline_primary}</p>
+                )}
+                <p className="text-xs text-muted-foreground">Exibida em destaque. Máx. 80 caracteres.</p>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="headline-secondary">Mensagem secundária</Label>
+                  <span className="text-xs text-muted-foreground">{headlineSecondary.length}/80</span>
+                </div>
+                <Input
+                  id="headline-secondary"
+                  value={headlineSecondary}
+                  onChange={(e) => setHeadlineSecondary(e.target.value)}
+                  maxLength={80}
+                  disabled={disabled}
+                />
+                {headlineErrors.headline_secondary && (
+                  <p className="text-xs text-destructive">{headlineErrors.headline_secondary}</p>
+                )}
+                <p className="text-xs text-muted-foreground">Complemento da mensagem principal. Máx. 80 caracteres.</p>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="headline-description">Descrição</Label>
+                  <span className="text-xs text-muted-foreground">{headlineDescription.length}/200</span>
+                </div>
+                <textarea
+                  id="headline-description"
+                  value={headlineDescription}
+                  onChange={(e) => setHeadlineDescription(e.target.value)}
+                  maxLength={200}
+                  disabled={disabled}
+                  rows={3}
+                  className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+                />
+                {headlineErrors.headline_description && (
+                  <p className="text-xs text-destructive">{headlineErrors.headline_description}</p>
+                )}
+                <p className="text-xs text-muted-foreground">Apresentação breve da loja. Máx. 200 caracteres.</p>
+              </div>
+
+              <div className="flex justify-end">
+                <Button type="submit" size="sm" disabled={disabled}>
+                  {updateHeadlineMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Salvar alterações'}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+
         {/* General */}
         <Card>
           <CardHeader>

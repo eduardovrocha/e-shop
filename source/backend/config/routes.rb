@@ -11,6 +11,7 @@ Rails.application.routes.draw do
       post "payments/webhook",          to: "payments#webhook"
       post "shipping/calculate",        to: "shipping#calculate"
       get  "orders/track/:token",       to: "tracking#show", as: :order_tracking
+      resource :store_settings, only: %i[show update]
 
       namespace :admin do
         post   "auth/login",  to: "auth#login"

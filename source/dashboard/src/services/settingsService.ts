@@ -14,6 +14,15 @@ export interface StoreSettings {
   whatsapp_number: string
   free_shipping_above_cents: number
   shipping_fee_cents: number
+  headline_primary: string
+  headline_secondary: string
+  headline_description: string
+}
+
+export interface HeadlineSettings {
+  headline_primary: string
+  headline_secondary: string
+  headline_description: string
 }
 
 export interface StripeInfo {
@@ -27,4 +36,6 @@ export const settingsService = {
   update: (data: Partial<StoreSettings>) =>
     api.patch<StoreSettings>('/admin/settings', { store_setting: data }).then((r) => r.data),
   stripeInfo: () => api.get<StripeInfo>('/admin/settings/stripe_info').then((r) => r.data),
+  updateHeadline: (data: HeadlineSettings) =>
+    api.put<HeadlineSettings>('/store_settings', data).then((r) => r.data),
 }

@@ -1,8 +1,10 @@
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/Button'
+import { useStoreSettings } from '@/hooks/useStoreSettings'
 
 export default function Home() {
   const navigate = useNavigate()
+  const settings = useStoreSettings()
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
@@ -22,10 +24,10 @@ export default function Home() {
             Andrequicé
           </h1>
           <p className="font-serif text-lg text-andrequice-brown/80 leading-relaxed">
-            "Nossa história, nossa devoção."
+            "{settings.headline_primary} {settings.headline_secondary}"
           </p>
           <p className="font-sans text-sm text-andrequice-brown/70 leading-relaxed">
-            Camisetas artesanais da Festa de Andrequicé — fé, tradição e arte do interior de Minas Gerais.
+            {settings.headline_description}
           </p>
         </div>
 
