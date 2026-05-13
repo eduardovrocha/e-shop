@@ -23,6 +23,12 @@ module ImageSerializable
   end
 
   def blob_url_opts
-    { host: ENV.fetch("API_HOST", request.host), protocol: "https" }
+    host_url = ENV.fetch("HOST_URL", "http://localhost")
+    parts    = host_url.sub(%r{\Ahttps?://}, "").split(":")
+    {
+      host:     parts[0],
+      port:     parts[1]&.to_i.presence,
+      protocol: host_url.start_with?("https") ? "https" : "http",
+    }
   end
 end
