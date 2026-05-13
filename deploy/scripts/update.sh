@@ -146,7 +146,15 @@ ls -t "${APP_DIR}/deploy/backups/"*.sql.gz 2>/dev/null \
 echo ""
 echo "[5/8] Buildando e subindo containers..."
 
-$COMPOSE build --no-cache --parallel \
+BUILD_DATE=$(date +'%d/%m/%Y')
+APP_VERSION=$(git -C "$APP_DIR" describe --tags --abbrev=0 2>/dev/null || echo "0.1.0")
+APP_VERSION="${APP_VERSION#v}"
+
+$COMPOSE build \
+  --no-cache \
+  --parallel \
+  --build-arg VITE_APP_VERSION="${APP_VERSION}" \
+  --build-arg VITE_BUILD_DATE="${BUILD_DATE}" \
   || rollback "falha no build dos containers"
 
 $COMPOSE up -d \
@@ -243,6 +251,7 @@ echo "════════════════════════�
 echo "  ✅ Update concluído com sucesso"
 echo "  Versão anterior : ${PREVIOUS_SHORT}"
 echo "  Versão atual    : ${NEW_SHORT}"
+echo "  Versão do build : v.${APP_VERSION:-0.1.0}, ${BUILD_DATE:-$(date +'%d/%m/%Y')}"
 echo "  Migrations      : ${NEEDS_MIGRATION}"
 echo "  Backup          : ${BACKUP_FILE}"
 echo "  Log             : ${LOG_FILE}"

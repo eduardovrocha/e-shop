@@ -148,7 +148,16 @@ jobs:
       - name: Install dependencies (${{ matrix.app.name }})
         run: npm ci
 
+      - name: Set build metadata
+        run: |
+          RAW="${{ github.ref_name }}"
+          VERSION="${RAW#v}"
+          echo "APP_VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "BUILD_DATE=$(date +'%d/%m/%Y')" >> $GITHUB_ENV
+
       - name: Build (${{ matrix.app.name }})
         env:
           VITE_API_URL: https://api.andrequice.store
+          VITE_APP_VERSION: ${{ env.APP_VERSION }}
+          VITE_BUILD_DATE: ${{ env.BUILD_DATE }}
         run: npm run build

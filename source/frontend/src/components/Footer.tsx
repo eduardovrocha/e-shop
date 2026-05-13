@@ -36,8 +36,19 @@ export function Footer() {
         <div className="border-t border-white/10 pt-6 flex flex-col gap-1">
           <p className="text-xs">© {new Date().getFullYear()} Andrequicé. Todos os direitos reservados.</p>
           <p className="text-xs text-white/40">Pagamentos processados com segurança via Stripe.</p>
-          <p className="text-xs text-white/40">Desenvolvido por{" "}
-            <a href="https://ioit.solutions" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">ioit.solutions</a>
+          <p className="text-xs text-white/40">
+            {(() => {
+              const appVersion = import.meta.env.VITE_APP_VERSION ?? "0.1.0"
+              const buildDate  = import.meta.env.VITE_BUILD_DATE  ?? ""
+              const buildLabel = buildDate ? `v.${appVersion}, ${buildDate}` : `v.${appVersion}`
+              return (
+                <>
+                  Desenvolvido por{" "}
+                  <a href="https://ioit.solutions" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">ioit.solutions</a>
+                  {" "}{buildLabel}
+                </>
+              )
+            })()}
           </p>
         </div>
       </div>
