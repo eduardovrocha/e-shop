@@ -2,7 +2,7 @@ import { useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ShoppingBag, ArrowRight } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import type { OrderNotification, ConnectionStatus } from '@/hooks/useOrderNotifications'
+import type { OrderNotification } from '@/hooks/useOrderNotifications'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -44,10 +44,9 @@ interface Props {
   onClose: () => void
   orders: OrderNotification[]
   unreadCount: number
-  connectionStatus: ConnectionStatus
   markAsRead: (id: number) => void
   markAllAsRead: () => void
-  triggerRef: React.RefObject<HTMLButtonElement>
+  triggerRef: React.RefObject<HTMLButtonElement | null>
 }
 
 export function NotificationDropdown({
@@ -55,7 +54,6 @@ export function NotificationDropdown({
   onClose,
   orders,
   unreadCount,
-  connectionStatus,
   markAsRead,
   markAllAsRead,
   triggerRef,

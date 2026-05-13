@@ -83,7 +83,6 @@ export function AdminHeader() {
             onClose={() => setNotifOpen(false)}
             orders={orders}
             unreadCount={unreadCount}
-            connectionStatus={connectionStatus}
             markAsRead={markAsRead}
             markAllAsRead={markAllAsRead}
             triggerRef={bellRef}
