@@ -1,0 +1,35 @@
+name: Promote to Production
+
+on:
+  workflow_run:
+    workflows: [CI]
+    branches: [main]
+    types: [completed]
+
+jobs:
+  promote:
+    name: Fast-forward branch production
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_PUSH_TOKEN }}
+
+      - name: Configure git identity
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Fast-forward production to main
+        run: |
+          git checkout production || git checkout -b production
+          git merge --ff-only origin/main
+          git push origin production
+
+      - name: Notify success
+        run: |
+          echo "✅ Branch production atualizada para $(git rev-parse --short HEAD)"

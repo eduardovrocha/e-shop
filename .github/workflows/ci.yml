@@ -2,8 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
+    branches: [main, develop]
 
 jobs:
   test:
@@ -12,7 +13,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16
+        image: postgres:16-alpine
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -20,6 +21,15 @@ jobs:
         ports: ["5432:5432"]
         options: >-
           --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -32,6 +42,7 @@ jobs:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB_TEST: andrequice_test
       RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
+      REDIS_URL: redis://localhost:6379/0
       JWT_SECRET: test_jwt_secret_ci
       STRIPE_WEBHOOK_SECRET: whsec_test_ci
       SUPPORT_EMAIL: ci@example.com
@@ -126,7 +137,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: npm
           cache-dependency-path: ${{ matrix.app.path }}/package-lock.json
 
@@ -134,4 +145,6 @@ jobs:
         run: npm ci
 
       - name: Build (${{ matrix.app.name }})
+        env:
+          VITE_API_URL: https://api.andrequice.store
         run: npm run build
