@@ -13,7 +13,7 @@ DOMAIN_FRONTEND="andrequice.store"
 DOMAIN_API="api.andrequice.store"
 DOMAIN_DASHBOARD="dashboard.andrequice.store"
 DOMAIN_STORAGE="storage.andrequice.store"
-EMAIL="seu-email@andrequice.store"   # recebe alertas de expiração
+EMAIL="contato@andrequice.store"   # recebe alertas de expiração
 
 echo "==> Iniciando apenas o Nginx (para ACME challenge)..."
 ${COMPOSE} up -d nginx
