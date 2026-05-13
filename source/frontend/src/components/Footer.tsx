@@ -9,22 +9,25 @@ export function Footer() {
 
   return (
     <footer className="bg-andrequice-navy text-white/70">
-      <div className="max-w-2xl mx-auto px-6 py-10 flex flex-col gap-8">
-        {/* Brand */}
-        <div className="flex flex-col gap-2">
-          <span className="font-serif text-xl font-semibold text-white">Andrequicé</span>
-          <p className="text-sm leading-relaxed max-w-xs">
-            {settings.footer_description}
-          </p>
-        </div>
+      <div className="max-w-6xl mx-auto px-6 py-10 flex flex-col gap-8">
+        {/* Content columns — 1 col mobile · 2 cols tablet · 3 cols desktop */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6 text-sm">
+          {/* Brand */}
+          <div className="flex flex-col gap-2">
+            <span className="font-serif text-xl font-semibold text-white">Andrequicé</span>
+            <p className="text-sm leading-relaxed max-w-xs">
+              {settings.footer_description}
+            </p>
+          </div>
 
-        {/* Links */}
-        <div className="flex gap-8 text-sm">
+          {/* Loja */}
           <div className="flex flex-col gap-2">
             <span className="text-xs font-semibold uppercase tracking-widest text-white/40">Loja</span>
             <Link to="/catalog" className="hover:text-white transition-colors">Catálogo</Link>
             <Link to="/cart" className="hover:text-white transition-colors">Carrinho</Link>
           </div>
+
+          {/* Contato */}
           <div className="flex flex-col gap-2">
             <span className="text-xs font-semibold uppercase tracking-widest text-white/40">Contato</span>
             <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">WhatsApp</a>
@@ -32,7 +35,7 @@ export function Footer() {
           </div>
         </div>
 
-        {/* Bottom */}
+        {/* Bottom bar — fora da grade */}
         <div className="border-t border-white/10 pt-6 flex flex-col gap-1">
           <p className="text-xs">© {new Date().getFullYear()} Andrequicé. Todos os direitos reservados.</p>
           <p className="text-xs text-white/40">Pagamentos processados com segurança via Stripe.</p>

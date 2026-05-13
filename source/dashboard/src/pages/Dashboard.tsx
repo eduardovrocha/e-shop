@@ -47,8 +47,9 @@ export default function Dashboard() {
   ]
 
   return (
-    <div className="max-w-2xl mx-auto px-4 space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Metric cards — linha própria, sub-grid 2 cols mobile · 4 cols desktop */}
+      <div className="col-span-full grid grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           title="Faturamento Total"
           value={dash(formatCurrency(stats?.revenue_cents ?? 0))}
@@ -79,8 +80,8 @@ export default function Dashboard() {
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+      {/* Vendas da Semana — lg:col-span-2 (gráfico precisa de largura) */}
+      <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="text-base">Vendas da Semana</CardTitle>
           </CardHeader>
@@ -129,99 +130,99 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Mais Vendidos</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
+      {/* Mais Vendidos — 1 col */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Mais Vendidos</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {isLoading
+            ? Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <div className="h-6 w-6 animate-pulse rounded-full bg-muted" />
+                  <div className="flex-1 space-y-1">
+                    <div className="h-3 w-32 animate-pulse rounded bg-muted" />
+                    <div className="h-2.5 w-16 animate-pulse rounded bg-muted" />
+                  </div>
+                </div>
+              ))
+            : (stats?.top_products ?? []).map((product, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">
+                    {i + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-medium text-foreground">{product.name}</p>
+                    <p className="text-[11px] text-muted-foreground">Tamanho {product.size}</p>
+                  </div>
+                  <span className="text-xs font-semibold text-brand-gold">{product.qty} un.</span>
+                </div>
+              ))}
+        </CardContent>
+      </Card>
+
+      {/* Pedidos Recentes — lg:col-span-2 (tabela precisa de largura) */}
+      <Card className="lg:col-span-2">
+        <CardHeader>
+          <CardTitle className="text-base">Pedidos Recentes</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="divide-y divide-border">
             {isLoading
               ? Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <div className="h-6 w-6 animate-pulse rounded-full bg-muted" />
-                    <div className="flex-1 space-y-1">
-                      <div className="h-3 w-32 animate-pulse rounded bg-muted" />
-                      <div className="h-2.5 w-16 animate-pulse rounded bg-muted" />
-                    </div>
+                  <div key={i} className="flex items-center justify-between px-5 py-3">
+                    <div className="h-4 w-40 animate-pulse rounded bg-muted" />
+                    <div className="h-4 w-20 animate-pulse rounded bg-muted" />
                   </div>
                 ))
-              : (stats?.top_products ?? []).map((product, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">
-                      {i + 1}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-medium text-foreground">{product.name}</p>
-                      <p className="text-[11px] text-muted-foreground">Tamanho {product.size}</p>
+              : (stats?.recent_orders ?? []).map((order) => (
+                  <div
+                    key={order.id}
+                    className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-muted/30"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono text-xs font-semibold text-muted-foreground">
+                        {order.number}
+                      </span>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">
+                          {order.customer_name}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {formatDateTime(order.created_at)}
+                        </p>
+                      </div>
                     </div>
-                    <span className="text-xs font-semibold text-brand-gold">{product.qty} un.</span>
+                    <div className="flex items-center gap-3">
+                      <StatusBadge status={order.status} />
+                      <span className="text-sm font-semibold text-foreground">
+                        {formatCurrency(order.total_cents)}
+                      </span>
+                    </div>
                   </div>
                 ))}
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base">Pedidos Recentes</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="divide-y divide-border">
-              {isLoading
-                ? Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} className="flex items-center justify-between px-5 py-3">
-                      <div className="h-4 w-40 animate-pulse rounded bg-muted" />
-                      <div className="h-4 w-20 animate-pulse rounded bg-muted" />
-                    </div>
-                  ))
-                : (stats?.recent_orders ?? []).map((order) => (
-                    <div
-                      key={order.id}
-                      className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-muted/30"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="font-mono text-xs font-semibold text-muted-foreground">
-                          {order.number}
-                        </span>
-                        <div>
-                          <p className="text-sm font-medium text-foreground">
-                            {order.customer_name}
-                          </p>
-                          <p className="text-[11px] text-muted-foreground">
-                            {formatDateTime(order.created_at)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <StatusBadge status={order.status} />
-                        <span className="text-sm font-semibold text-foreground">
-                          {formatCurrency(order.total_cents)}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+      {/* Alertas — 1 col */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Alertas</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {alerts.map(({ label, count, icon: Icon, color }) => (
+            <div
+              key={label}
+              className="flex items-center gap-3 rounded-lg bg-muted/40 px-3 py-2.5"
+            >
+              <Icon className={`h-4 w-4 shrink-0 ${color}`} />
+              <p className="flex-1 text-xs font-medium text-foreground">{label}</p>
+              <span className="text-sm font-bold text-foreground">{count}</span>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Alertas</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {alerts.map(({ label, count, icon: Icon, color }) => (
-              <div
-                key={label}
-                className="flex items-center gap-3 rounded-lg bg-muted/40 px-3 py-2.5"
-              >
-                <Icon className={`h-4 w-4 shrink-0 ${color}`} />
-                <p className="flex-1 text-xs font-medium text-foreground">{label}</p>
-                <span className="text-sm font-bold text-foreground">{count}</span>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
+          ))}
+        </CardContent>
+      </Card>
     </div>
   )
 }
