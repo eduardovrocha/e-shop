@@ -114,6 +114,8 @@ services:
       # start.sh exporta LOCAL_IP e sobrescreve este valor automaticamente
       VITE_API_URL: ${VITE_API_URL:-/api/v1}
       VITE_STRIPE_PUBLISHABLE_KEY: ${VITE_STRIPE_PUBLISHABLE_KEY:-}
+      VITE_APP_VERSION: ${VITE_APP_VERSION:-0.1.0-dev}
+      VITE_BUILD_DATE: ${VITE_BUILD_DATE:-local}
     stdin_open: true
     tty: true
     networks:
