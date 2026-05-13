@@ -12,6 +12,7 @@ COMPOSE="docker compose -f ${APP_DIR}/deploy/production/docker-compose.yml --env
 DOMAIN_FRONTEND="andrequice.store"
 DOMAIN_API="api.andrequice.store"
 DOMAIN_DASHBOARD="dashboard.andrequice.store"
+DOMAIN_STORAGE="storage.andrequice.store"
 EMAIL="seu-email@andrequice.store"   # recebe alertas de expiração
 
 echo "==> Iniciando apenas o Nginx (para ACME challenge)..."
@@ -56,9 +57,25 @@ docker run --rm \
     --no-eff-email \
     -d "${DOMAIN_DASHBOARD}"
 
+echo "==> Emitindo certificado para ${DOMAIN_STORAGE}..."
+docker run --rm \
+  -v "${APP_DIR}/deploy/production/certbot_conf:/etc/letsencrypt" \
+  -v "${APP_DIR}/deploy/production/certbot_www:/var/www/certbot" \
+  certbot/certbot certonly \
+    --webroot \
+    --webroot-path /var/www/certbot \
+    --email "${EMAIL}" \
+    --agree-tos \
+    --no-eff-email \
+    -d "${DOMAIN_STORAGE}"
+
 echo "==> Recarregando Nginx com SSL ativado..."
 ${COMPOSE} exec nginx nginx -s reload
 
 echo ""
-echo "✓ Certificados emitidos. SSL ativo para todos os domínios."
+echo "✓ Certificados emitidos. SSL ativo para todos os domínios:"
+echo "  - ${DOMAIN_FRONTEND} + www"
+echo "  - ${DOMAIN_API}"
+echo "  - ${DOMAIN_DASHBOARD}"
+echo "  - ${DOMAIN_STORAGE}"
 echo "  Renovação automática: o serviço certbot no compose roda a cada 12h."
