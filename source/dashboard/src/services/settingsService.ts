@@ -17,12 +17,14 @@ export interface StoreSettings {
   headline_primary: string
   headline_secondary: string
   headline_description: string
+  footer_description: string
 }
 
 export interface HeadlineSettings {
-  headline_primary: string
-  headline_secondary: string
-  headline_description: string
+  headline_primary?: string
+  headline_secondary?: string
+  headline_description?: string
+  footer_description?: string
 }
 
 export interface StripeInfo {

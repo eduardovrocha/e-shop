@@ -24,11 +24,13 @@ module Api
           headline_primary:     settings.headline_primary,
           headline_secondary:   settings.headline_secondary,
           headline_description: settings.headline_description,
+          footer_description:   settings.footer_description,
         }
       end
 
       def headline_params
-        params.permit(:headline_primary, :headline_secondary, :headline_description)
+        params.permit(:headline_primary, :headline_secondary, :headline_description,
+                      :footer_description)
       end
     end
   end

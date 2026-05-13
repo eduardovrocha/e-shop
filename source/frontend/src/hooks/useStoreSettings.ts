@@ -5,6 +5,7 @@ const DEFAULTS = {
   headline_primary:     'Nossa história,',
   headline_secondary:   'nossa devoção.',
   headline_description: 'Camisetas artesanais da Festa de Andrequicé. Arte, fé e tradição em cada peça.',
+  footer_description:   'Camisetas artesanais da Festa de Andrequicé — fé, tradição e arte do interior de Minas Gerais.',
 }
 
 export function useStoreSettings() {

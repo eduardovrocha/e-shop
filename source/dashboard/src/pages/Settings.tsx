@@ -23,6 +23,9 @@ export default function Settings() {
   const [headlineDescription, setHeadlineDescription] = useState('')
   const [headlineErrors, setHeadlineErrors] = useState<Partial<HeadlineSettings>>({})
 
+  const [footerDescription, setFooterDescription] = useState('')
+  const [footerErrors, setFooterErrors] = useState<{ footer_description?: string }>({})
+
   const [contactEmail, setContactEmail] = useState('')
   const [pickupZipcode, setPickupZipcode] = useState('')
   const [pickupStreet, setPickupStreet] = useState('')
@@ -40,6 +43,7 @@ export default function Settings() {
       setHeadlinePrimary(settings.headline_primary ?? '')
       setHeadlineSecondary(settings.headline_secondary ?? '')
       setHeadlineDescription(settings.headline_description ?? '')
+      setFooterDescription(settings.footer_description ?? '')
       setContactEmail(settings.contact_email)
       setPickupZipcode(settings.pickup_zipcode)
       setPickupStreet(settings.pickup_street)
@@ -102,6 +106,19 @@ export default function Settings() {
       const errs = err?.response?.data?.errors ?? {}
       setHeadlineErrors(errs)
       toast.error('Erro ao salvar apresentação')
+    }
+  }
+
+  const handleFooterSave = async (e: FormEvent) => {
+    e.preventDefault()
+    setFooterErrors({})
+    try {
+      await updateHeadlineMutation.mutateAsync({ footer_description: footerDescription })
+      toast.success('Footer atualizado')
+    } catch (err: any) {
+      const errs = err?.response?.data?.errors ?? {}
+      setFooterErrors(errs)
+      toast.error('Erro ao salvar footer')
     }
   }
 
@@ -175,6 +192,43 @@ export default function Settings() {
                   <p className="text-xs text-destructive">{headlineErrors.headline_description}</p>
                 )}
                 <p className="text-xs text-muted-foreground">Apresentação breve da loja. Máx. 200 caracteres.</p>
+              </div>
+
+              <div className="flex justify-end">
+                <Button type="submit" size="sm" disabled={disabled}>
+                  {updateHeadlineMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Salvar alterações'}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Footer */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Footer</CardTitle>
+            <CardDescription>Texto exibido no rodapé da loja pública.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleFooterSave} className="space-y-4">
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="footer-description">Descrição</Label>
+                  <span className="text-xs text-muted-foreground">{footerDescription.length}/200</span>
+                </div>
+                <textarea
+                  id="footer-description"
+                  value={footerDescription}
+                  onChange={(e) => setFooterDescription(e.target.value)}
+                  maxLength={200}
+                  disabled={disabled}
+                  rows={3}
+                  className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+                />
+                {footerErrors.footer_description && (
+                  <p className="text-xs text-destructive">{footerErrors.footer_description}</p>
+                )}
+                <p className="text-xs text-muted-foreground">Texto abaixo do nome da loja no rodapé. Máx. 200 caracteres.</p>
               </div>
 
               <div className="flex justify-end">

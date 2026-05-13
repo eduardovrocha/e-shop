@@ -1,6 +1,9 @@
 import { Link } from 'react-router-dom'
+import { useStoreSettings } from '@/hooks/useStoreSettings'
 
 export function Footer() {
+  const settings = useStoreSettings()
+
   return (
     <footer className="bg-andrequice-navy text-white/70">
       <div className="max-w-2xl mx-auto px-6 py-10 flex flex-col gap-8">
@@ -8,7 +11,7 @@ export function Footer() {
         <div className="flex flex-col gap-2">
           <span className="font-serif text-xl font-semibold text-white">Andrequicé</span>
           <p className="text-sm leading-relaxed max-w-xs">
-            Camisetas artesanais da Festa de Andrequicé — fé, tradição e arte do interior de Minas Gerais.
+            {settings.footer_description}
           </p>
         </div>
 

@@ -5,6 +5,7 @@ class StoreSetting < ApplicationRecord
   validates :headline_primary,     presence: true, length: { maximum: 80 }
   validates :headline_secondary,   presence: true, length: { maximum: 80 }
   validates :headline_description, presence: true, length: { maximum: 200 }
+  validates :footer_description,   presence: true, length: { maximum: 200 }
 
   def self.instance
     Rails.cache.fetch(CACHE_KEY, expires_in: CACHE_TTL) do
@@ -24,7 +25,8 @@ class StoreSetting < ApplicationRecord
         shipping_fee_cents:        1_500,
         headline_primary:          "Nossa história,",
         headline_secondary:        "nossa devoção.",
-        headline_description:      "Camisetas artesanais da Festa de Andrequicé. Arte, fé e tradição em cada peça."
+        headline_description:      "Camisetas artesanais da Festa de Andrequicé. Arte, fé e tradição em cada peça.",
+        footer_description:        "Camisetas artesanais da Festa de Andrequicé — fé, tradição e arte do interior de Minas Gerais."
       )
     end
   end

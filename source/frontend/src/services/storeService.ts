@@ -17,6 +17,7 @@ export interface StoreHeadline {
   headline_primary: string
   headline_secondary: string
   headline_description: string
+  footer_description: string
 }
 
 export const storeService = {
