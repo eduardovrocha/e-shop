@@ -1,6 +1,6 @@
-import { useState, useEffect, type FormEvent } from 'react'
+import { useState, useEffect, useRef, useMemo, type FormEvent } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Loader2, Plus, Trash2, Package } from 'lucide-react'
+import { ArrowLeft, Loader2, Plus, Trash2, Package, Settings2 } from 'lucide-react'
 import { PageTitle } from '@/components/PageTitle'
 import { LoadingState } from '@/components/LoadingState'
 import { Button } from '@/components/ui/button'
@@ -18,11 +18,11 @@ import {
 } from '@/components/ui/select'
 import { ProductImageUploader } from '@/components/ProductImageUploader'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { CategoryManagerModal } from '@/components/CategoryManagerModal'
 import { useProduct, useCreateProduct, useUpdateProduct } from '@/hooks/useProducts'
+import { useCategories } from '@/hooks/useCategories'
 import { useToast } from '@/hooks/useToast'
 import type { VariantPayload } from '@/types/product'
-
-const CATEGORIES = ['camisetas', 'acessorios', 'kits', 'outros']
 const SIZES = ['PP', 'P', 'M', 'G', 'GG', 'GGG', 'U']
 
 interface VariantRow extends VariantPayload {
@@ -275,9 +275,21 @@ export default function ProductForm() {
   const createMutation = useCreateProduct()
   const updateMutation = useUpdateProduct()
 
+  const { data: categoriesData } = useCategories()
+  // useMemo keeps the array reference stable between renders so it's safe as
+  // a useEffect dependency. Using `= []` inline would create a new ref every
+  // render and cause the default-category effect to fire in an infinite loop.
+  const categoryNames = useMemo(
+    () => categoriesData?.map((c) => c.name) ?? [],
+    [categoriesData]
+  )
+
+  const [manageCategoriesOpen, setManageCategoriesOpen] = useState(false)
+  const manageTriggerRef = useRef<HTMLButtonElement>(null)
+
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [category, setCategory] = useState('camisetas')
+  const [category, setCategory] = useState('')
   const [active, setActive] = useState(true)
   const [variants, setVariants] = useState<VariantRow[]>([])
 
@@ -287,11 +299,18 @@ export default function ProductForm() {
   const [widthMm, setWidthMm] = useState('')
   const [lengthMm, setLengthMm] = useState('')
 
+  // Set default category once categories are loaded (create mode only)
+  useEffect(() => {
+    if (!isEdit && !category && categoryNames.length > 0) {
+      setCategory(categoryNames[0])
+    }
+  }, [categoryNames, isEdit, category])
+
   useEffect(() => {
     if (existing) {
       setName(existing.name ?? '')
       setDescription(existing.description ?? '')
-      setCategory(existing.category ?? 'camisetas')
+      setCategory(existing.category ?? '')
       setActive(existing.active)
       setVariants(
         (existing.variants ?? []).map((v) => ({
@@ -402,13 +421,24 @@ export default function ProductForm() {
             </div>
 
             <div className="space-y-1.5">
-              <Label>Categoria</Label>
+              <div className="flex items-center justify-between">
+                <Label>Categoria</Label>
+                <button
+                  ref={manageTriggerRef}
+                  type="button"
+                  onClick={() => setManageCategoriesOpen(true)}
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Settings2 className="h-3 w-3" />
+                  Gerenciar categorias
+                </button>
+              </div>
               <Select value={category} onValueChange={setCategory}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Selecione uma categoria" />
                 </SelectTrigger>
                 <SelectContent>
-                  {CATEGORIES.map((c) => (
+                  {categoryNames.map((c) => (
                     <SelectItem key={c} value={c} className="capitalize">
                       {c}
                     </SelectItem>
@@ -416,6 +446,17 @@ export default function ProductForm() {
                 </SelectContent>
               </Select>
             </div>
+
+            <CategoryManagerModal
+              open={manageCategoriesOpen}
+              onOpenChange={(v) => {
+                setManageCategoriesOpen(v)
+                if (!v) manageTriggerRef.current?.focus()
+              }}
+              onSaved={(autoSelectName) => {
+                if (autoSelectName) setCategory(autoSelectName)
+              }}
+            />
 
             <div className="space-y-1.5">
               <Label>Status</Label>

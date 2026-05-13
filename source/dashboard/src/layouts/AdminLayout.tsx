@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { Outlet } from 'react-router-dom'
 import { AdminSidebar } from '@/components/AdminSidebar'
 import { AdminHeader } from '@/components/AdminHeader'
+import { AdminFooter } from '@/components/AdminFooter'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { LoadingState } from '@/components/LoadingState'
 
@@ -19,6 +20,7 @@ export default function AdminLayout() {
             </Suspense>
           </ErrorBoundary>
         </main>
+        <AdminFooter />
       </div>
     </div>
   )
