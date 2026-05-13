@@ -369,7 +369,6 @@ module Api
 
         DisputeNotificationJob.perform_later(order_id: order.id, dispute_id: dispute.id)
       end
-
     end
   end
 end

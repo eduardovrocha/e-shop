@@ -1,5 +1,5 @@
 class OrderBroadcastService
-  CHANNEL = 'orders:new'
+  CHANNEL = "orders:new"
 
   def self.call(order)
     new(order).call
@@ -20,7 +20,7 @@ class OrderBroadcastService
 
   def message
     {
-      type:    'new_order',
+      type:    "new_order",
       payload: {
         id:         @order.id,
         number:     @order.number,

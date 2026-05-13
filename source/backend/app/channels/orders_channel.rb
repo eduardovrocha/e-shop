@@ -1,6 +1,6 @@
 class OrdersChannel < ApplicationCable::Channel
   def subscribed
-    stream_from 'orders:new'
+    stream_from "orders:new"
   end
 
   def unsubscribed
