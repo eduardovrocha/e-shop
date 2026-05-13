@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Search } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { AdminPageGrid } from '@/components/AdminPageGrid'
 import { PageTitle } from '@/components/PageTitle'
 import { DataTable, type Column } from '@/components/DataTable'
 import { Input } from '@/components/ui/input'
@@ -57,13 +58,17 @@ export default function Customers() {
   ]
 
   return (
-    <div className="max-w-2xl mx-auto px-4 space-y-6">
-      <PageTitle
-        title="Clientes"
-        subtitle={meta ? `${meta.total_count} clientes cadastrados` : 'Carregando...'}
-      />
+    <AdminPageGrid>
+      {/* col-span-full: título */}
+      <div className="col-span-full">
+        <PageTitle
+          title="Clientes"
+          subtitle={meta ? `${meta.total_count} clientes cadastrados` : 'Carregando...'}
+        />
+      </div>
 
-      <div className="mb-4">
+      {/* col-span-full: filtros */}
+      <div className="col-span-full">
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -78,18 +83,21 @@ export default function Customers() {
         </div>
       </div>
 
-      <DataTable
-        columns={columns}
-        data={customers}
-        keyExtractor={(c) => String(c.id)}
-        currentPage={page}
-        totalPages={meta?.total_pages ?? 1}
-        totalCount={meta?.total_count}
-        onPageChange={setPage}
-        loading={isLoading}
-        emptyMessage="Nenhum cliente encontrado"
-        onRowClick={(c) => navigate(`/customers/${c.id}`)}
-      />
-    </div>
+      {/* col-span-full: tabela */}
+      <div className="col-span-full">
+        <DataTable
+          columns={columns}
+          data={customers}
+          keyExtractor={(c) => String(c.id)}
+          currentPage={page}
+          totalPages={meta?.total_pages ?? 1}
+          totalCount={meta?.total_count}
+          onPageChange={setPage}
+          loading={isLoading}
+          emptyMessage="Nenhum cliente encontrado"
+          onRowClick={(c) => navigate(`/customers/${c.id}`)}
+        />
+      </div>
+    </AdminPageGrid>
   )
 }

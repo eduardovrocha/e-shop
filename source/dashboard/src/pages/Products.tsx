@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Search, Plus, Pencil, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { AdminPageGrid } from '@/components/AdminPageGrid'
 import { PageTitle } from '@/components/PageTitle'
 import { DataTable, type Column } from '@/components/DataTable'
 import { StatusBadge } from '@/components/StatusBadge'
@@ -121,19 +122,23 @@ export default function Products() {
   ]
 
   return (
-    <div className="max-w-2xl mx-auto px-4 space-y-6">
-      <PageTitle
-        title="Produtos"
-        subtitle={meta ? `${meta.total_count} produtos cadastrados` : 'Carregando...'}
-        actions={
-          <Button size="sm" onClick={() => navigate('/products/new')}>
-            <Plus className="h-4 w-4" />
-            Novo produto
-          </Button>
-        }
-      />
+    <AdminPageGrid>
+      {/* col-span-full: título */}
+      <div className="col-span-full">
+        <PageTitle
+          title="Produtos"
+          subtitle={meta ? `${meta.total_count} produtos cadastrados` : 'Carregando...'}
+          actions={
+            <Button size="sm" onClick={() => navigate('/products/new')}>
+              <Plus className="h-4 w-4" />
+              Novo produto
+            </Button>
+          }
+        />
+      </div>
 
-      <div className="mb-4">
+      {/* col-span-full: filtros */}
+      <div className="col-span-full">
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -148,17 +153,20 @@ export default function Products() {
         </div>
       </div>
 
-      <DataTable
-        columns={columns}
-        data={products}
-        keyExtractor={(p) => p.id}
-        currentPage={page}
-        totalPages={meta?.total_pages ?? 1}
-        totalCount={meta?.total_count}
-        onPageChange={setPage}
-        loading={isLoading}
-        emptyMessage="Nenhum produto encontrado"
-      />
+      {/* col-span-full: tabela */}
+      <div className="col-span-full">
+        <DataTable
+          columns={columns}
+          data={products}
+          keyExtractor={(p) => p.id}
+          currentPage={page}
+          totalPages={meta?.total_pages ?? 1}
+          totalCount={meta?.total_count}
+          onPageChange={setPage}
+          loading={isLoading}
+          emptyMessage="Nenhum produto encontrado"
+        />
+      </div>
 
       <ConfirmDialog
         open={!!deleteTarget}
@@ -169,6 +177,6 @@ export default function Products() {
         destructive
         onConfirm={handleDelete}
       />
-    </div>
+    </AdminPageGrid>
   )
 }

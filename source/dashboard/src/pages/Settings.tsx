@@ -1,4 +1,15 @@
 import { useState, useEffect, type FormEvent } from 'react'
+import { Loader2, CheckCircle2, AlertCircle, CreditCard, MessageCircle, Truck } from 'lucide-react'
+import { AdminPageGrid } from '@/components/AdminPageGrid'
+import { PageTitle } from '@/components/PageTitle'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { useSettings, useUpdateSettings, useUpdateHeadline, useStripeInfo } from '@/hooks/useSettings'
+import { useToast } from '@/hooks/useToast'
+import type { StoreSettings, HeadlineSettings } from '@/services/settingsService'
 
 const maskWhatsApp = (value: string) => {
   const d = value.replace(/\D/g, '').slice(0, 13)
@@ -8,17 +19,6 @@ const maskWhatsApp = (value: string) => {
   if (d.length <= 9)  return `+${d.slice(0, 2)} ${d.slice(2, 4)} ${d.slice(4)}`
   return `+${d.slice(0, 2)} ${d.slice(2, 4)} ${d.slice(4, 9)}-${d.slice(9)}`
 }
-import { Loader2, CheckCircle2, AlertCircle, CreditCard, MessageCircle, Truck } from 'lucide-react'
-import { PageTitle } from '@/components/PageTitle'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
-import { Badge } from '@/components/ui/badge'
-import { useSettings, useUpdateSettings, useUpdateHeadline, useStripeInfo } from '@/hooks/useSettings'
-import { useToast } from '@/hooks/useToast'
-import type { StoreSettings, HeadlineSettings } from '@/services/settingsService'
 
 export default function Settings() {
   const toast = useToast()
@@ -135,12 +135,14 @@ export default function Settings() {
   const disabled = isSaving || isLoading
 
   return (
-    <div className="max-w-2xl mx-auto px-4 space-y-6">
-      <PageTitle title="Configurações" subtitle="Gerencie as configurações da loja" />
+    <AdminPageGrid>
+      {/* col-span-full: título */}
+      <div className="col-span-full">
+        <PageTitle title="Configurações" subtitle="Gerencie as configurações da loja" />
+      </div>
 
-      <div className="space-y-6">
-        {/* Headline */}
-        <Card>
+      {/* col-span-full: formulário */}
+      <Card className="col-span-full">
           <CardHeader>
             <CardTitle className="text-base">Apresentação da Loja</CardTitle>
             <CardDescription>Textos exibidos na página inicial e no catálogo.</CardDescription>
@@ -212,8 +214,8 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {/* Footer */}
-        <Card>
+      {/* col-span-full: formulário */}
+      <Card className="col-span-full">
           <CardHeader>
             <CardTitle className="text-base">Footer</CardTitle>
             <CardDescription>Texto exibido no rodapé da loja pública.</CardDescription>
@@ -249,8 +251,8 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {/* General */}
-        <Card>
+      {/* col-span-full: formulário */}
+      <Card className="col-span-full">
           <CardHeader>
             <CardTitle className="text-base">Informações Gerais</CardTitle>
             <CardDescription>Dados básicos da loja</CardDescription>
@@ -363,8 +365,8 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {/* WhatsApp */}
-        <Card>
+      {/* col-span-full: formulário */}
+      <Card className="col-span-full">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -398,10 +400,8 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        <Separator />
-
-        {/* Stripe — read-only, managed via ENV */}
-        <Card>
+      {/* col-span-full: info stripe */}
+      <Card className="col-span-full">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -448,8 +448,8 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {/* Shipping */}
-        <Card>
+      {/* col-span-full: formulário */}
+      <Card className="col-span-full">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -504,7 +504,6 @@ export default function Settings() {
             </form>
           </CardContent>
         </Card>
-      </div>
-    </div>
+    </AdminPageGrid>
   )
 }

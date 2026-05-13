@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Search, Pencil, Check, X } from 'lucide-react'
+import { AdminPageGrid } from '@/components/AdminPageGrid'
 import { PageTitle } from '@/components/PageTitle'
 import { DataTable, type Column } from '@/components/DataTable'
 import { Badge } from '@/components/ui/badge'
@@ -167,13 +168,17 @@ export default function Inventory() {
   ]
 
   return (
-    <div className="max-w-2xl mx-auto px-4 space-y-6">
-      <PageTitle
-        title="Estoque"
-        subtitle={meta ? `${meta.total_count} variantes cadastradas` : 'Controle de variantes e quantidades'}
-      />
+    <AdminPageGrid>
+      {/* col-span-full: título */}
+      <div className="col-span-full">
+        <PageTitle
+          title="Estoque"
+          subtitle={meta ? `${meta.total_count} variantes cadastradas` : 'Controle de variantes e quantidades'}
+        />
+      </div>
 
-      <div className="mb-4">
+      {/* col-span-full: filtros + dica */}
+      <div className="col-span-full flex flex-col gap-2">
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -186,23 +191,25 @@ export default function Inventory() {
             }}
           />
         </div>
+        <p className="text-xs text-muted-foreground">
+          Passe o mouse sobre o estoque para editar inline. Pressione Enter para confirmar ou Esc para cancelar.
+        </p>
       </div>
 
-      <p className="text-xs text-muted-foreground -mt-4">
-        Passe o mouse sobre o estoque para editar inline. Pressione Enter para confirmar ou Esc para cancelar.
-      </p>
-
-      <DataTable
-        columns={columns}
-        data={variants}
-        keyExtractor={(v) => v.id}
-        currentPage={page}
-        totalPages={meta?.total_pages ?? 1}
-        totalCount={meta?.total_count}
-        onPageChange={setPage}
-        loading={isLoading}
-        emptyMessage="Nenhuma variante encontrada"
-      />
-    </div>
+      {/* col-span-full: tabela */}
+      <div className="col-span-full">
+        <DataTable
+          columns={columns}
+          data={variants}
+          keyExtractor={(v) => v.id}
+          currentPage={page}
+          totalPages={meta?.total_pages ?? 1}
+          totalCount={meta?.total_count}
+          onPageChange={setPage}
+          loading={isLoading}
+          emptyMessage="Nenhuma variante encontrada"
+        />
+      </div>
+    </AdminPageGrid>
   )
 }

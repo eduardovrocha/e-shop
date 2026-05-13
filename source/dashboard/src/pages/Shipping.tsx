@@ -1,5 +1,6 @@
 import { useState, useEffect, type FormEvent } from 'react'
 import { AlertCircle, Wifi, WifiOff, Eye, EyeOff } from 'lucide-react'
+import { AdminPageGrid } from '@/components/AdminPageGrid'
 import { PageTitle } from '@/components/PageTitle'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -171,38 +172,42 @@ export default function Shipping() {
 
   if (isLoading) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-8">
-        <div className="animate-pulse space-y-4">
+      <AdminPageGrid>
+        {/* col-span-full: skeleton */}
+        <div className="col-span-full animate-pulse space-y-4 py-8">
           <div className="h-8 bg-muted rounded w-1/3" />
           <div className="h-4 bg-muted rounded w-1/2" />
           <div className="h-48 bg-muted rounded" />
         </div>
-      </div>
+      </AdminPageGrid>
     )
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 space-y-6">
-      <PageTitle
-        title="Frete"
-        subtitle="Configurações de envio e transportadoras"
-        actions={
-          settings?.me_configured ? (
-            <Badge variant="success" className="flex items-center gap-1.5">
-              <Wifi className="h-3 w-3" />
-              Melhor Envio configurado
-            </Badge>
-          ) : (
-            <Badge variant="secondary" className="flex items-center gap-1.5">
-              <WifiOff className="h-3 w-3" />
-              Melhor Envio não configurado
-            </Badge>
-          )
-        }
-      />
+    <AdminPageGrid>
+      {/* col-span-full: título */}
+      <div className="col-span-full">
+        <PageTitle
+          title="Frete"
+          subtitle="Configurações de envio e transportadoras"
+          actions={
+            settings?.me_configured ? (
+              <Badge variant="success" className="flex items-center gap-1.5">
+                <Wifi className="h-3 w-3" />
+                Melhor Envio configurado
+              </Badge>
+            ) : (
+              <Badge variant="secondary" className="flex items-center gap-1.5">
+                <WifiOff className="h-3 w-3" />
+                Melhor Envio não configurado
+              </Badge>
+            )
+          }
+        />
+      </div>
 
-      {/* Tabs */}
-      <div className="border-b border-border">
+      {/* col-span-full: abas de navegação */}
+      <div className="col-span-full border-b border-border">
         <nav className="-mb-px flex gap-1" aria-label="Abas de configuração de frete">
           {TABS.map((tab) => (
             <button
@@ -221,8 +226,9 @@ export default function Shipping() {
         </nav>
       </div>
 
-      {/* ── Tab: Origem & Remetente ─────────────────────────────────────────── */}
+      {/* col-span-full: formulário */}
       {activeTab === 'sender' && (
+        <div className="col-span-full">
         <form onSubmit={handleSenderSave}>
           <Card>
             <CardHeader>
@@ -345,11 +351,12 @@ export default function Shipping() {
             </CardContent>
           </Card>
         </form>
+        </div>
       )}
 
-      {/* ── Tab: Melhor Envio ───────────────────────────────────────────────── */}
+      {/* col-span-full: formulário */}
       {activeTab === 'melhorenvio' && (
-        <div className="space-y-4">
+        <div className="col-span-full space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Credenciais do Melhor Envio</CardTitle>
@@ -521,8 +528,9 @@ export default function Shipping() {
         </div>
       )}
 
-      {/* ── Tab: Transportadoras ────────────────────────────────────────────── */}
+      {/* col-span-full: card transportadoras */}
       {activeTab === 'carriers' && (
+        <div className="col-span-full">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Transportadoras</CardTitle>
@@ -546,10 +554,12 @@ export default function Shipping() {
             )}
           </CardContent>
         </Card>
+        </div>
       )}
 
-      {/* ── Tab: Regras de Frete ────────────────────────────────────────────── */}
+      {/* col-span-full: formulário */}
       {activeTab === 'rules' && (
+        <div className="col-span-full">
         <form onSubmit={handleRulesSave}>
           <Card>
             <CardHeader>
@@ -628,8 +638,9 @@ export default function Shipping() {
             </CardContent>
           </Card>
         </form>
+        </div>
       )}
-    </div>
+    </AdminPageGrid>
   )
 }
 
