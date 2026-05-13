@@ -46,7 +46,7 @@ class Order < ApplicationRecord
   end
 
   def public_tracking_url
-    host = ENV.fetch("HOST_URL", "http://localhost").sub(/\/$/, "")
+    host = ENV.fetch("FRONTEND_URL", "http://localhost").sub(/\/$/, "")
     "#{host}/track/#{tracking_token}"
   end
 

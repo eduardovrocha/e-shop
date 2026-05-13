@@ -9,6 +9,7 @@ REQUIRED_IN_PRODUCTION = %w[
   ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
   ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
   HOST_URL
+  FRONTEND_URL
   SUPPORT_EMAIL
   CORS_ORIGINS
 ].freeze
@@ -38,6 +39,15 @@ if Rails.env.production?
     raise "HOST_URL mal configurado: '#{host_url}'. " \
           "Em produção HOST_URL deve apontar para a API (ex: https://api.andrequice.store), " \
           "não para o frontend."
+  end
+
+  # FRONTEND_URL deve apontar para o domínio público da loja, não para a API.
+  # Usado em links de rastreamento de pedido exibidos ao cliente (e-mail + dashboard).
+  frontend_url = ENV.fetch("FRONTEND_URL", "")
+  if frontend_url.include?("api.")
+    raise "FRONTEND_URL mal configurado: '#{frontend_url}'. " \
+          "FRONTEND_URL deve apontar para o frontend (ex: https://andrequice.store), " \
+          "não para a API."
   end
 else
   missing_prod = REQUIRED_IN_PRODUCTION.select { |k| ENV[k].blank? }

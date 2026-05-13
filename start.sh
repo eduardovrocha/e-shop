@@ -56,9 +56,12 @@ detect_local_ip() {
 
 LOCAL_IP=$(detect_local_ip)
 
-# Exportar HOST_URL com o IP detectado para geração correta de URLs pelo Rails
-# (ex: URLs de redirect do ActiveStorage)
+# Exportar HOST_URL / FRONTEND_URL com o IP detectado.
+# Em dev ambos apontam para o mesmo nginx (porta 80).
+# HOST_URL: usado pelo Rails para URLs do ActiveStorage e da API.
+# FRONTEND_URL: usado para links públicos da loja (ex: rastreamento de pedido).
 export HOST_URL="http://${LOCAL_IP}"
+export FRONTEND_URL="http://${LOCAL_IP}"
 
 # ─── Build e start ────────────────────────────────────────────────────────────
 echo "==> Construindo imagens..."

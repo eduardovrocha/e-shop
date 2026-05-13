@@ -53,8 +53,9 @@ services:
       SMTP_USERNAME: ${SMTP_USERNAME:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_DOMAIN: ${SMTP_DOMAIN:-}
-      # HOST_URL é sobrescrito por start.sh com o IP local detectado automaticamente
+      # HOST_URL / FRONTEND_URL são sobrescritos por start.sh com o IP local detectado automaticamente
       HOST_URL: ${HOST_URL:-http://localhost}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
       # CORS_ORIGINS é ignorado em development — cors.rb aceita qualquer IP privado
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:3092}
       SENTRY_DSN: ${SENTRY_DSN:-}
@@ -136,6 +137,8 @@ services:
       # start.sh exporta LOCAL_IP e sobrescreve este valor automaticamente
       VITE_API_URL: ${VITE_API_URL:-/api/v1}
       VITE_APP_NAME: ${VITE_APP_NAME:-Andrequicé Admin}
+      VITE_APP_VERSION: ${VITE_APP_VERSION:-0.1.0-dev}
+      VITE_BUILD_DATE: ${VITE_BUILD_DATE:-local}
     stdin_open: true
     tty: true
     networks:
