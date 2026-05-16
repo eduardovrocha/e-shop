@@ -7,11 +7,14 @@ module Production
     queue_as :default
 
     def perform(product_id)
-      lock_key = Zlib.crc32("production_queue_#{product_id}")
+      # CRC32 always returns a 32-bit unsigned integer; we coerce explicitly
+      # and pass it through sanitize_sql_array so Brakeman recognizes the
+      # value as a bound parameter rather than raw interpolation.
+      lock_key = Integer(Zlib.crc32("production_queue_#{product_id}"))
 
       ActiveRecord::Base.transaction do
         ActiveRecord::Base.connection.execute(
-          "SELECT pg_advisory_xact_lock(#{lock_key})"
+          ActiveRecord::Base.sanitize_sql_array([ "SELECT pg_advisory_xact_lock(?)", lock_key ])
         )
 
         product = Product.find_by(id: product_id)
