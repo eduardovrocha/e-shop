@@ -32,10 +32,15 @@ Rails.application.configure do
   # Store uploaded files on the local file system (see config/storage.yml for options).
   config.active_storage.service = :minio # MinIO self-hosted via Docker Compose (ver config/storage.yml)
 
-  # Mount Action Cable outside main process or domain.
-  # config.action_cable.mount_path = nil
-  # config.action_cable.url = "wss://example.com/cable"
-  # config.action_cable.allowed_request_origins = [ "http://example.com", /http:\/\/example.*/ ]
+  # Action Cable — montado em /cable (default) e proxied pelo nginx do host
+  # (server blocks dashboard.andrequice.store e api.andrequice.store).
+  # Lista fechada de origins; sem regex para evitar bypass acidental.
+  config.action_cable.mount_path = "/cable"
+  config.action_cable.allowed_request_origins = [
+    "https://dashboard.andrequice.store",
+    "https://andrequice.store"
+  ]
+  config.action_cable.disable_request_forgery_protection = false
 
   # Assume all access to the app is happening through a SSL-terminating reverse proxy.
   # Can be used together with config.force_ssl for Strict-Transport-Security and secure cookies.
