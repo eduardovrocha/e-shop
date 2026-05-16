@@ -12,6 +12,8 @@ module Api
           return render json: { error: "Método de entrega inválido" }, status: :unprocessable_entity
         end
 
+        # Stock validation only applies to from_stock items; made_to_order
+        # items are produced on demand and have no stock to check.
         validate_stock!(items)
 
         items_total = calculate_items_total_cents(items)
@@ -26,13 +28,18 @@ module Api
         end
         total = items_total + shipping_fee
 
-        # Atomic check-and-reserve with row-level locking.
-        # validate_stock! above is an un-locked fast path; this block is the
-        # real race-condition guard — two concurrent buyers for the last unit
-        # will both pass the unlocked check, but only one wins the SELECT FOR
-        # UPDATE here. The loser gets InsufficientStockError → 422 to the
-        # frontend before any Stripe call is made.
+        # Atomic check-and-reserve with row-level locking — from_stock only.
         reserve_stock!(items)
+
+        # Production lead-time snapshot. Per-item promised_completion_days is
+        # captured here so the webhook can stamp each OrderItem with the date
+        # we committed to at purchase time, regardless of queue movement
+        # between create_intent and payment_intent.succeeded.
+        promised_completion_snapshot = build_promised_completion_snapshot(items)
+        aggregated_completion_days   =
+          promised_completion_snapshot.map { |s| s[:promised_completion_days] }.max.to_i
+        aggregated_promised_completion_date =
+          aggregated_completion_days.days.from_now.to_date
 
         payment_intent = Stripe::PaymentIntent.create(
           amount: total,
@@ -49,15 +56,18 @@ module Api
             customer_phone:     params[:customer_phone],
             shipping_address:    params[:shipping_address]&.to_json,
             shipping_service_id: params[:shipping_service_id],
-            shipping_cep:        params[:shipping_cep]
+            shipping_cep:        params[:shipping_cep],
+            promised_completion_snapshot:        promised_completion_snapshot.to_json,
+            aggregated_promised_completion_date: aggregated_promised_completion_date.iso8601
           }
         )
 
         render json: {
-          client_secret:      payment_intent.client_secret,
-          total_cents:        total,
-          items_total_cents:  items_total,
-          shipping_fee_cents: shipping_fee
+          client_secret:                       payment_intent.client_secret,
+          total_cents:                         total,
+          items_total_cents:                   items_total,
+          shipping_fee_cents:                  shipping_fee,
+          aggregated_promised_completion_date: aggregated_promised_completion_date
         }
       rescue ProductVariant::InsufficientStockError => e
         render json: { error: e.message }, status: :unprocessable_entity
@@ -98,6 +108,7 @@ module Api
       private
 
       # Validate available stock for every item before creating payment intent.
+      # made_to_order items are produced on demand and skip stock validation.
       # Raises ProductVariant::InsufficientStockError on first failure.
       def validate_stock!(items)
         items.each do |item|
@@ -112,7 +123,32 @@ module Api
             )
           end
 
+          next if variant.product&.made_to_order?
+
           raise ProductVariant::InsufficientStockError.new(variant, qty) if variant.available_quantity < qty
+        end
+      end
+
+      # Builds per-item promised completion days, querying the product for the
+      # estimated lead time accounting for the current queue. from_stock items
+      # always report 0 days. Returns an array of hashes (one per item).
+      def build_promised_completion_snapshot(items)
+        items.filter_map do |item|
+          variant = ProductVariant.includes(:product).find_by(id: item[:variant_id].to_i)
+          next unless variant&.product
+
+          days =
+            if variant.product.made_to_order?
+              variant.product.estimated_completion_days_for_new_order.to_i
+            else
+              0
+            end
+
+          {
+            variant_id:               variant.id,
+            quantity:                 [ item[:quantity].to_i, 1 ].max,
+            promised_completion_days: days
+          }
         end
       end
 
@@ -192,6 +228,10 @@ module Api
               )
             end
 
+            # made_to_order items don't reserve stock — they are produced
+            # to order and don't share the from_stock pool.
+            next if variant.product&.made_to_order?
+
             raise ProductVariant::InsufficientStockError.new(variant, qty) if variant.available_quantity < qty
 
             variant.increment!(:reserved_quantity, qty)
@@ -214,6 +254,8 @@ module Api
         raw_items.each do |item|
           variant = ProductVariant.find_by(id: item["variant_id"])
           next unless variant
+          # made_to_order items never reserved stock — nothing to release.
+          next if variant.product&.made_to_order?
 
           qty = [ item["quantity"].to_i, 1 ].max
           variant.decrement!(:reserved_quantity, [ variant.reserved_quantity, qty ].min)
@@ -254,19 +296,28 @@ module Api
           nil
         end
 
+        promised_snapshot = parse_promised_completion_snapshot(metadata)
+        aggregated_promised_date =
+          begin
+            Date.parse(metadata["aggregated_promised_completion_date"].to_s)
+          rescue ArgumentError, TypeError
+            nil
+          end
+
         newly_created = false
         order = Order.find_or_create_by!(stripe_intent_id: intent.id) do |o|
-          o.customer_name      = metadata["customer_name"]
-          o.customer_email     = metadata["customer_email"]
-          o.customer_phone     = metadata["customer_phone"]
-          o.delivery_method    = metadata["delivery_method"] || "pickup"
-          o.items_total_cents  = metadata["items_total_cents"].to_i
-          o.shipping_fee_cents = metadata["shipping_fee_cents"].to_i
-          o.total_cents        = intent.amount
-          o.items              = items_snapshot
-          o.shipping_address   = shipping_address
-          o.status             = "paid"
-          newly_created        = true
+          o.customer_name            = metadata["customer_name"]
+          o.customer_email           = metadata["customer_email"]
+          o.customer_phone           = metadata["customer_phone"]
+          o.delivery_method          = metadata["delivery_method"] || "pickup"
+          o.items_total_cents        = metadata["items_total_cents"].to_i
+          o.shipping_fee_cents       = metadata["shipping_fee_cents"].to_i
+          o.total_cents              = intent.amount
+          o.items                    = items_snapshot
+          o.shipping_address         = shipping_address
+          o.promised_completion_date = aggregated_promised_date
+          o.status                   = "paid"
+          newly_created              = true
         end
 
         # For duplicate webhook events the order already exists — just ensure paid
@@ -278,10 +329,61 @@ module Api
         end
 
         deduct_stock!(items_snapshot)
+
+        # Materialize OrderItem rows the first time this intent is processed
+        # and drive each item through mark_paid! so the per-item state machine
+        # fires its callbacks (queue advance for made_to_order, immediate
+        # skip-to-ready_to_ship for from_stock). Guarded by an
+        # already-created check to stay idempotent across webhook retries.
+        if newly_created || order.order_items.empty?
+          create_order_items_for!(order, items_snapshot, promised_snapshot)
+          order.order_items.reload.each(&:mark_paid!)
+          # Stamp the order with the max promised date across items (if any
+          # made_to_order items pushed it out further than the aggregate).
+          max_promised = order.order_items.maximum(:promised_completion_date)
+          order.update!(promised_completion_date: max_promised) if max_promised
+        end
+
         CustomerUpsertService.call(order)
         OrderBroadcastService.call(order) if newly_created
 
         Rails.logger.info "[Stripe] Order #{order.number || order.id} paid — intent=#{intent.id} total=#{intent.amount}"
+      end
+
+      def parse_promised_completion_snapshot(metadata)
+        JSON.parse(metadata["promised_completion_snapshot"] || "[]")
+      rescue JSON::ParserError
+        []
+      end
+
+      # Creates one OrderItem row per item in the snapshot and stamps the
+      # per-item promised_completion_date from the create_intent snapshot.
+      # Items whose variant has been deleted are skipped — the order's items
+      # JSONB still carries the historical record for those.
+      def create_order_items_for!(order, items_snapshot, promised_snapshot)
+        promised_by_variant = promised_snapshot.each_with_object({}) do |entry, h|
+          h[entry["variant_id"].to_i] = entry["promised_completion_days"].to_i
+        end
+
+        items_snapshot.each do |item|
+          variant_id = item["variant_id"].to_i
+          variant    = ProductVariant.find_by(id: variant_id)
+          next unless variant
+
+          days = promised_by_variant[variant_id] || 0
+          OrderItem.create!(
+            order:                    order,
+            product_variant:          variant,
+            product:                  variant.product,
+            name:                     item["name"],
+            size:                     item["size"],
+            quantity:                 item["quantity"].to_i,
+            unit_price_cents:         item["unit_price_cents"].to_i,
+            subtotal_cents:           item["subtotal_cents"].to_i,
+            production_status:        :pending,
+            promised_completion_date: days.days.from_now.to_date
+          )
+        end
       end
 
       # Enriches the raw frontend snapshot with server-authoritative prices.
@@ -321,6 +423,12 @@ module Api
             variant = ProductVariant.find_by(id: variant_id)
             unless variant
               Rails.logger.error "[Stock] Variant #{variant_id} not found — skipping deduction"
+              next
+            end
+
+            # made_to_order items don't decrement physical stock at payment.
+            if variant.product&.made_to_order?
+              Rails.logger.info "[Stock] Skipping deduction for made_to_order variant #{variant.id} (#{variant.sku})"
               next
             end
 

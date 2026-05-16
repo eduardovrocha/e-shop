@@ -2,8 +2,36 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Header } from '@/components/Header'
 import { Button } from '@/components/Button'
-import { trackingService, type TrackingOrder } from '@/services/trackingService'
+import { CancelTrackingItemModal } from '@/components/CancelTrackingItemModal'
+import {
+  trackingService,
+  type TrackingOrder,
+  type TrackingOrderItem,
+  type TrackingProductionStatus,
+} from '@/services/trackingService'
 import { formatPrice } from '@/lib/utils'
+
+const ITEM_STATUS_LABELS: Record<TrackingProductionStatus, string> = {
+  pending:       'Pendente',
+  paid:          'Aguardando produção',
+  in_production: 'Em produção',
+  ready_to_ship: 'Pronta para envio',
+  shipped:       'Enviada',
+  delivered:     'Entregue',
+  canceled:      'Cancelada',
+}
+
+function itemStatusLabel(item: TrackingOrderItem): string {
+  if (item.fulfillment_mode === 'from_stock' && item.production_status === 'paid') {
+    return 'Aguardando envio'
+  }
+  return ITEM_STATUS_LABELS[item.production_status] ?? item.production_status
+}
+
+function canCancel(item: TrackingOrderItem): boolean {
+  return item.fulfillment_mode === 'made_to_order' &&
+    (item.production_status === 'paid' || item.production_status === 'in_production')
+}
 
 function formatDate(dateString: string): string {
   return new Intl.DateTimeFormat('pt-BR', {
@@ -81,6 +109,12 @@ export default function TrackOrder() {
   const [order, setOrder] = useState<TrackingOrder | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [cancelTarget, setCancelTarget] = useState<TrackingOrderItem | null>(null)
+
+  function refetch() {
+    if (!token) return
+    trackingService.get(token).then(setOrder).catch(() => {})
+  }
 
   useEffect(() => {
     if (!token) return
@@ -269,19 +303,59 @@ export default function TrackOrder() {
                 Itens do pedido
               </h2>
               <div className="divide-y divide-andrequice-sand">
-                {order.items.map((item, i) => (
-                  <div key={i} className="flex items-center justify-between py-2.5">
-                    <div>
-                      <p className="text-sm text-andrequice-navy font-medium">{item.name}</p>
-                      <p className="text-xs text-andrequice-border mt-0.5">
-                        Tam. {item.size} · Qtd {item.quantity}
-                      </p>
+                {order.order_items && order.order_items.length > 0 ? (
+                  order.order_items.map((row) => (
+                    <div key={row.id} className="py-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm text-andrequice-navy font-medium">{row.name}</p>
+                          <p className="text-xs text-andrequice-border mt-0.5">
+                            {row.size && <>Tam. {row.size} · </>}Qtd {row.quantity}
+                          </p>
+                          <p className="text-xs text-andrequice-brown mt-1">
+                            <span className="font-medium">{itemStatusLabel(row)}</span>
+                            {row.fulfillment_mode === 'made_to_order' &&
+                              (row.production_status === 'paid' || row.production_status === 'in_production') &&
+                              row.promised_completion_date && (
+                              <>
+                                {' · '}Pronta até{' '}
+                                {new Date(row.promised_completion_date + 'T00:00:00').toLocaleDateString('pt-BR')}
+                              </>
+                            )}
+                          </p>
+                        </div>
+                        <span className="text-sm text-andrequice-navy font-semibold whitespace-nowrap">
+                          {formatPrice(row.subtotal_cents / 100)}
+                        </span>
+                      </div>
+                      {canCancel(row) && (
+                        <div className="mt-2">
+                          <button
+                            type="button"
+                            onClick={() => setCancelTarget(row)}
+                            className="text-xs font-medium text-andrequice-copper hover:underline"
+                          >
+                            Cancelar item
+                          </button>
+                        </div>
+                      )}
                     </div>
-                    <span className="text-sm text-andrequice-navy font-semibold">
-                      {formatPrice(item.subtotal_cents / 100)}
-                    </span>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  order.items.map((item, i) => (
+                    <div key={i} className="flex items-center justify-between py-2.5">
+                      <div>
+                        <p className="text-sm text-andrequice-navy font-medium">{item.name}</p>
+                        <p className="text-xs text-andrequice-border mt-0.5">
+                          Tam. {item.size} · Qtd {item.quantity}
+                        </p>
+                      </div>
+                      <span className="text-sm text-andrequice-navy font-semibold">
+                        {formatPrice(item.subtotal_cents / 100)}
+                      </span>
+                    </div>
+                  ))
+                )}
               </div>
 
               <div className="border-t border-andrequice-sand pt-3 mt-1 space-y-1.5">
@@ -317,6 +391,17 @@ export default function TrackOrder() {
           </div>
         )}
       </main>
+
+      <CancelTrackingItemModal
+        open={cancelTarget !== null}
+        token={token ?? ''}
+        item={cancelTarget}
+        onClose={() => setCancelTarget(null)}
+        onCanceled={() => {
+          setCancelTarget(null)
+          refetch()
+        }}
+      />
     </div>
   )
 }

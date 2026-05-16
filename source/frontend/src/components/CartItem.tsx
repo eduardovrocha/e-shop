@@ -1,5 +1,6 @@
 import { useCartStore } from '@/store/cartStore'
 import { PriceTag } from '@/components/PriceTag'
+import { Badge } from '@/components/Badge'
 import { formatPrice } from '@/lib/utils'
 
 interface CartItemProps {
@@ -10,9 +11,14 @@ interface CartItemProps {
   imageUrl?: string
   size?: string
   maxStock?: number
+  fulfillmentMode?: 'from_stock' | 'made_to_order'
+  productionLeadTimeDays?: number | null
 }
 
-export function CartItem({ variantId, name, price, quantity, imageUrl, size, maxStock }: CartItemProps) {
+export function CartItem({
+  variantId, name, price, quantity, imageUrl, size, maxStock,
+  fulfillmentMode, productionLeadTimeDays,
+}: CartItemProps) {
   const { updateQuantity, removeItem } = useCartStore()
   const atLimit = maxStock !== undefined && quantity >= maxStock
 
@@ -47,6 +53,16 @@ export function CartItem({ variantId, name, price, quantity, imageUrl, size, max
             {size && (
               <p className="text-xs text-andrequice-border mt-0.5">Tamanho: {size}</p>
             )}
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <Badge variant={fulfillmentMode === 'made_to_order' ? 'copper' : 'sand'}>
+                {fulfillmentMode === 'made_to_order' ? 'Sob encomenda' : 'Pronta entrega'}
+              </Badge>
+              {fulfillmentMode === 'made_to_order' && productionLeadTimeDays != null && (
+                <span className="text-[11px] text-andrequice-brown/70">
+                  Pronta em até {productionLeadTimeDays} dias
+                </span>
+              )}
+            </div>
           </div>
           <button
             onClick={() => removeItem(variantId)}

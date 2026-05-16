@@ -48,9 +48,17 @@ export function ProductCard({ product }: ProductCardProps) {
       {/* Info */}
       <div className="p-4 flex flex-col gap-3 flex-1">
         <div className="flex flex-col gap-1.5">
-          <h3 className="font-serif font-semibold text-andrequice-navy text-base leading-snug line-clamp-2">
-            {product.name}
-          </h3>
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="font-serif font-semibold text-andrequice-navy text-base leading-snug line-clamp-2">
+              {product.name}
+            </h3>
+            <Badge
+              variant={product.fulfillmentMode === 'made_to_order' ? 'copper' : 'sand'}
+              className="flex-shrink-0"
+            >
+              {product.fulfillmentMode === 'made_to_order' ? 'Sob encomenda' : 'Pronta entrega'}
+            </Badge>
+          </div>
           <div className="flex flex-wrap gap-2">
             {product.variants
               .filter((v) => v.available && v.stock > 0)

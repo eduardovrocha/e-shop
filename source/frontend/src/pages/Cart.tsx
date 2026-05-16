@@ -165,6 +165,13 @@ export default function Cart() {
     deliveryMethod === 'pickup' ||
     (deliveryMethod === 'delivery' && selectedShipping !== null)
 
+  // Optimistic lead-time estimate for the cart: max of made_to_order item
+  // lead times. The precise queue-aware estimate only appears post create_intent.
+  const aggregatedLeadTimeDays = items.reduce<number>((acc, i) => {
+    if (i.fulfillmentMode !== 'made_to_order' || i.productionLeadTimeDays == null) return acc
+    return Math.max(acc, i.productionLeadTimeDays)
+  }, 0)
+
   if (items.length === 0) {
     return (
       <div className="min-h-screen bg-white flex flex-col">
@@ -241,6 +248,8 @@ export default function Cart() {
               quantity={item.quantity}
               imageUrl={item.imageUrl}
               maxStock={stockMap[item.variantId]}
+              fulfillmentMode={item.fulfillmentMode}
+              productionLeadTimeDays={item.productionLeadTimeDays}
             />
           ))}
         </ul>
@@ -450,6 +459,14 @@ export default function Cart() {
                     : formatPrice(shippingCents / 100)}
             </span>
           </div>
+          {aggregatedLeadTimeDays > 0 && (
+            <div className="rounded-xl bg-andrequice-sand/40 border border-andrequice-sand px-3 py-2.5">
+              <p className="text-xs font-semibold text-andrequice-navy">Prazo estimado de envio</p>
+              <p className="text-xs text-andrequice-brown/80 mt-0.5">
+                Seu pedido será enviado em até {aggregatedLeadTimeDays} dias após a confirmação do pagamento.
+              </p>
+            </div>
+          )}
           <div className="h-px bg-andrequice-sand" />
           <div className="flex justify-between items-center">
             <span className="font-sans font-semibold text-andrequice-navy">Total</span>

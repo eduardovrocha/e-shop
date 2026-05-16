@@ -7,6 +7,8 @@ export interface VariantStock {
   available: boolean
 }
 
+export type FulfillmentMode = 'from_stock' | 'made_to_order'
+
 export interface Product {
   id: number
   name: string
@@ -21,6 +23,9 @@ export interface Product {
   stock: number
   badge?: string
   slug: string
+  fulfillmentMode: FulfillmentMode
+  productionLeadTimeDays: number | null
+  estimatedCompletionDays: number | null
 }
 
 export type Size = 'PP' | 'P' | 'M' | 'G' | 'GG' | 'GGG' | 'U'

@@ -1,0 +1,18 @@
+<%= @store_name %> — Produção iniciada
+==========================================
+
+Olá <%= @order.customer_name.to_s.split.first.presence || "cliente" %>,
+
+Boa notícia: a produção da sua peça <%= @product&.name %><%= @order_item.size ? " — Tamanho #{@order_item.size}" : "" %> começou hoje.
+
+<% if @promised %>
+Estimativa de conclusão: <%= @promised.strftime("%d/%m/%Y") %>
+<% end %>
+
+Acompanhe seu pedido em:
+<%= @public_url %>
+
+Pedido: <%= @order.number %>
+
+---
+<%= @store_name %> — <%= ENV.fetch("SUPPORT_EMAIL", "suporte@andrequice.com.br") %>

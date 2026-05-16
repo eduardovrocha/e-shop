@@ -1,0 +1,25 @@
+<%= @store_name %> — Item cancelado
+==========================================
+
+Olá <%= @order.customer_name.to_s.split.first.presence || "cliente" %>,
+
+O item <%= @product&.name %><%= @order_item.size ? " — Tamanho #{@order_item.size}" : "" %> do seu pedido foi cancelado <% if @actor_type == "admin" %>pelo nosso time<% else %>a seu pedido<% end %>.
+
+REEMBOLSO
+---------
+Valor:      R$ <%= format("%.2f", @refund_cents.to_i / 100.0) %>
+Percentual: <%= @refund_percentage %>%
+
+O valor foi enviado ao mesmo método de pagamento e deve aparecer no seu extrato em até 10 dias úteis.
+
+<% if @reason.present? %>
+Motivo: <%= @reason %>
+<% end %>
+
+Acompanhe seu pedido em:
+<%= @public_url %>
+
+Pedido: <%= @order.number %>
+
+---
+<%= @store_name %> — <%= ENV.fetch("SUPPORT_EMAIL", "suporte@andrequice.com.br") %>

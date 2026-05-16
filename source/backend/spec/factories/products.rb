@@ -18,6 +18,13 @@ FactoryBot.define do
       width_mm  { 200 }
       length_mm { 300 }
     end
+
+    trait :made_to_order do
+      fulfillment_mode               { :made_to_order }
+      production_lead_time_days      { 14 }
+      production_capacity            { 3 }
+      cancellation_refund_percentage { 50 }
+    end
   end
 
   factory :product_variant do

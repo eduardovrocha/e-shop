@@ -1,6 +1,6 @@
 class OrderStatusService
   NOTIFIABLE_STATUSES = %w[
-    paid processing producing packed shipped out_for_delivery delivered cancelled refunded
+    paid processing ready_to_ship producing packed shipped out_for_delivery delivered cancelled refunded
   ].freeze
 
   # Records the current status of a newly created order (no status change).
@@ -64,8 +64,22 @@ class OrderStatusService
   end
 
   def enqueue_notification
-    return unless NOTIFIABLE_STATUSES.include?(@new_status)
+    return unless send_status_change_email?(@order, @new_status)
     OrderStatusEmailJob.perform_later(@order.id, @new_status)
+  end
+
+  # Suppresses the generic ready_to_ship email for orders that never had
+  # a production phase (i.e. orders made entirely of from_stock items).
+  # Those customers already received the "paid" email; a second notification
+  # seconds later would be noise.
+  def send_status_change_email?(order, new_status)
+    return false unless NOTIFIABLE_STATUSES.include?(new_status)
+
+    if new_status == "ready_to_ship"
+      return order.order_items.where.not(production_started_at: nil).exists?
+    end
+
+    true
   end
 
   def log_transition

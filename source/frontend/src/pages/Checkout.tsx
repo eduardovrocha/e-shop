@@ -218,8 +218,32 @@ function PaymentSection({
     }
   }
 
+  // Format aggregated promised date (only meaningful when there are made_to_order
+  // items in the cart; backend returns today's date for purely from_stock orders).
+  const promisedDate = intent.aggregated_promised_completion_date
+    ? new Date(intent.aggregated_promised_completion_date + 'T00:00:00')
+    : null
+  const todayIso = new Date().toISOString().slice(0, 10)
+  const showPromised = promisedDate && intent.aggregated_promised_completion_date !== todayIso
+
   return (
     <form onSubmit={handleSubmit} noValidate>
+      {showPromised && promisedDate && (
+        <div className="bg-andrequice-sand/40 border border-andrequice-sand rounded-2xl p-4 mb-4 flex gap-3">
+          <span className="text-xl leading-none mt-0.5">📦</span>
+          <div className="flex-1">
+            <p className="font-sans text-sm font-semibold text-andrequice-navy">Prazo de envio</p>
+            <p className="font-sans text-sm text-andrequice-brown mt-0.5">
+              Seu pedido será preparado e enviado até{' '}
+              <strong>{promisedDate.toLocaleDateString('pt-BR')}</strong>.
+            </p>
+            <p className="font-sans text-xs text-andrequice-brown/70 mt-1.5 leading-relaxed">
+              Itens artesanais são feitos sob demanda. O prazo da transportadora soma após o envio.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-2xl overflow-hidden shadow-soft">
         <div className="flex items-center justify-between px-4 py-3.5 border-b border-andrequice-sand">
           <span className="font-sans text-xs font-semibold uppercase tracking-widest text-andrequice-border">

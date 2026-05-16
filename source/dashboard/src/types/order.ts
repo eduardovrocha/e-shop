@@ -2,6 +2,7 @@ export type OrderStatus =
   | 'pending'
   | 'paid'
   | 'processing'
+  | 'ready_to_ship'
   | 'producing'
   | 'packed'
   | 'shipped'
@@ -11,6 +12,32 @@ export type OrderStatus =
   | 'refunded'
   | 'failed'
   | 'disputed'
+
+export type ProductionStatus =
+  | 'pending'
+  | 'paid'
+  | 'in_production'
+  | 'ready_to_ship'
+  | 'shipped'
+  | 'delivered'
+  | 'canceled'
+
+export interface OrderItemRow {
+  id: number
+  product_variant_id: number | null
+  product_id: number | null
+  name: string
+  size: string | null
+  quantity: number
+  unit_price_cents: number
+  subtotal_cents: number
+  production_status: ProductionStatus
+  promised_completion_date: string | null
+  production_started_at: string | null
+  production_completed_at: string | null
+  fulfillment_mode: 'from_stock' | 'made_to_order' | null
+  cancellation_refund_percentage: number | null
+}
 
 export type DeliveryMethod = 'delivery' | 'pickup'
 export type PaymentMethod = 'stripe' | 'pix'
@@ -53,6 +80,8 @@ export interface Order {
   status: OrderStatus
   delivery_method: DeliveryMethod
   items: OrderItem[]
+  order_items?: OrderItemRow[]
+  promised_completion_date?: string | null
   items_total_cents: number
   shipping_fee_cents: number
   total_cents: number

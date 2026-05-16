@@ -58,6 +58,8 @@ export default function Product() {
       price:     selectedVariant.effectivePrice,
       quantity:  1,
       imageUrl:  product.images[0],
+      fulfillmentMode:        product.fulfillmentMode,
+      productionLeadTimeDays: product.productionLeadTimeDays,
     })
     setAdded(true)
     setTimeout(() => setAdded(false), 2000)
@@ -169,8 +171,18 @@ export default function Product() {
           <h1 className="font-serif text-2xl font-semibold text-andrequice-navy tracking-display leading-tight">
             {product.name}
           </h1>
-          {totalStock > 0 && totalStock <= 10 && (
-            <div><Badge variant="copper">{totalStock} restantes</Badge></div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant={product.fulfillmentMode === 'made_to_order' ? 'copper' : 'sand'}>
+              {product.fulfillmentMode === 'made_to_order' ? 'Sob encomenda' : 'Pronta entrega'}
+            </Badge>
+            {totalStock > 0 && totalStock <= 10 && (
+              <Badge variant="copper">{totalStock} restantes</Badge>
+            )}
+          </div>
+          {product.fulfillmentMode === 'made_to_order' && product.productionLeadTimeDays != null && (
+            <p className="font-sans text-xs text-andrequice-brown/80 mt-1">
+              Pronta em até {product.productionLeadTimeDays} dias após o pedido
+            </p>
           )}
         </div>
 

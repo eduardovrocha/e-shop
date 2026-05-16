@@ -1,5 +1,6 @@
 class Product < ApplicationRecord
   has_many :variants, class_name: "ProductVariant", dependent: :destroy
+  has_many :order_items
   has_many_attached :images
 
   accepts_nested_attributes_for :variants, allow_destroy: true, reject_if: :all_blank
@@ -9,11 +10,24 @@ class Product < ApplicationRecord
   MAX_SIZE    = 5.megabytes
   ALLOWED_CONTENT_TYPES = %w[image/jpeg image/png image/webp].freeze
 
+  enum fulfillment_mode: { from_stock: 0, made_to_order: 1 }
+
   before_validation :generate_slug, if: -> { slug.blank? }
 
   validates :name,        presence: true
   validates :price_cents, numericality: { greater_than: 0 }
   validates :slug,        presence: true, uniqueness: true
+
+  with_options if: :made_to_order? do
+    validates :production_lead_time_days, presence: true,
+              numericality: { only_integer: true, greater_than: 0 }
+    validates :production_capacity, presence: true,
+              numericality: { only_integer: true, greater_than: 0 }
+    validates :cancellation_refund_percentage, presence: true,
+              numericality: { only_integer: true,
+                              greater_than_or_equal_to: 0,
+                              less_than_or_equal_to: 100 }
+  end
 
   scope :active,          -> { where(active: true) }
   scope :inactive,        -> { where(active: false) }
@@ -58,6 +72,24 @@ class Product < ApplicationRecord
 
   def total_stock
     variants.sum { |v| v.available_quantity }
+  end
+
+  # Returns the estimated number of days from order placement to completion.
+  # For from_stock products this is the configured lead time (or nil). For
+  # made_to_order it accounts for the current production queue and capacity:
+  # each "wave" of `production_capacity` simultaneous units takes one
+  # `production_lead_time_days` window.
+  def estimated_completion_days_for_new_order
+    return production_lead_time_days unless made_to_order?
+    return nil if production_capacity.blank? || production_lead_time_days.blank?
+
+    queue_count = order_items
+                    .where(production_status: [ :paid, :in_production ])
+                    .count
+
+    new_position = queue_count + 1
+    waves        = ((new_position - 1) / production_capacity).floor
+    (waves + 1) * production_lead_time_days
   end
 
   private

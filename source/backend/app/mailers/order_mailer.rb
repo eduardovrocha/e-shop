@@ -18,6 +18,10 @@ class OrderMailer < ApplicationMailer
     @public_url   = order.public_tracking_url
     @history      = order.status_histories.order(:created_at)
     @subject_base = SUBJECTS.fetch(status, "Atualização do pedido")
+    @has_made_to_order = order.order_items.joins(product_variant: :product)
+                                          .where(products: { fulfillment_mode: Product.fulfillment_modes[:made_to_order] })
+                                          .exists?
+    @show_promise = order.promised_completion_date.present? && @has_made_to_order
 
     mail(
       to:      order.customer_email,

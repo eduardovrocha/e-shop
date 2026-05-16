@@ -94,6 +94,26 @@
             </td>
           </tr>
 
+          <% if @show_promise %>
+          <!-- Promised completion -->
+          <tr>
+            <td style="padding:0 40px 8px;">
+              <div style="background:#f8f5f0;border:1px solid #e8e0d4;border-radius:8px;padding:16px;">
+                <p style="margin:0 0 6px;font-family:Arial,sans-serif;font-size:12px;color:#8a7560;text-transform:uppercase;letter-spacing:1px;font-weight:bold;">
+                  Prazo de envio
+                </p>
+                <p style="margin:0;font-family:Arial,sans-serif;font-size:14px;color:#1a2744;">
+                  Seu pedido será preparado e enviado até <strong><%= @order.promised_completion_date.strftime("%d/%m/%Y") %></strong>.
+                </p>
+                <p style="margin:8px 0 0;font-family:Arial,sans-serif;font-size:12px;color:#8a7560;line-height:1.5;">
+                  Algumas peças do seu pedido são artesanais e feitas sob demanda.
+                  O prazo da transportadora será contado a partir do envio.
+                </p>
+              </div>
+            </td>
+          </tr>
+          <% end %>
+
           <!-- Order Summary -->
           <tr>
             <td style="padding:24px 40px;">

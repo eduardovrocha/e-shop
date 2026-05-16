@@ -8,6 +8,7 @@ class OrderStatusHistory < ApplicationRecord
     "paid"             => { title: "Pagamento aprovado",      icon: "check_circle" },
     "processing"       => { title: "Em processamento",        icon: "refresh" },
     "producing"        => { title: "Em produção",             icon: "tool" },
+    "ready_to_ship"    => { title: "Pronto para envio",        icon: "package_check" },
     "packed"           => { title: "Embalado",                icon: "package" },
     "shipped"          => { title: "Enviado",                 icon: "truck" },
     "out_for_delivery" => { title: "Saiu para entrega",       icon: "map_pin" },

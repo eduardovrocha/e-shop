@@ -23,7 +23,8 @@ import {
 import { formatCurrency, formatDateTime, formatDate } from '@/lib/utils'
 import { useOrder, useUpdateOrder, useResendOrderEmail } from '@/hooks/useOrders'
 import { useToast } from '@/hooks/useToast'
-import type { OrderStatus } from '@/types/order'
+import type { OrderStatus, OrderItemRow } from '@/types/order'
+import { CancelOrderItemModal } from '@/components/CancelOrderItemModal'
 
 const STATUS_OPTIONS: { label: string; value: OrderStatus }[] = [
   { label: 'Pendente',          value: 'pending' },
@@ -63,6 +64,7 @@ export default function OrderDetail() {
 
   const [status, setStatus] = useState<OrderStatus | ''>('')
   const [trackingCode, setTrackingCode] = useState('')
+  const [cancelTarget, setCancelTarget] = useState<OrderItemRow | null>(null)
   const [carrier, setCarrier] = useState('')
   const [shippingService, setShippingService] = useState('')
   const [estimatedDelivery, setEstimatedDelivery] = useState('')
@@ -145,7 +147,45 @@ export default function OrderDetail() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            {order.items.length === 0 ? (
+            {(order.order_items && order.order_items.length > 0) ? (
+              <div className="divide-y divide-border">
+                {order.order_items.map((row) => {
+                  const cancellable =
+                    row.fulfillment_mode === 'made_to_order' &&
+                    (row.production_status === 'paid' || row.production_status === 'in_production')
+                  return (
+                    <div key={row.id} className="flex items-center justify-between gap-3 px-5 py-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium">{row.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {row.size && <>Tamanho {row.size} · </>}Qtd {row.quantity}
+                          {row.fulfillment_mode === 'made_to_order' && (
+                            <span className="ml-2 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800">
+                              Sob encomenda
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-semibold">
+                          {formatCurrency(row.subtotal_cents)}
+                        </span>
+                        {cancellable && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => setCancelTarget(row)}
+                          >
+                            Cancelar item
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : order.items.length === 0 ? (
               <p className="px-5 py-4 text-sm text-muted-foreground">Nenhum item disponível.</p>
             ) : (
               <div className="divide-y divide-border">
@@ -459,6 +499,21 @@ export default function OrderDetail() {
           </Card>
         )}
       </AdminPageGrid>
+
+      {cancelTarget && (
+        <CancelOrderItemModal
+          open={cancelTarget !== null}
+          onOpenChange={(v) => !v && setCancelTarget(null)}
+          orderNumber={order.number ?? null}
+          itemId={cancelTarget.id}
+          itemName={cancelTarget.name}
+          size={cancelTarget.size}
+          quantity={cancelTarget.quantity}
+          subtotalCents={cancelTarget.subtotal_cents}
+          refundPercentage={cancelTarget.cancellation_refund_percentage ?? 0}
+          productionStatus={cancelTarget.production_status}
+        />
+      )}
     </div>
   )
 }

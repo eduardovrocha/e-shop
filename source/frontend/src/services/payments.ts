@@ -30,6 +30,7 @@ export interface PaymentIntentResponse {
   total_cents: number
   items_total_cents: number
   shipping_fee_cents: number
+  aggregated_promised_completion_date?: string | null
 }
 
 export async function createPaymentIntent(payload: CreateIntentPayload): Promise<PaymentIntentResponse> {

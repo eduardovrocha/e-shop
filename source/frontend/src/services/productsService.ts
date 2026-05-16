@@ -1,5 +1,5 @@
 import api from '@/services/api'
-import type { Product, VariantStock } from '@/types/product'
+import type { Product, VariantStock, FulfillmentMode } from '@/types/product'
 
 interface BackendVariantStock {
   variant_id: number
@@ -23,6 +23,9 @@ interface BackendProduct {
   total_stock: number
   sizes: string[]
   variant_stock: BackendVariantStock[]
+  fulfillment_mode?: FulfillmentMode
+  production_lead_time_days?: number | null
+  estimated_completion_days?: number | null
 }
 
 function toProduct(p: BackendProduct): Product {
@@ -58,6 +61,9 @@ function toProduct(p: BackendProduct): Product {
     variants,
     stock,
     badge,
+    fulfillmentMode:         p.fulfillment_mode ?? 'from_stock',
+    productionLeadTimeDays:  p.production_lead_time_days ?? null,
+    estimatedCompletionDays: p.estimated_completion_days ?? null,
   }
 }
 

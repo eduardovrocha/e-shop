@@ -13,6 +13,7 @@ const ProductForm = lazy(() => import('@/pages/ProductForm'))
 const Inventory = lazy(() => import('@/pages/Inventory'))
 const Customers = lazy(() => import('@/pages/Customers'))
 const CustomerDetail = lazy(() => import('@/pages/CustomerDetail'))
+const Production = lazy(() => import('@/pages/Production'))
 // Cupons: feature não implementada — lazy imports suspensos até liberação
 // const Coupons = lazy(() => import('@/pages/Coupons'))
 // const CouponForm = lazy(() => import('@/pages/CouponForm'))
@@ -41,6 +42,7 @@ export default function AppRoutes() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/orders" element={<Orders />} />
           <Route path="/orders/:id" element={<OrderDetail />} />
+          <Route path="/production" element={<Production />} />
           <Route path="/products" element={<Products />} />
           <Route path="/products/new" element={<ProductForm />} />
           <Route path="/products/:id/edit" element={<ProductForm />} />

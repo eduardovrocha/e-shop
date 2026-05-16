@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_13_170001) do
+ActiveRecord::Schema[7.2].define(version: 2026_05_16_203104) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -91,6 +91,28 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_13_170001) do
     t.index ["email"], name: "index_customers_on_email", unique: true
   end
 
+  create_table "order_items", force: :cascade do |t|
+    t.bigint "order_id", null: false
+    t.bigint "product_variant_id"
+    t.bigint "product_id"
+    t.string "name"
+    t.string "size"
+    t.integer "quantity", default: 1, null: false
+    t.integer "unit_price_cents", default: 0, null: false
+    t.integer "subtotal_cents", default: 0, null: false
+    t.integer "production_status", default: 0, null: false
+    t.datetime "production_started_at"
+    t.datetime "production_completed_at"
+    t.date "promised_completion_date"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["order_id"], name: "index_order_items_on_order_id"
+    t.index ["product_id", "production_status"], name: "index_order_items_on_product_id_and_production_status"
+    t.index ["product_id"], name: "index_order_items_on_product_id"
+    t.index ["product_variant_id"], name: "index_order_items_on_product_variant_id"
+    t.index ["production_status"], name: "index_order_items_on_production_status"
+  end
+
   create_table "order_status_histories", force: :cascade do |t|
     t.bigint "order_id", null: false
     t.string "status", null: false
@@ -127,6 +149,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_13_170001) do
     t.string "shipping_service"
     t.date "estimated_delivery"
     t.bigint "customer_id"
+    t.date "promised_completion_date"
     t.index ["created_at"], name: "index_orders_on_created_at"
     t.index ["customer_email"], name: "index_orders_on_customer_email"
     t.index ["customer_id"], name: "index_orders_on_customer_id"
@@ -174,7 +197,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_13_170001) do
     t.integer "height_mm"
     t.integer "width_mm"
     t.integer "length_mm"
+    t.integer "fulfillment_mode", default: 0, null: false
+    t.integer "production_lead_time_days"
+    t.integer "production_capacity"
+    t.integer "cancellation_refund_percentage"
     t.index ["active"], name: "index_products_on_active"
+    t.index ["fulfillment_mode"], name: "index_products_on_fulfillment_mode"
     t.index ["slug"], name: "index_products_on_slug", unique: true
     t.check_constraint "height_mm IS NULL OR height_mm > 0", name: "chk_products_height_mm_positive"
     t.check_constraint "length_mm IS NULL OR length_mm > 0", name: "chk_products_length_mm_positive"
@@ -256,6 +284,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_13_170001) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "customer_addresses", "customers"
+  add_foreign_key "order_items", "orders"
+  add_foreign_key "order_items", "product_variants"
+  add_foreign_key "order_items", "products"
   add_foreign_key "order_status_histories", "orders"
   add_foreign_key "orders", "customers"
   add_foreign_key "product_variants", "products"

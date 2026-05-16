@@ -9,6 +9,8 @@ export interface CartItem {
   price: number
   quantity: number
   imageUrl?: string
+  fulfillmentMode?: 'from_stock' | 'made_to_order'
+  productionLeadTimeDays?: number | null
 }
 
 interface CartState {

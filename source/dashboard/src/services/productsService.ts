@@ -17,6 +17,10 @@ export interface ProductPayload {
   height_mm?: number | null
   width_mm?: number | null
   length_mm?: number | null
+  fulfillment_mode?: 'from_stock' | 'made_to_order'
+  production_lead_time_days?: number | null
+  production_capacity?: number | null
+  cancellation_refund_percentage?: number | null
   variants_attributes?: VariantPayload[]
 }
 

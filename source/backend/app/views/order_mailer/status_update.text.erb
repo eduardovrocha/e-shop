@@ -19,6 +19,15 @@ HISTÓRICO
 <% end %>
 
 ---
+<% if @show_promise %>
+
+PRAZO DE ENVIO
+--------------
+Seu pedido será preparado e enviado até <%= @order.promised_completion_date.strftime("%d/%m/%Y") %>.
+Algumas peças são artesanais e feitas sob demanda. O prazo da transportadora será contado a partir do envio.
+
+---
+<% end %>
 
 RESUMO DO PEDIDO
 ----------------

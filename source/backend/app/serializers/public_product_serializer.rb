@@ -11,18 +11,21 @@ class PublicProductSerializer
     prices       = all_variants.map(&:price_cents)
 
     {
-      id:              @product.id,
-      name:            @product.name,
-      description:     @product.description,
-      category:        @product.category,
-      price_cents:     @product.price_cents,
-      min_price_cents: prices.min || @product.price_cents,
-      max_price_cents: prices.max || @product.price_cents,
-      slug:            @product.slug,
-      images:          @image_urls,
-      total_stock:     all_variants.sum(&:available_quantity),
-      sizes:           sorted_sizes(all_variants),
-      variant_stock:   sorted_variant_stock(all_variants)
+      id:                          @product.id,
+      name:                        @product.name,
+      description:                 @product.description,
+      category:                    @product.category,
+      price_cents:                 @product.price_cents,
+      min_price_cents:             prices.min || @product.price_cents,
+      max_price_cents:             prices.max || @product.price_cents,
+      slug:                        @product.slug,
+      images:                      @image_urls,
+      total_stock:                 all_variants.sum(&:available_quantity),
+      sizes:                       sorted_sizes(all_variants),
+      variant_stock:               sorted_variant_stock(all_variants),
+      fulfillment_mode:            @product.fulfillment_mode,
+      production_lead_time_days:   @product.production_lead_time_days,
+      estimated_completion_days:   @product.estimated_completion_days_for_new_order
     }
   end
 

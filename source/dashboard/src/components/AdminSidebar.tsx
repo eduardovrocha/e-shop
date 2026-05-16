@@ -7,6 +7,7 @@ import {
   Users,
   Truck,
   Settings,
+  Factory,
   X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -17,6 +18,7 @@ const navItems = [
   { to: '/settings', label: 'Configurações', icon: Settings },
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/orders', label: 'Pedidos', icon: ShoppingBag },
+  { to: '/production', label: 'Produção', icon: Factory },
   { to: '/products', label: 'Produtos', icon: Package },
   { to: '/inventory', label: 'Estoque', icon: Warehouse },
   { to: '/customers', label: 'Clientes', icon: Users },

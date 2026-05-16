@@ -22,7 +22,7 @@ import { CategoryManagerModal } from '@/components/CategoryManagerModal'
 import { useProduct, useCreateProduct, useUpdateProduct } from '@/hooks/useProducts'
 import { useCategories } from '@/hooks/useCategories'
 import { useToast } from '@/hooks/useToast'
-import type { VariantPayload } from '@/types/product'
+import type { VariantPayload, FulfillmentMode } from '@/types/product'
 const SIZES = ['PP', 'P', 'M', 'G', 'GG', 'GGG', 'U']
 
 interface VariantRow extends VariantPayload {
@@ -299,6 +299,13 @@ export default function ProductForm() {
   const [widthMm, setWidthMm] = useState('')
   const [lengthMm, setLengthMm] = useState('')
 
+  // Modalidade de venda
+  const [fulfillmentMode, setFulfillmentMode] = useState<FulfillmentMode>('from_stock')
+  const [leadTimeDays, setLeadTimeDays] = useState('')
+  const [productionCapacity, setProductionCapacity] = useState('')
+  const [refundPct, setRefundPct] = useState('')
+  const [mtoErrors, setMtoErrors] = useState<Record<string, string>>({})
+
   // Set default category once categories are loaded (create mode only)
   useEffect(() => {
     if (!isEdit && !category && categoryNames.length > 0) {
@@ -323,6 +330,10 @@ export default function ProductForm() {
       setHeightMm(existing.height_mm != null ? String(existing.height_mm) : '')
       setWidthMm(existing.width_mm != null ? String(existing.width_mm) : '')
       setLengthMm(existing.length_mm != null ? String(existing.length_mm) : '')
+      setFulfillmentMode(existing.fulfillment_mode ?? 'from_stock')
+      setLeadTimeDays(existing.production_lead_time_days != null ? String(existing.production_lead_time_days) : '')
+      setProductionCapacity(existing.production_capacity != null ? String(existing.production_capacity) : '')
+      setRefundPct(existing.cancellation_refund_percentage != null ? String(existing.cancellation_refund_percentage) : '')
     }
   }, [existing])
 
@@ -350,6 +361,31 @@ export default function ProductForm() {
       return
     }
 
+    // Validate made_to_order fields client-side
+    const nextMtoErrors: Record<string, string> = {}
+    let leadTimeNum: number | null = null
+    let capacityNum: number | null = null
+    let refundNum: number | null = null
+    if (fulfillmentMode === 'made_to_order') {
+      leadTimeNum = leadTimeDays ? parseInt(leadTimeDays) : NaN
+      if (!Number.isInteger(leadTimeNum) || leadTimeNum <= 0) {
+        nextMtoErrors.leadTime = 'Informe um número inteiro maior que zero'
+      }
+      capacityNum = productionCapacity ? parseInt(productionCapacity) : NaN
+      if (!Number.isInteger(capacityNum) || capacityNum <= 0) {
+        nextMtoErrors.capacity = 'Informe um número inteiro maior que zero'
+      }
+      refundNum = refundPct !== '' ? parseInt(refundPct) : NaN
+      if (!Number.isInteger(refundNum) || refundNum < 0 || refundNum > 100) {
+        nextMtoErrors.refund = 'Informe um valor entre 0 e 100'
+      }
+    }
+    setMtoErrors(nextMtoErrors)
+    if (Object.keys(nextMtoErrors).length > 0) {
+      toast.error('Revise os campos de modalidade de venda')
+      return
+    }
+
     const variants_attributes = variants.map(({ _key: _k, _priceInput: _pi, ...rest }) => rest)
 
     // price_cents on the product is derived from the minimum variant price (backend compat)
@@ -361,6 +397,10 @@ export default function ProductForm() {
       height_mm: heightMm ? parseInt(heightMm) : null,
       width_mm:  widthMm  ? parseInt(widthMm)  : null,
       length_mm: lengthMm ? parseInt(lengthMm) : null,
+      fulfillment_mode: fulfillmentMode,
+      production_lead_time_days:      fulfillmentMode === 'made_to_order' ? leadTimeNum : null,
+      production_capacity:            fulfillmentMode === 'made_to_order' ? capacityNum : null,
+      cancellation_refund_percentage: fulfillmentMode === 'made_to_order' ? refundNum   : null,
     }
 
     try {
@@ -473,6 +513,114 @@ export default function ProductForm() {
                 </SelectContent>
               </Select>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Modalidade de venda */}
+        <Card className="w-full">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Modalidade de venda</CardTitle>
+          </CardHeader>
+          <Separator />
+          <CardContent className="pt-4 space-y-4">
+            <p className="text-xs text-muted-foreground">
+              Define como este produto será comercializado.
+            </p>
+
+            <div className="space-y-2">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="radio"
+                  name="fulfillment_mode"
+                  value="from_stock"
+                  checked={fulfillmentMode === 'from_stock'}
+                  onChange={() => setFulfillmentMode('from_stock')}
+                  className="mt-1"
+                />
+                <div className="space-y-0.5">
+                  <p className="text-sm font-medium">Pronta entrega (estoque)</p>
+                  <p className="text-xs text-muted-foreground">
+                    Venda imediata a partir do estoque disponível.
+                  </p>
+                </div>
+              </label>
+
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="radio"
+                  name="fulfillment_mode"
+                  value="made_to_order"
+                  checked={fulfillmentMode === 'made_to_order'}
+                  onChange={() => setFulfillmentMode('made_to_order')}
+                  className="mt-1"
+                />
+                <div className="space-y-0.5">
+                  <p className="text-sm font-medium">Sob encomenda (made-to-order)</p>
+                  <p className="text-xs text-muted-foreground">
+                    Produção iniciada após confirmação do pedido.
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            {fulfillmentMode === 'made_to_order' && (
+              <div className="space-y-4 pt-2 border-t border-border">
+                <div className="space-y-1.5">
+                  <Label htmlFor="lead_time">Prazo de produção (dias)</Label>
+                  <Input
+                    id="lead_time"
+                    type="number"
+                    min={1}
+                    placeholder="ex: 14"
+                    value={leadTimeDays}
+                    onChange={(e) => setLeadTimeDays(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Tempo estimado entre o pedido e a conclusão da peça.
+                  </p>
+                  {mtoErrors.leadTime && (
+                    <p className="text-xs text-destructive font-medium">{mtoErrors.leadTime}</p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="production_capacity">Capacidade de produção (peças simultâneas)</Label>
+                  <Input
+                    id="production_capacity"
+                    type="number"
+                    min={1}
+                    placeholder="ex: 5"
+                    value={productionCapacity}
+                    onChange={(e) => setProductionCapacity(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Quantas peças cabem em produção ao mesmo tempo.
+                  </p>
+                  {mtoErrors.capacity && (
+                    <p className="text-xs text-destructive font-medium">{mtoErrors.capacity}</p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="refund_pct">Reembolso em caso de cancelamento (%)</Label>
+                  <Input
+                    id="refund_pct"
+                    type="number"
+                    min={0}
+                    max={100}
+                    placeholder="ex: 50"
+                    value={refundPct}
+                    onChange={(e) => setRefundPct(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Percentual do valor pago devolvido se o cliente cancelar com a peça já em produção. 0–100.
+                  </p>
+                  {mtoErrors.refund && (
+                    <p className="text-xs text-destructive font-medium">{mtoErrors.refund}</p>
+                  )}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 

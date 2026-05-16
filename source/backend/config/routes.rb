@@ -12,6 +12,7 @@ Rails.application.routes.draw do
       post "payments/webhook",          to: "payments#webhook"
       post "shipping/calculate",        to: "shipping#calculate"
       get  "orders/track/:token",       to: "tracking#show", as: :order_tracking
+      patch "orders/track/:token/items/:id/cancel", to: "tracking_items#cancel"
       resource :store_settings, only: %i[show update]
 
       namespace :admin do
@@ -29,6 +30,14 @@ Rails.application.routes.draw do
             post :resend_email
           end
         end
+        resources :order_items, only: %i[index] do
+          member do
+            patch :start_production
+            patch :complete_production
+            patch :cancel
+          end
+        end
+        get "production/metrics", to: "production_metrics#show"
         resources :customers, only: %i[index show]
         resources :products do
           collection { get :inventory }
