@@ -12,7 +12,7 @@ export type FulfillmentMode = 'from_stock' | 'made_to_order'
 export interface Product {
   id: number
   name: string
-  description: string
+  description: string | null
   category: string
   price: number
   minPrice: number

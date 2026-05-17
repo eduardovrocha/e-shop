@@ -1,4 +1,6 @@
 class OrderMailer < ApplicationMailer
+  include Rails.application.routes.url_helpers
+
   SUBJECTS = {
     "paid"             => "✅ Pagamento confirmado",
     "processing"       => "📦 Pedido em processamento",
@@ -12,13 +14,14 @@ class OrderMailer < ApplicationMailer
   }.freeze
 
   def status_update(order, status)
-    @order        = order
-    @status       = status
-    @store_name   = StoreSetting.instance.event_name.presence || "Andrequicé"
+    @order         = order
+    @status        = status
+    @store_name    = StoreSetting.instance.event_name.presence || "Andrequicé"
     @support_email = Rails.application.credentials.dig(:mail, :support)
-    @public_url   = order.public_tracking_url
-    @history      = order.status_histories.order(:created_at)
-    @subject_base = SUBJECTS.fetch(status, "Atualização do pedido")
+    @public_url    = order.public_tracking_url
+    @history       = order.status_histories.order(:created_at)
+    @subject_base  = SUBJECTS.fetch(status, "Atualização do pedido")
+    @items_view    = build_items_view(order)
     @has_made_to_order = order.order_items.joins(product_variant: :product)
                                           .where(products: { fulfillment_mode: Product.fulfillment_modes[:made_to_order] })
                                           .exists?
@@ -29,5 +32,67 @@ class OrderMailer < ApplicationMailer
       from:    "#{@store_name} <#{@support_email}>",
       subject: "#{@subject_base} — #{order.number}"
     )
+  end
+
+  private
+
+  # Builds the per-item view-model used by the email template. Tries the
+  # canonical source (order_items table with eager-loaded product images)
+  # first and falls back to the legacy orders.items JSONB so pre-Phase-1
+  # orders still render. Each entry contains everything the template needs
+  # so the ERB stays a dumb iterator.
+  def build_items_view(order)
+    rows = order.order_items
+                .includes(product_variant: { product: { images_attachments: :blob } })
+                .to_a
+
+    if rows.any?
+      rows.map { |item| order_item_row(item) }
+    else
+      Array(order.items).map { |item| jsonb_item_row(item) }
+    end
+  end
+
+  def order_item_row(item)
+    product = item.product_variant&.product
+    {
+      name:             item.name.presence || product&.name || "Item",
+      size:             item.size,
+      quantity:         item.quantity.to_i,
+      unit_price_cents: item.unit_price_cents.to_i,
+      subtotal_cents:   item.subtotal_cents.to_i,
+      image_url:        product_image_url(product),
+    }
+  end
+
+  def jsonb_item_row(item)
+    qty = item["quantity"].to_i
+    {
+      name:             item["name"],
+      size:             item["size"],
+      quantity:         qty,
+      unit_price_cents: item["unit_price_cents"].to_i,
+      subtotal_cents:   item["subtotal_cents"].to_i,
+      image_url:        nil, # legacy snapshot — no FK back to product
+    }
+  end
+
+  def product_image_url(product)
+    return nil unless product
+    blob = product.ordered_images.first
+    return nil unless blob
+    rails_blob_url(blob, host: image_host, protocol: image_protocol)
+  rescue StandardError
+    # Never block an order email because of an image URL hiccup.
+    nil
+  end
+
+  def image_host
+    host = ENV.fetch("HOST_URL", "https://api.andrequice.store")
+    host.sub(%r{\Ahttps?://}, "").split(":").first
+  end
+
+  def image_protocol
+    ENV.fetch("HOST_URL", "").start_with?("http://") ? "http" : "https"
   end
 end

@@ -4,7 +4,7 @@
 <%= @subject_base %>
 
 Pedido: <%= @order.number %>
-Data: <%= @order.created_at.strftime("%d/%m/%Y") %>
+Data:   <%= @order.created_at.strftime("%d/%m/%Y") %>
 Status: <%= OrderStatusHistory.title_for(@status) %>
 
 Acompanhe seu pedido em:
@@ -31,12 +31,13 @@ Algumas peças são artesanais e feitas sob demanda. O prazo da transportadora s
 
 RESUMO DO PEDIDO
 ----------------
-<% @order.items.each do |item| %>
-• <%= item["name"] %> (Tam. <%= item["size"] %>) x<%= item["quantity"] %> — R$ <%= format("%.2f", item["subtotal_cents"].to_i / 100.0) %>
+<% @items_view.each do |item| %>
+• <%= item[:name] %><% if item[:size].present? %> (Tam. <%= item[:size] %>)<% end %>
+  <%= item[:quantity] %> un. × R$ <%= format("%.2f", item[:unit_price_cents] / 100.0) %> = R$ <%= format("%.2f", item[:subtotal_cents] / 100.0) %>
 <% end %>
 
 Subtotal: R$ <%= format("%.2f", @order.items_total_cents / 100.0) %>
-<% if @order.shipping_fee_cents > 0 %>
+<% if @order.shipping_fee_cents.to_i > 0 %>
 Frete:    R$ <%= format("%.2f", @order.shipping_fee_cents / 100.0) %>
 <% end %>
 Total:    R$ <%= format("%.2f", @order.total_cents / 100.0) %>
