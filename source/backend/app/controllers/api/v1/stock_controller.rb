@@ -19,6 +19,14 @@ module Api
                    message: "Produto não encontrado" }
         end
 
+        # made_to_order products carry stock_quantity = 0 by design — the
+        # production queue is the gate, validated at create_intent time
+        # (Fase 2A). Report them as valid so the /cart stock-check effect
+        # does not remove these items.
+        if variant.product&.made_to_order?
+          return { variant_id:, available: requested, valid: true, message: nil }
+        end
+
         available = variant.available_quantity
         valid     = available >= requested
 

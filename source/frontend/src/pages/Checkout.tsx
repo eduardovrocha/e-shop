@@ -293,9 +293,42 @@ export default function Checkout() {
     return () => clearTimeout(t)
   }, [intent])
 
+  // Persist a pending-order snapshot the moment we have an intent. Stripe
+  // 3DS confirmation redirects out of the SPA — when the browser comes
+  // back to /pedido-confirmado?redirect_status=succeeded, location.state
+  // is gone, and we recover the receipt data from sessionStorage.
+  useEffect(() => {
+    if (!intent) return
+    const snapshot = {
+      paymentIntentId: intent.client_secret?.split('_secret_')[0] ?? null,
+      totalCents:        intent.total_cents,
+      subtotalCents:     intent.items_total_cents,
+      shippingFeeCents:  intent.shipping_fee_cents,
+      promisedDate:      intent.aggregated_promised_completion_date ?? null,
+      deliveryMethod,
+      contact: { ...contact },
+      shippingAddress: shippingAddress ? { ...shippingAddress } : null,
+      addressExtra: { ...addressExtra },
+      selectedShipping: selectedShipping ? { ...selectedShipping } : null,
+      items: items.map((i) => ({ ...i })),
+    }
+    try {
+      sessionStorage.setItem('andrequice-pending-order', JSON.stringify(snapshot))
+    } catch {
+      /* storage full or unavailable — fall back to location.state path */
+    }
+  }, [intent, items, deliveryMethod, contact, shippingAddress, addressExtra, selectedShipping])
+
   const handleSuccess = useCallback(() => {
+    // In-element confirmation (no 3DS redirect): pull the snapshot we just
+    // saved and pass it through location.state for the happy path.
+    let snapshot: unknown = null
+    try {
+      const raw = sessionStorage.getItem('andrequice-pending-order')
+      if (raw) snapshot = JSON.parse(raw)
+    } catch { /* ignore */ }
     clearCart()
-    navigate('/pedido-confirmado')
+    navigate('/pedido-confirmado', snapshot ? { state: { order: snapshot } } : undefined)
   }, [clearCart, navigate])
 
   // ── Empty / redirect placeholder ────────────────────────────────────────

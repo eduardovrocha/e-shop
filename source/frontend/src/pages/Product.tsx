@@ -12,6 +12,7 @@ import { ProductPriceTag } from '@/components/product/ProductPriceTag'
 import { useCartStore } from '@/store/cartStore'
 import { useProduct } from '@/hooks/useProducts'
 import type { VariantStock } from '@/types/product'
+import { isVariantPurchasable, maxPurchasableQuantity } from '@/utils/variant'
 
 const DESCRIPTION_TRUNCATE_LENGTH = 240
 
@@ -41,14 +42,24 @@ export default function Product() {
     return cartItems.find((i) => i.variantId === selectedVariant.variantId)?.quantity ?? 0
   }, [cartItems, selectedVariant])
 
-  const maxQuantity = selectedVariant
-    ? Math.max(1, selectedVariant.stock - inCart)
+  // Max quantity in the stepper:
+  //   - made_to_order: cap of 99 (UI only — capacity validated server-side)
+  //   - from_stock:    remaining free stock minus what is already in cart
+  const maxQuantity = selectedVariant && product
+    ? Math.max(
+        1,
+        product.fulfillmentMode === 'made_to_order'
+          ? maxPurchasableQuantity(product, selectedVariant)
+          : selectedVariant.stock - inCart
+      )
     : 1
 
+  // CTA enables when the variant is selected AND purchasable AND
+  // (for from_stock) the cart does not already hold all stock.
   const canAdd =
-    !!selectedVariant &&
-    (product?.fulfillmentMode === 'made_to_order' || selectedVariant.stock > 0) &&
-    (product?.fulfillmentMode === 'made_to_order' || inCart < (selectedVariant?.stock ?? 0))
+    !!selectedVariant && !!product &&
+    isVariantPurchasable(product, selectedVariant) &&
+    (product.fulfillmentMode === 'made_to_order' || inCart < selectedVariant.stock)
 
   // ── Handlers ─────────────────────────────────────────────────────────────
   const handleSelectVariant = useCallback((v: VariantStock) => {
@@ -213,6 +224,7 @@ export default function Product() {
                 variants={product.variants}
                 selectedId={selectedVariant?.variantId ?? null}
                 onSelect={handleSelectVariant}
+                fulfillmentMode={product.fulfillmentMode}
                 errorState={sizeError}
               />
             )}

@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import type { Product } from '@/types/product'
 import { Badge } from '@/components/Badge'
 import { Button } from '@/components/Button'
+import { isVariantPurchasable } from '@/utils/variant'
 
 interface ProductCardProps {
   product: Product
@@ -38,7 +39,9 @@ export function ProductCard({ product }: ProductCardProps) {
             </Badge>
           </div>
         )}
-        {product.stock <= 10 && (
+        {/* "N restantes" só faz sentido em from_stock; em made_to_order
+             stock_quantity é sempre 0 por design (não é estoque, é fila). */}
+        {product.fulfillmentMode === 'from_stock' && product.stock > 0 && product.stock <= 10 && (
           <div className="absolute top-3 right-3">
             <Badge variant="copper">{product.stock} restantes</Badge>
           </div>
@@ -61,7 +64,7 @@ export function ProductCard({ product }: ProductCardProps) {
           </div>
           <div className="flex flex-wrap gap-2">
             {product.variants
-              .filter((v) => v.available && v.stock > 0)
+              .filter((v) => isVariantPurchasable(product, v))
               .map((v) => (
                 <button
                   key={v.variantId}

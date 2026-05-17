@@ -179,12 +179,22 @@ export default function Cart() {
   useEffect(() => {
     if (validated.current || items.length === 0) return
     validated.current = true
+    // Snapshot of cart items so we can look up fulfillment_mode without a
+    // stale store read inside the async handler.
+    const byVariantId = new Map(items.map((i) => [i.variantId, i]))
     checkStock(items.map((i) => ({ variant_id: i.variantId, quantity: i.quantity })))
       .then((results) => {
         const newMap: Record<number, number> = {}
         const alerts: string[] = []
         results.forEach((r) => {
           newMap[r.variant_id] = r.available
+          // Never apply stock corrections to made_to_order items — their
+          // stock_quantity is 0 by design, so a /stock/check that returned
+          // "out of stock" here would either be a stale or pre-Fase-2A
+          // backend. Production capacity is gated at create_intent time.
+          const cartItem = byVariantId.get(r.variant_id)
+          if (cartItem?.fulfillmentMode === 'made_to_order') return
+
           if (!r.valid && r.message) {
             if (r.available === 0) removeItem(r.variant_id)
             else updateQuantity(r.variant_id, r.available)

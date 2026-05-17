@@ -26,7 +26,7 @@ export function Header({ showBack = false, title, transparent = false }: HeaderP
             <button
               onClick={() => navigate(-1)}
               aria-label="Voltar"
-              className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-andrequice-sand transition-colors"
+              className="w-11 h-11 flex items-center justify-center rounded-full hover:bg-andrequice-sand transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-andrequice-gold focus-visible:ring-offset-1"
             >
               <svg
                 width="20"
@@ -58,7 +58,7 @@ export function Header({ showBack = false, title, transparent = false }: HeaderP
         <Link
           to="/cart"
           aria-label={`Carrinho com ${itemCount} ${itemCount === 1 ? 'item' : 'itens'}`}
-          className="relative w-9 h-9 flex items-center justify-center rounded-full hover:bg-andrequice-sand transition-colors ml-auto"
+          className="relative w-11 h-11 flex items-center justify-center rounded-full hover:bg-andrequice-sand transition-colors ml-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-andrequice-gold focus-visible:ring-offset-1"
         >
           <svg
             width="22"
