@@ -32,7 +32,7 @@ Antes do primeiro build, aplicar as correções dos bloqueadores:
 Aplicar `production.rb.patch`:
 - Descomentar `config.require_master_key = true`
 - Alterar `active_storage.service` para `:amazon`
-- Adicionar bloco completo de SMTP
+- SMTP já configurado via Rails credentials (`smtp.*` em `credentials.yml.enc`)
 
 ### 2.2 — storage.yml
 Aplicar `storage.yml.patch` — adicionar serviço `:amazon` com `force_path_style: true`.
@@ -69,13 +69,17 @@ nano /home/deploy/andrequice/.env
 ```
 
 Variáveis obrigatórias para o deploy:
-- `RAILS_MASTER_KEY`
+- `RAILS_MASTER_KEY` — descriptografa `credentials.yml.enc` (SMTP + mail vivem lá)
 - `POSTGRES_PASSWORD`
 - `HOSTINGER_OBJ_ACCESS_KEY` + `HOSTINGER_OBJ_SECRET_KEY` + `HOSTINGER_OBJ_ENDPOINT`
 - `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET`
-- `SMTP_HOST` + `SMTP_USERNAME` + `SMTP_PASSWORD`
 - `ADMIN_SEED_PASSWORD`
 - `CORS_ORIGINS`
+
+> SMTP (`smtp.address`, `smtp.user_name`, `smtp.password`) e e-mail de
+> suporte (`mail.support`, `mail.from`) vivem em `config/credentials.yml.enc`
+> e são descriptografados em tempo de boot usando `RAILS_MASTER_KEY`.
+> Para editar: `docker exec -it production-api-1 sh -c 'EDITOR=nano bin/rails credentials:edit'`.
 
 ---
 

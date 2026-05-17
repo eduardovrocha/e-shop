@@ -54,4 +54,4 @@ Transportadora: <%= @order.carrier %><%= " (#{@order.shipping_service})" if @ord
 
 ---
 
-<%= @store_name %> — <%= ENV.fetch("SUPPORT_EMAIL", "suporte@andrequice.com.br") %>
+<%= @store_name %> — <%= @support_email %>

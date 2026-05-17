@@ -1,6 +1,8 @@
 class ProductionMailer < ApplicationMailer
   layout false
 
+  before_action { @support_email = Rails.application.credentials.dig(:mail, :support) }
+
   # Tells the customer that production of their item started.
   def item_entered_production(order_item_id)
     @order_item = OrderItem.find(order_item_id)
@@ -71,7 +73,11 @@ class ProductionMailer < ApplicationMailer
 
   private
 
+  def support_email
+    Rails.application.credentials.dig(:mail, :support)
+  end
+
   def sender
-    "#{@store_name} <#{ENV.fetch('SUPPORT_EMAIL', 'suporte@andrequice.store')}>"
+    "#{@store_name} <#{support_email}>"
   end
 end

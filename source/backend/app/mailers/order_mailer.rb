@@ -15,6 +15,7 @@ class OrderMailer < ApplicationMailer
     @order        = order
     @status       = status
     @store_name   = StoreSetting.instance.event_name.presence || "Andrequicé"
+    @support_email = Rails.application.credentials.dig(:mail, :support)
     @public_url   = order.public_tracking_url
     @history      = order.status_histories.order(:created_at)
     @subject_base = SUBJECTS.fetch(status, "Atualização do pedido")
@@ -25,7 +26,7 @@ class OrderMailer < ApplicationMailer
 
     mail(
       to:      order.customer_email,
-      from:    "#{@store_name} <#{ENV.fetch('SUPPORT_EMAIL', 'suporte@andrequice.store')}>",
+      from:    "#{@store_name} <#{@support_email}>",
       subject: "#{@subject_base} — #{order.number}"
     )
   end

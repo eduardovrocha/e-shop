@@ -86,23 +86,27 @@ Rails.application.configure do
   # caching is enabled.
   config.action_mailer.perform_caching = false
 
-  config.action_mailer.delivery_method = :smtp
-  config.action_mailer.perform_deliveries = true
-  config.action_mailer.raise_delivery_errors = false
-  config.action_mailer.smtp_settings = {
-    address:              ENV.fetch("SMTP_HOST"),
-    port:                 ENV.fetch("SMTP_PORT", 587).to_i,
-    user_name:            ENV.fetch("SMTP_USERNAME"),
-    password:             ENV.fetch("SMTP_PASSWORD"),
-    authentication:       :plain,
-    enable_starttls_auto: true
-  }
-  config.action_mailer.default_options = {
-    from: ENV.fetch("SMTP_FROM")
-  }
-  config.action_mailer.default_url_options = {
-    host:     ENV.fetch("API_HOST", "api.andrequice.store"),
+  # Action Mailer — SMTP via Rails encrypted credentials.
+  # All sensitive values (host, user, password) live in credentials.yml.enc
+  # under the `smtp:` and `mail:` keys. Server only needs RAILS_MASTER_KEY.
+  config.action_mailer.delivery_method       = :smtp
+  config.action_mailer.perform_deliveries    = true
+  config.action_mailer.raise_delivery_errors = true
+  config.action_mailer.default_url_options   = {
+    host:     Rails.application.credentials.dig(:mail, :default_host),
     protocol: "https"
+  }
+  config.action_mailer.smtp_settings = {
+    address:              Rails.application.credentials.dig(:smtp, :address),
+    port:                 Rails.application.credentials.dig(:smtp, :port),
+    domain:               Rails.application.credentials.dig(:smtp, :domain),
+    user_name:            Rails.application.credentials.dig(:smtp, :user_name),
+    password:             Rails.application.credentials.dig(:smtp, :password),
+    authentication:       Rails.application.credentials.dig(:smtp, :authentication)&.to_sym || :login,
+    tls:                  Rails.application.credentials.dig(:smtp, :tls),
+    enable_starttls_auto: false,
+    open_timeout:         10,
+    read_timeout:         10
   }
 
   # Enable locale fallbacks for I18n (makes lookups for any locale fall back to

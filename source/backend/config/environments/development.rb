@@ -44,6 +44,22 @@ Rails.application.configure do
   # caching is enabled.
   config.action_mailer.perform_caching = false
 
+  # Action Mailer — same credentials-backed SMTP config as production, so
+  # dev sends through the real Hostinger SMTP when needed (smoke tests,
+  # template previews). Errors stay silent in dev via raise_delivery_errors.
+  config.action_mailer.delivery_method    = :smtp
+  config.action_mailer.perform_deliveries = true
+  config.action_mailer.smtp_settings = {
+    address:              Rails.application.credentials.dig(:smtp, :address),
+    port:                 Rails.application.credentials.dig(:smtp, :port),
+    domain:               Rails.application.credentials.dig(:smtp, :domain),
+    user_name:            Rails.application.credentials.dig(:smtp, :user_name),
+    password:             Rails.application.credentials.dig(:smtp, :password),
+    authentication:       Rails.application.credentials.dig(:smtp, :authentication)&.to_sym || :login,
+    tls:                  Rails.application.credentials.dig(:smtp, :tls),
+    enable_starttls_auto: false
+  }
+
   # HOST_URL controls Active Storage redirect URLs and action mailer links.
   # docker-compose injects HOST_URL=http://localhost; start.sh overrides with
   # the detected LAN IP so mobile/tablet clients can reach image URLs directly.
