@@ -13,12 +13,14 @@ export default function AdminLayout() {
 
       <div className="flex flex-1 flex-col lg:ml-64">
         <AdminHeader />
-        <main className="flex-1 overflow-auto p-4 lg:p-6">
-          <ErrorBoundary>
-            <Suspense fallback={<LoadingState />}>
-              <Outlet />
-            </Suspense>
-          </ErrorBoundary>
+        <main className="flex-1 overflow-auto">
+          <div className="max-w-6xl mx-auto px-4 pb-10 pt-8">
+            <ErrorBoundary>
+              <Suspense fallback={<LoadingState />}>
+                <Outlet />
+              </Suspense>
+            </ErrorBoundary>
+          </div>
         </main>
         <AdminFooter />
       </div>

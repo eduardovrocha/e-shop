@@ -5,7 +5,7 @@ export function AdminFooter() {
 
   return (
     <footer className="bg-brand-navy text-white/70">
-      <div className="px-6 py-8 flex flex-col gap-6">
+      <div className="max-w-6xl mx-auto px-4 pb-10 pt-8 flex flex-col gap-6">
         {/* Brand */}
         <div className="flex flex-col gap-1">
           <span className="font-serif text-lg font-semibold text-white">Andrequicé</span>

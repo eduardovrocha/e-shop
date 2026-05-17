@@ -125,9 +125,29 @@ export default function Inventory() {
 
   const columns: Column<VariantRow>[] = [
     {
+      key: 'image',
+      header: '',
+      render: (v) => (
+        <img
+          src={`https://placehold.co/40x40/E8D1B0/0D2B45?text=${v.product.charAt(0)}`}
+          alt={v.product}
+          className="h-10 w-10 rounded-lg object-cover"
+        />
+      ),
+      className: 'w-14',
+    },
+    {
       key: 'product',
       header: 'Produto',
-      render: (v) => <span className="font-medium text-foreground">{v.product}</span>,
+      render: (v) => (
+        <div>
+          <p className="font-medium text-foreground">{v.product}</p>
+          <p className="text-[11px] capitalize text-muted-foreground">
+            {v.size}
+            {v.color ? ` · ${v.color}` : ''}
+          </p>
+        </div>
+      ),
     },
     {
       key: 'sku',
@@ -137,27 +157,22 @@ export default function Inventory() {
       ),
     },
     {
-      key: 'size',
-      header: 'Tamanho',
-      render: (v) => (
-        <span className="inline-flex h-6 w-8 items-center justify-center rounded border border-border text-xs font-semibold">
-          {v.size}
-        </span>
-      ),
-    },
-    {
-      key: 'color',
-      header: 'Cor',
-      render: (v) => <span className="text-sm text-muted-foreground">{v.color ?? '—'}</span>,
-    },
-    {
       key: 'stock',
-      header: 'Estoque (total / reservado)',
+      header: 'Estoque',
       render: (v) => (
-        <InlineStockEditor
-          row={v}
-          onSave={(qty) => handleStockSave(v, qty)}
-        />
+        <div className="flex items-center gap-2">
+          <InlineStockEditor row={v} onSave={(qty) => handleStockSave(v, qty)} />
+          {v.stock === 0 && (
+            <Badge variant="destructive" className="text-[10px]">
+              Zerado
+            </Badge>
+          )}
+          {v.stock > 0 && v.stock <= 10 && (
+            <Badge variant="warning" className="text-[10px]">
+              Baixo
+            </Badge>
+          )}
+        </div>
       ),
     },
     {
@@ -177,8 +192,8 @@ export default function Inventory() {
         />
       </div>
 
-      {/* col-span-full: filtros + dica */}
-      <div className="col-span-full flex flex-col gap-2">
+      {/* col-span-full: filtros */}
+      <div className="col-span-full">
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -191,9 +206,6 @@ export default function Inventory() {
             }}
           />
         </div>
-        <p className="text-xs text-muted-foreground">
-          Passe o mouse sobre o estoque para editar inline. Pressione Enter para confirmar ou Esc para cancelar.
-        </p>
       </div>
 
       {/* col-span-full: tabela */}

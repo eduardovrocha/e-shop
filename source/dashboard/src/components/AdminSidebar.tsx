@@ -15,7 +15,6 @@ import { useUIStore } from '@/store/uiStore'
 import { Button } from './ui/button'
 
 const navItems = [
-  { to: '/settings', label: 'Configurações', icon: Settings },
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/orders', label: 'Pedidos', icon: ShoppingBag },
   { to: '/production', label: 'Produção', icon: Factory },
@@ -25,6 +24,7 @@ const navItems = [
   // Cupons: backend não implementado — ocultar do menu até a feature estar pronta
   // { to: '/coupons', label: 'Cupons', icon: Tag },
   { to: '/shipping', label: 'Frete', icon: Truck },
+  { to: '/settings', label: 'Configurações', icon: Settings },
 ]
 
 export function AdminSidebar() {

@@ -423,7 +423,7 @@ export default function ProductForm() {
   if (isEdit && isLoading) return <LoadingState />
 
   return (
-    <div className="max-w-3xl mx-auto px-4 space-y-6">
+    <div className="space-y-6">
       <PageTitle
         title={isEdit ? 'Editar Produto' : 'Novo Produto'}
         subtitle={isEdit ? existing?.name : 'Preencha os dados do produto'}

@@ -89,7 +89,7 @@ export default function CouponForm() {
   if (isEdit && isLoading) return <LoadingState />
 
   return (
-    <div className="max-w-2xl mx-auto px-4 space-y-6">
+    <div className="space-y-6">
       <PageTitle
         title={isEdit ? 'Editar Cupom' : 'Novo Cupom'}
         subtitle={isEdit ? existing?.code : 'Preencha os dados do cupom'}
