@@ -162,9 +162,11 @@ RSpec.describe Shipping::CalculatorService, type: :service do
           .to_return(status: 200, body: success_body, headers: { "Content-Type" => "application/json" })
       end
 
-      it "não inclui opções de carrier (payload vazio → provider retorna [])" do
+      it "aplica dimensões fallback e mantém opções de carrier" do
+        expect(Rails.logger).to receive(:warn).with(/sem dimensões/).at_least(:once)
+
         results = described_class.new.calculate(to_zipcode: "04568000", items: items)
-        expect(results.none? { |r| r[:service_id] == 1 }).to be true
+        expect(results.any? { |r| r[:service_id] == 1 }).to be true
       end
     end
 
