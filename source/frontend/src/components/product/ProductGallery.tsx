@@ -1,128 +1,95 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { GalleryMainImage } from './GalleryMainImage'
+import { GalleryThumbnails } from './GalleryThumbnails'
+import { GalleryLightbox } from './GalleryLightbox'
 
 interface ProductGalleryProps {
   images: string[]
   productName: string
 }
 
-// Image gallery with thumbnail strip, keyboard arrows and ARIA carousel
-// semantics. Single-image fallback hides controls.
+// Orchestrator: owns currentIndex + lightbox open state. Renders three
+// dumb subcomponents and wires keyboard navigation at the container level.
+// Sub-components stay isolated and reusable.
 export function ProductGallery({ images, productName }: ProductGalleryProps) {
-  const [active, setActive] = useState(0)
+  const [current, setCurrent]     = useState(0)
+  const [lightboxOpen, setLightbox] = useState(false)
   const mainRef = useRef<HTMLDivElement | null>(null)
 
-  // Clamp active when image list changes (e.g. product switches).
+  // Reset to first image if the list changes (e.g. product switch).
   useEffect(() => {
-    if (active > images.length - 1) setActive(0)
-  }, [images.length, active])
+    if (current > images.length - 1) setCurrent(0)
+  }, [images.length, current])
 
-  const goTo = useCallback((idx: number) => {
-    setActive(((idx % images.length) + images.length) % images.length)
-  }, [images.length])
-
-  const prev = useCallback(() => goTo(active - 1), [active, goTo])
-  const next = useCallback(() => goTo(active + 1), [active, goTo])
-
+  // Arrow keys at the region level — works while focus is anywhere inside
+  // (main image or a thumbnail).
   const handleKeyDown = useCallback((e: KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'ArrowLeft')  { prev(); e.preventDefault() }
-    if (e.key === 'ArrowRight') { next(); e.preventDefault() }
-  }, [prev, next])
+    if (images.length <= 1) return
+    if (e.key === 'ArrowLeft') {
+      if (current > 0) setCurrent(current - 1)
+      e.preventDefault()
+    } else if (e.key === 'ArrowRight') {
+      if (current < images.length - 1) setCurrent(current + 1)
+      e.preventDefault()
+    }
+  }, [current, images.length])
 
+  // ── Empty state ────────────────────────────────────────────────────────
   if (images.length === 0) {
     return (
-      <div className="aspect-square w-full rounded-2xl bg-andrequice-sand" />
+      <div
+        role="region"
+        aria-label={`Galeria de imagens — ${productName}`}
+        className="aspect-square w-full flex flex-col items-center justify-center gap-2 rounded-2xl bg-andrequice-cream border border-andrequice-sand"
+      >
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-andrequice-border" aria-hidden="true">
+          <line x1="2" y1="2" x2="22" y2="22" />
+          <path d="M10.41 10.41a2 2 0 1 1-2.83-2.83" />
+          <line x1="13.5" y1="13.5" x2="6" y2="21" />
+          <line x1="18" y1="12" x2="21" y2="15" />
+          <path d="M3.59 3.59A1.99 1.99 0 0 0 3 5v14a2 2 0 0 0 2 2h14c.55 0 1.05-.22 1.41-.59" />
+          <path d="M21 15V5a2 2 0 0 0-2-2H9" />
+        </svg>
+        <p className="text-xs text-andrequice-border">Sem imagens disponíveis</p>
+      </div>
     )
   }
 
-  const multiple = images.length > 1
-
   return (
-    <div
-      className="flex flex-col gap-3"
-      onKeyDown={handleKeyDown}
-    >
-      {/* Main image */}
-      <div
+    <div onKeyDown={handleKeyDown} className="flex flex-col gap-3">
+      <GalleryMainImage
         ref={mainRef}
-        role="region"
-        aria-roledescription="carousel"
-        aria-label={`Galeria de imagens: ${productName}`}
-        tabIndex={0}
-        className="relative aspect-square w-full rounded-2xl overflow-hidden bg-andrequice-sand focus:outline-none focus:ring-2 focus:ring-andrequice-gold focus:ring-offset-2"
-      >
-        <img
-          key={active}
-          src={images[active]}
-          alt={`${productName} — imagem ${active + 1} de ${images.length}`}
-          className="w-full h-full object-cover"
-        />
+        images={images}
+        currentIndex={current}
+        productName={productName}
+        onChange={setCurrent}
+        onZoomRequest={() => setLightbox(true)}
+      />
 
-        {multiple && (
-          <>
-            <button
-              type="button"
-              onClick={prev}
-              aria-label="Imagem anterior"
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center shadow-soft hover:bg-white transition-colors"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-                <path d="M15 18l-6-6 6-6" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              onClick={next}
-              aria-label="Próxima imagem"
-              className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center shadow-soft hover:bg-white transition-colors"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-                <path d="M9 18l6-6-6-6" />
-              </svg>
-            </button>
+      <GalleryThumbnails
+        images={images}
+        currentIndex={current}
+        productName={productName}
+        onSelect={setCurrent}
+      />
 
-            {/* Counter — small, top-right */}
-            <span className="absolute top-3 right-3 rounded-full bg-andrequice-navy/60 text-white text-[11px] font-medium px-2.5 py-1">
-              {active + 1} / {images.length}
-            </span>
-          </>
-        )}
+      {/* Screen-reader-only live announcement */}
+      <div className="sr-only" aria-live="polite">
+        Imagem {current + 1} de {images.length}
       </div>
 
-      {/* Thumbnails */}
-      {multiple && (
-        <div
-          role="tablist"
-          aria-label="Selecionar imagem"
-          className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 snap-x"
-        >
-          {images.map((src, i) => {
-            const isActive = i === active
-            return (
-              <button
-                key={`${src}-${i}`}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                aria-label={`Imagem ${i + 1} de ${images.length}`}
-                onClick={() => goTo(i)}
-                className={[
-                  'shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden snap-start transition-all',
-                  isActive
-                    ? 'ring-2 ring-andrequice-gold ring-offset-2 ring-offset-white'
-                    : 'opacity-70 hover:opacity-100',
-                ].join(' ')}
-              >
-                <img
-                  src={src}
-                  alt=""
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
-              </button>
-            )
-          })}
-        </div>
-      )}
+      <GalleryLightbox
+        open={lightboxOpen}
+        images={images}
+        currentIndex={current}
+        productName={productName}
+        onChange={setCurrent}
+        onClose={() => {
+          setLightbox(false)
+          // restore focus to the main image (region) when closing
+          setTimeout(() => mainRef.current?.focus(), 0)
+        }}
+      />
     </div>
   )
 }
