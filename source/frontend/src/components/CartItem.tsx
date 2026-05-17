@@ -23,9 +23,9 @@ export function CartItem({
   const atLimit = maxStock !== undefined && quantity >= maxStock
 
   return (
-    <li className="bg-white rounded-2xl overflow-hidden shadow-soft flex gap-3 p-3">
-      {/* Thumbnail */}
-      <div className="w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden bg-andrequice-sand">
+    <li className="bg-white rounded-2xl overflow-hidden shadow-soft grid grid-cols-4 gap-3 p-3">
+      {/* Thumbnail — 1 coluna */}
+      <div className="col-span-1 aspect-square rounded-xl overflow-hidden bg-andrequice-sand">
         {imageUrl ? (
           <img
             src={imageUrl}
@@ -43,8 +43,8 @@ export function CartItem({
         )}
       </div>
 
-      {/* Details */}
-      <div className="flex-1 min-w-0 flex flex-col justify-between gap-2">
+      {/* Details — 3 colunas */}
+      <div className="col-span-3 min-w-0 flex flex-col justify-between gap-2">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <h4 className="font-serif font-semibold text-andrequice-navy text-sm leading-snug line-clamp-2">

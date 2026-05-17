@@ -61,3 +61,15 @@ shipping_carriers.each do |attrs|
   end
 end
 puts "Transportadoras criadas: #{ShippingCarrier.count}"
+
+# ShippingSetting: em development liga Retirada + Frete Grátis (limiar R$ 0)
+# para que o cálculo retorne opções sem depender do Melhor Envio.
+if Rails.env.development?
+  setting = ShippingSetting.instance
+  setting.update!(
+    local_pickup_enabled:      true,
+    free_shipping_enabled:     true,
+    free_shipping_above_cents: 0
+  )
+  puts "ShippingSetting (dev): retirada + frete grátis habilitados."
+end

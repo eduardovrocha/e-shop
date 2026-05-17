@@ -90,17 +90,36 @@ module Shipping
         }
       end
 
+      # Fallback de dimensões (camiseta padrão) quando o produto não tem dims
+      # configuradas. Evita carrinho sem opções de frete; cota aproximada é
+      # melhor que checkout quebrado. O warning sinaliza que admin precisa
+      # preencher os campos do produto.
+      FALLBACK_DIMS = { width_cm: 20.0, height_cm: 4.0, length_cm: 30.0, weight_kg: 0.3 }.freeze
+
       def build_products_payload(items)
         items.filter_map do |item|
           product = Product.find_by(id: item[:product_id])
-          next unless product&.has_dimensions?
+          next if product.nil?
+
+          if product.has_dimensions?
+            width  = product.width_cm
+            height = product.height_cm
+            length = product.length_cm
+            weight = product.weight_kg
+          else
+            Rails.logger.warn("[MelhorEnvio] Produto ##{product.id} (#{product.name}) sem dimensões — usando fallback")
+            width  = FALLBACK_DIMS[:width_cm]
+            height = FALLBACK_DIMS[:height_cm]
+            length = FALLBACK_DIMS[:length_cm]
+            weight = FALLBACK_DIMS[:weight_kg]
+          end
 
           {
             id:              product.id.to_s,
-            width:           product.width_cm,
-            height:          product.height_cm,
-            length:          product.length_cm,
-            weight:          product.weight_kg,
+            width:           width,
+            height:          height,
+            length:          length,
+            weight:          weight,
             quantity:        [ item[:quantity].to_i, 1 ].max,
             insurance_value: ((product.price_cents * [ item[:quantity].to_i, 1 ].max) / 100.0).round(2)
           }

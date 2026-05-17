@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Header } from '@/components/Header'
+import { Footer } from '@/components/Footer'
 import { MobileBottomBar } from '@/components/MobileBottomBar'
 import { CartItem } from '@/components/CartItem'
 import { Button } from '@/components/Button'
@@ -204,6 +205,7 @@ export default function Cart() {
             Ver Catálogo
           </Button>
         </div>
+        <Footer />
       </div>
     )
   }
@@ -212,7 +214,7 @@ export default function Cart() {
     <div className="min-h-screen bg-white flex flex-col">
       <Header showBack />
 
-      <div className="max-w-2xl mx-auto w-full px-4 pt-6 pb-40 flex flex-col gap-6">
+      <div className="max-w-6xl mx-auto px-4 pb-10 pt-8 w-full flex flex-col gap-6">
         <SectionTitle
           title="Carrinho"
           subtitle={`${items.length} ${items.length === 1 ? 'item' : 'itens'}`}
@@ -479,6 +481,8 @@ export default function Cart() {
           )}
         </div>
       </div>
+
+      <Footer />
 
       {/* Sticky CTA */}
       <MobileBottomBar>

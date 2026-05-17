@@ -12,6 +12,7 @@ import { stripePromise } from '@/lib/stripe'
 import { createPaymentIntent, type PaymentIntentResponse } from '@/services/payments'
 import { checkStock } from '@/services/stockService'
 import { Header } from '@/components/Header'
+import { Footer } from '@/components/Footer'
 import { MobileBottomBar } from '@/components/MobileBottomBar'
 import { Input } from '@/components/Input'
 import { Button } from '@/components/Button'
@@ -513,6 +514,7 @@ export default function Checkout() {
           <p className="font-serif text-xl text-andrequice-navy mb-4">Carrinho vazio</p>
           <Button variant="primary" onClick={() => navigate('/catalog')}>Ver Catálogo</Button>
         </div>
+        <Footer />
       </div>
     )
   }
@@ -523,7 +525,7 @@ export default function Checkout() {
     <div className="min-h-screen bg-white flex flex-col">
       <Header showBack />
 
-      <div className="max-w-2xl mx-auto w-full px-4 pt-6 pb-44 flex flex-col gap-4">
+      <div className="max-w-6xl mx-auto px-4 pb-10 pt-8 w-full flex flex-col gap-4">
         <SectionTitle title="Finalizar Pedido" />
 
         {/* ── 1. Método de Entrega (read-only) ──────────────────────────── */}
@@ -809,6 +811,8 @@ export default function Checkout() {
           </div>
         )}
       </div>
+
+      <Footer />
 
       {/* ── Bottom bar: visível enquanto não há intent ────────────────────── */}
       {!intent && (
