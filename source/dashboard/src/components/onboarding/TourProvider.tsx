@@ -160,6 +160,43 @@ export function TourProvider({
     return () => { cancelled = true }
   }, [currentPhase, resolvedOrderId, disableBackendSync])
 
+  // ---------- Highlight ring on the current step's target --------------------
+  //
+  // Visual spec section 6 — instead of dimming the page, mark the focused
+  // element with a pulsing ring. We toggle the .tour-highlight class
+  // imperatively on the current step's target so the highlight follows the
+  // tooltip from step to step. The target may not be mounted at the exact
+  // moment stepIndex flips (route navigation is async), so a MutationObserver
+  // catches it as soon as it lands.
+
+  useEffect(() => {
+    const current = visibleSteps[stepIndex]
+    if (!joyrideRun || !current || current.asModal || !current.target) return
+
+    const selector = current.target
+    let node: Element | null = document.querySelector(selector)
+    if (node) node.classList.add('tour-highlight')
+
+    let observer: MutationObserver | null = null
+    if (!node) {
+      observer = new MutationObserver(() => {
+        const found = document.querySelector(selector)
+        if (found) {
+          node = found
+          node.classList.add('tour-highlight')
+          observer?.disconnect()
+          observer = null
+        }
+      })
+      observer.observe(document.body, { childList: true, subtree: true })
+    }
+
+    return () => {
+      observer?.disconnect()
+      node?.classList.remove('tour-highlight')
+    }
+  }, [stepIndex, visibleSteps, joyrideRun])
+
   // ---------- Navigation between steps ---------------------------------------
 
   const waitForTarget = useCallback(async (selector: string): Promise<boolean> => {
