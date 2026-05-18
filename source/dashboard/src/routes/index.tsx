@@ -19,6 +19,7 @@ const Production = lazy(() => import('@/pages/Production'))
 // const CouponForm = lazy(() => import('@/pages/CouponForm'))
 const Settings = lazy(() => import('@/pages/Settings'))
 const Shipping = lazy(() => import('@/pages/Shipping'))
+const OnboardingPlayground = lazy(() => import('@/pages/OnboardingPlayground'))
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -31,6 +32,10 @@ export default function AppRoutes() {
     <Suspense fallback={<LoadingState />}>
       <Routes>
         <Route path="/login" element={<Login />} />
+
+        {import.meta.env.DEV && (
+          <Route path="/playground/onboarding" element={<OnboardingPlayground />} />
+        )}
 
         <Route
           element={

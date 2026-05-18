@@ -1,0 +1,435 @@
+/* ---------------------------------------------------------------------------
+ * Onboarding tour — design tokens.
+ *
+ * Values follow `docs/e-shop-onboarding-design-visual.md` 1:1.
+ * Scoped via CSS custom properties so the tour stays visually consistent
+ * even if the dashboard's main design system shifts.
+ * ------------------------------------------------------------------------- */
+
+:root {
+  /* Colors — light */
+  --tour-bg:              #FFFFFF;
+  --tour-bg-modal:        #FFFFFF;
+  --tour-border:          #E5E7EB;
+  --tour-text-primary:    #111827;
+  --tour-text-secondary:  #4B5563;
+  --tour-text-tertiary:   #6B7280;
+  --tour-accent:          #4F46E5;
+  --tour-accent-hover:    #4338CA;
+  --tour-accent-soft:     #EEF2FF;
+  --tour-overlay:         rgba(15, 23, 42, 0.45);
+
+  /* Shadows */
+  --tour-shadow:
+    0 12px 32px -8px rgba(15, 23, 42, 0.18),
+    0 4px 12px -2px rgba(15, 23, 42, 0.08);
+  --tour-shadow-modal:
+    0 24px 64px -12px rgba(15, 23, 42, 0.28),
+    0 8px 24px -4px rgba(15, 23, 42, 0.12);
+
+  /* Highlight ring around the focused element */
+  --tour-highlight-ring:
+    0 0 0 3px rgba(79, 70, 229, 0.35),
+    0 0 0 4px rgba(79, 70, 229, 0.8),
+    0 0 0 12px rgba(79, 70, 229, 0.08);
+  --tour-highlight-ring-pulse:
+    0 0 0 3px rgba(79, 70, 229, 0.45),
+    0 0 0 5px rgba(79, 70, 229, 0.9),
+    0 0 0 16px rgba(79, 70, 229, 0.04);
+
+  /* Typography */
+  --tour-font-family:
+    "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /* Radii */
+  --tour-radius-tooltip:  12px;
+  --tour-radius-modal:    16px;
+  --tour-radius-button:   8px;
+
+  /* Z-index */
+  --tour-z-highlight:     9998;
+  --tour-z-tooltip:       9999;
+  --tour-z-modal:         10000;
+
+  /* Easing */
+  --tour-ease-standard:   cubic-bezier(0.4, 0, 0.2, 1);
+  --tour-ease-out:        cubic-bezier(0, 0, 0.2, 1);
+  --tour-ease-in:         cubic-bezier(0.4, 0, 1, 1);
+  --tour-ease-smooth:     cubic-bezier(0.45, 0.05, 0.55, 0.95);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --tour-bg:              #1F2937;
+    --tour-bg-modal:        #1F2937;
+    --tour-border:          #374151;
+    --tour-text-primary:    #F9FAFB;
+    --tour-text-secondary:  #D1D5DB;
+    --tour-text-tertiary:   #9CA3AF;
+    --tour-accent:          #818CF8;
+    --tour-accent-hover:    #A5B4FC;
+    --tour-accent-soft:     rgba(129, 140, 248, 0.12);
+    --tour-overlay:         rgba(0, 0, 0, 0.6);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Highlight ring around the target element.
+ * Pulsing continuously to draw attention without distracting.
+ * ------------------------------------------------------------------------- */
+
+.tour-highlight {
+  position: relative;
+  z-index: var(--tour-z-highlight);
+  border-radius: inherit;
+  box-shadow: var(--tour-highlight-ring);
+  transition: box-shadow 250ms var(--tour-ease-standard);
+  animation: tour-pulse 2.4s var(--tour-ease-smooth) infinite;
+}
+
+@keyframes tour-pulse {
+  0%, 100% { box-shadow: var(--tour-highlight-ring); }
+  50%      { box-shadow: var(--tour-highlight-ring-pulse); }
+}
+
+/* ---------------------------------------------------------------------------
+ * Tooltip
+ * ------------------------------------------------------------------------- */
+
+.tour-tooltip {
+  position: relative;
+  width: 320px;
+  max-width: min(360px, calc(100vw - 32px));
+  min-height: 180px;
+  background: var(--tour-bg);
+  border: 1px solid var(--tour-border);
+  border-radius: var(--tour-radius-tooltip);
+  padding: 20px;
+  box-shadow: var(--tour-shadow);
+  font-family: var(--tour-font-family);
+  color: var(--tour-text-primary);
+  z-index: var(--tour-z-tooltip);
+  animation: tour-tooltip-in 200ms var(--tour-ease-out) both;
+}
+
+.tour-tooltip[data-position="top"]    { animation-name: tour-tooltip-in-from-bottom; }
+.tour-tooltip[data-position="bottom"] { animation-name: tour-tooltip-in-from-top; }
+.tour-tooltip[data-position="left"]   { animation-name: tour-tooltip-in-from-right; }
+.tour-tooltip[data-position="right"]  { animation-name: tour-tooltip-in-from-left; }
+
+.tour-tooltip__title {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: -0.005em;
+  color: var(--tour-text-primary);
+  margin: 0 0 8px 0;
+}
+
+.tour-tooltip__body {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.55;
+  color: var(--tour-text-secondary);
+  margin: 0 0 16px 0;
+}
+
+.tour-tooltip__indicator {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--tour-text-tertiary);
+  margin: 0 0 8px 0;
+}
+
+.tour-tooltip__progress {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 16px 0;
+}
+
+.tour-tooltip__progress-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid var(--tour-border);
+  background: transparent;
+  transition:
+    background-color 180ms var(--tour-ease-out),
+    border-color 180ms var(--tour-ease-out);
+}
+
+.tour-tooltip__progress-dot--filled {
+  background: var(--tour-accent);
+  border-color: var(--tour-accent);
+}
+
+.tour-tooltip__controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.tour-tooltip__controls-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Arrow */
+.tour-tooltip__arrow {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: var(--tour-bg);
+  border: 1px solid var(--tour-border);
+  transform: rotate(45deg);
+}
+
+.tour-tooltip[data-position="top"] .tour-tooltip__arrow {
+  bottom: -6px;
+  left: 50%;
+  margin-left: -5px;
+  border-top: none;
+  border-left: none;
+}
+.tour-tooltip[data-position="bottom"] .tour-tooltip__arrow {
+  top: -6px;
+  left: 50%;
+  margin-left: -5px;
+  border-bottom: none;
+  border-right: none;
+}
+.tour-tooltip[data-position="left"] .tour-tooltip__arrow {
+  right: -6px;
+  top: 50%;
+  margin-top: -5px;
+  border-bottom: none;
+  border-left: none;
+}
+.tour-tooltip[data-position="right"] .tour-tooltip__arrow {
+  left: -6px;
+  top: 50%;
+  margin-top: -5px;
+  border-top: none;
+  border-right: none;
+}
+
+@keyframes tour-tooltip-in-from-top {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes tour-tooltip-in-from-bottom {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes tour-tooltip-in-from-left {
+  from { opacity: 0; transform: translateX(-4px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes tour-tooltip-in-from-right {
+  from { opacity: 0; transform: translateX(4px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ---------------------------------------------------------------------------
+ * Buttons
+ * ------------------------------------------------------------------------- */
+
+.tour-button-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--tour-accent);
+  color: #FFFFFF;
+  padding: 9px 16px;
+  border-radius: var(--tour-radius-button);
+  font-family: var(--tour-font-family);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  border: none;
+  cursor: pointer;
+  transition:
+    background-color 140ms var(--tour-ease-standard),
+    transform 140ms var(--tour-ease-standard);
+}
+.tour-button-primary:hover  { background: var(--tour-accent-hover); }
+.tour-button-primary:active { transform: translateY(1px); }
+.tour-button-primary:focus-visible {
+  outline: 2px solid var(--tour-accent);
+  outline-offset: 2px;
+}
+
+.tour-button-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  color: var(--tour-text-secondary);
+  padding: 9px 14px;
+  border-radius: var(--tour-radius-button);
+  font-family: var(--tour-font-family);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  border: 1px solid var(--tour-border);
+  cursor: pointer;
+  transition:
+    background-color 140ms var(--tour-ease-standard),
+    border-color 140ms var(--tour-ease-standard),
+    color 140ms var(--tour-ease-standard);
+}
+.tour-button-secondary:hover {
+  background: var(--tour-accent-soft);
+  border-color: var(--tour-accent);
+  color: var(--tour-accent);
+}
+.tour-button-secondary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.tour-button-secondary:focus-visible {
+  outline: 2px solid var(--tour-accent);
+  outline-offset: 2px;
+}
+
+.tour-link-skip {
+  background: transparent;
+  color: var(--tour-text-tertiary);
+  padding: 9px 0;
+  font-family: var(--tour-font-family);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 140ms var(--tour-ease-standard);
+}
+.tour-link-skip:hover {
+  color: var(--tour-text-secondary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.tour-link-skip:focus-visible {
+  outline: 2px solid var(--tour-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ---------------------------------------------------------------------------
+ * Modal
+ * ------------------------------------------------------------------------- */
+
+.tour-modal__overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--tour-overlay);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--tour-z-modal);
+  animation: tour-overlay-in 180ms var(--tour-ease-out);
+}
+
+.tour-modal {
+  background: var(--tour-bg-modal);
+  border-radius: var(--tour-radius-modal);
+  padding: 32px;
+  width: 480px;
+  max-width: 90vw;
+  box-shadow: var(--tour-shadow-modal);
+  font-family: var(--tour-font-family);
+  color: var(--tour-text-primary);
+  animation: tour-modal-in 240ms var(--tour-ease-out);
+}
+
+.tour-modal__title {
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  color: var(--tour-text-primary);
+  margin: 0 0 16px 0;
+}
+
+.tour-modal__body {
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--tour-text-secondary);
+  margin: 0 0 24px 0;
+}
+.tour-modal__body > p {
+  margin: 0 0 12px 0;
+}
+.tour-modal__body > p:last-child {
+  margin-bottom: 0;
+}
+
+.tour-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--tour-border);
+}
+
+@keyframes tour-overlay-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes tour-modal-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ---------------------------------------------------------------------------
+ * Viewport guard message for mobile (< 768px).
+ * ------------------------------------------------------------------------- */
+
+.tour-viewport-guard {
+  position: fixed;
+  inset: 0;
+  background: var(--tour-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: var(--tour-z-modal);
+  font-family: var(--tour-font-family);
+}
+
+.tour-viewport-guard__card {
+  background: var(--tour-bg);
+  border-radius: var(--tour-radius-modal);
+  padding: 24px;
+  max-width: 360px;
+  box-shadow: var(--tour-shadow-modal);
+  color: var(--tour-text-primary);
+}
+
+/* ---------------------------------------------------------------------------
+ * Reduced motion — kill animations.
+ * ------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .tour-tooltip,
+  .tour-modal,
+  .tour-modal__overlay,
+  .tour-highlight,
+  .tour-tooltip__progress-dot,
+  .tour-button-primary,
+  .tour-button-secondary,
+  .tour-link-skip {
+    animation: none !important;
+    transition: opacity 50ms linear !important;
+  }
+}

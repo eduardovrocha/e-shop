@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@import './styles/onboarding-tokens.css';
+
 @layer base {
   :root {
     --background: 30 60% 97%;
