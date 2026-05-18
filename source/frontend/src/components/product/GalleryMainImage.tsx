@@ -69,7 +69,7 @@ export const GalleryMainImage = forwardRef<HTMLDivElement, GalleryMainImageProps
   // ── Image error fallback ──────────────────────────────────────────────
   const [errored, setErrored] = useState<Record<number, boolean>>({})
   const handleError = useCallback((idx: number) => {
-    if (process.env.NODE_ENV !== 'production') {
+    if (import.meta.env.DEV) {
       // eslint-disable-next-line no-console
       console.warn(`[ProductGallery] image ${idx + 1} failed to load`)
     }

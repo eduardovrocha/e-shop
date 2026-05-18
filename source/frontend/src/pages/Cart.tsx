@@ -153,7 +153,6 @@ function LineItem({
 const EMAIL_RE = /\S+@\S+\.\S+/
 
 const STEP_IDS = ['cart', 'shipping', 'contact', 'address'] as const
-type StepId = typeof STEP_IDS[number]
 
 export default function Cart() {
   const navigate = useNavigate()
