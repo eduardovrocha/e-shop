@@ -38,7 +38,7 @@ export const PHASE_2_STEPS: TourStepDefinition[] = [
     phase:     2,
     route:     '/production',
     target:    '[data-tour="production-list"]',
-    position:  'top',
+    position:  'bottom',
     title:     'A produção começa por aqui.',
     body:      'Arraste o card entre as etapas conforme o trabalho avança. Quando chegar em "Pronto para envio", o pedido sai daqui e entra na fila de envio.',
     condition: storeHasManufacturedProduct,
