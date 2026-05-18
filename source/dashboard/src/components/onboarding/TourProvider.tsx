@@ -383,6 +383,14 @@ export function TourProvider({
     // state and the STEP_AFTER event never reaches our onEvent handler, so
     // "Próximo" appears to do nothing. Talking to the provider is also more
     // predictable — we already own stepIndex.
+    //
+    // Use Joyride's *resolved* placement (after viewport-collision flips)
+    // instead of the desired one so the CSS arrow lands on the right edge.
+    const resolved = props.step.placement as string | undefined
+    const resolvedPosition =
+      resolved === 'top' || resolved === 'bottom' || resolved === 'left' || resolved === 'right'
+        ? resolved
+        : stepDef.position
     return (
       <TourTooltip
         title={stepDef.title}
@@ -390,7 +398,7 @@ export function TourProvider({
         stepIndex={visibleSteps.findIndex((s) => s.id === stepDef.id)}
         totalSteps={visibleSteps.length}
         phase={stepDef.phase}
-        position={stepDef.position}
+        position={resolvedPosition}
         isFirstStep={stepIdx === 0}
         isLastStep={stepIdx === positionedSteps.length - 1}
         onPrev={prev}

@@ -179,13 +179,15 @@
 }
 
 /* ---------------------------------------------------------------------------
- * React-Joyride's own arrow + floater.
+ * React-Joyride floater + arrow handling.
  *
- * The floater is the wrapping container Joyride places around our tooltip;
- * Joyride also injects an SVG arrow as a sibling of the tooltip. We adopt
- * its arrow (which is repositioned automatically on placement flips and
- * viewport collisions) and skin it with our tokens — we used to render a
- * second CSS arrow inside our tooltip which produced a visible duplicate.
+ * Joyride wraps our tooltip in `.react-joyride__floater` and injects its own
+ * SVG arrow as a sibling. The SVG arrow has no concept of our border so it
+ * floats with a visible seam between target and tooltip — we hide it and
+ * render the arrow ourselves as a `::before` pseudo-element on the tooltip,
+ * driven by `data-position`. The position attribute is set from Joyride's
+ * resolved placement so collision flips still keep the arrow on the right
+ * side.
  * ------------------------------------------------------------------------- */
 .react-joyride__floater {
   /* Smooth the transform-driven repositioning that happens when Joyride
@@ -198,12 +200,57 @@
 }
 
 .react-joyride__arrow {
-  color: var(--tour-bg) !important;
+  display: none !important;
 }
-.react-joyride__arrow polygon {
-  /* The SVG inherits color via `fill: currentColor`, but pinning the polygon
-   * directly avoids surprises if Joyride changes that inline. */
-  fill: var(--tour-bg);
+
+/* ---------------------------------------------------------------------------
+ * Custom arrow as a rotated-square ::before.
+ *
+ * Same background as the tooltip. Border only on the two OUTWARD edges of
+ * the rotated diamond — the two inward edges have no border, so the half of
+ * the square that sits inside the tooltip blends with its body and leaves
+ * no seam. Sits behind the tooltip via z-index: -1 plus an explicit
+ * stacking context on the tooltip itself.
+ * ------------------------------------------------------------------------- */
+.tour-tooltip { isolation: isolate; }
+
+.tour-tooltip::before {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: var(--tour-bg);
+  transform: rotate(45deg);
+  z-index: -1;
+}
+
+.tour-tooltip[data-position="bottom"]::before {
+  top: -6px;
+  left: 50%;
+  margin-left: -6px;
+  border-top:  1px solid var(--tour-border);
+  border-left: 1px solid var(--tour-border);
+}
+.tour-tooltip[data-position="top"]::before {
+  bottom: -6px;
+  left: 50%;
+  margin-left: -6px;
+  border-bottom: 1px solid var(--tour-border);
+  border-right:  1px solid var(--tour-border);
+}
+.tour-tooltip[data-position="right"]::before {
+  left: -6px;
+  top: 50%;
+  margin-top: -6px;
+  border-left:   1px solid var(--tour-border);
+  border-bottom: 1px solid var(--tour-border);
+}
+.tour-tooltip[data-position="left"]::before {
+  right: -6px;
+  top: 50%;
+  margin-top: -6px;
+  border-right: 1px solid var(--tour-border);
+  border-top:   1px solid var(--tour-border);
 }
 
 @keyframes tour-tooltip-in-from-top {
