@@ -37,7 +37,7 @@ class OrderMailer < ApplicationMailer
       number:     addr["number"]     || addr[:number],
       complement: addr["complement"] || addr[:complement],
       city:       addr["city"]       || addr[:city],
-      state:      addr["state"]      || addr[:state],
+      state:      addr["state"]      || addr[:state]
     }
     @is_pickup = order.delivery_method == "pickup"
 
@@ -76,7 +76,7 @@ class OrderMailer < ApplicationMailer
       unit_price_cents: item.unit_price_cents.to_i,
       subtotal_cents:   item.subtotal_cents.to_i,
       image_url:        product_image_url(product),
-      fulfillment_mode: product&.fulfillment_mode || "from_stock",
+      fulfillment_mode: product&.fulfillment_mode || "from_stock"
     }
   end
 
@@ -89,7 +89,7 @@ class OrderMailer < ApplicationMailer
       unit_price_cents: item["unit_price_cents"].to_i,
       subtotal_cents:   item["subtotal_cents"].to_i,
       image_url:        nil, # legacy snapshot — no FK back to product
-      fulfillment_mode: item["fulfillment_mode"] || "from_stock",
+      fulfillment_mode: item["fulfillment_mode"] || "from_stock"
     }
   end
 

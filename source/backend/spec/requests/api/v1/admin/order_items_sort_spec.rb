@@ -55,20 +55,20 @@ RSpec.describe "Admin OrderItems sort", type: :request do
     response.parsed_body["order_items"].map { |i| i["id"] } & scoped_ids
   end
 
-  let(:scoped_ids) { [item_old.id, item_middle.id, item_new.id] }
+  let(:scoped_ids) { [ item_old.id, item_middle.id, item_new.id ] }
 
   describe "created_at_asc (FIFO, default)" do
     it "returns oldest first" do
       get_index(sort: "created_at_asc")
       expect(response).to have_http_status(:ok)
-      expect(relative_order(scoped_ids)).to eq([item_old.id, item_middle.id, item_new.id])
+      expect(relative_order(scoped_ids)).to eq([ item_old.id, item_middle.id, item_new.id ])
     end
   end
 
   describe "created_at_desc" do
     it "returns newest first" do
       get_index(sort: "created_at_desc")
-      expect(relative_order(scoped_ids)).to eq([item_new.id, item_middle.id, item_old.id])
+      expect(relative_order(scoped_ids)).to eq([ item_new.id, item_middle.id, item_old.id ])
     end
   end
 
@@ -76,7 +76,7 @@ RSpec.describe "Admin OrderItems sort", type: :request do
     it "returns the item with the closest deadline first" do
       get_index(sort: "promised_completion_date_asc")
       # middle (2d) < old (10d) < new (20d)
-      expect(relative_order(scoped_ids)).to eq([item_middle.id, item_old.id, item_new.id])
+      expect(relative_order(scoped_ids)).to eq([ item_middle.id, item_old.id, item_new.id ])
     end
   end
 
@@ -84,7 +84,7 @@ RSpec.describe "Admin OrderItems sort", type: :request do
     it "returns items ordered alphabetically by order.customer_name" do
       get_index(sort: "customer_name_asc")
       # Ana → Bruno → Carlos
-      expect(relative_order(scoped_ids)).to eq([item_new.id, item_old.id, item_middle.id])
+      expect(relative_order(scoped_ids)).to eq([ item_new.id, item_old.id, item_middle.id ])
     end
   end
 
@@ -92,7 +92,7 @@ RSpec.describe "Admin OrderItems sort", type: :request do
     it "returns items ordered alphabetically by product name" do
       get_index(sort: "product_name_asc")
       # AAA (item_new) → BBB (item_old) → CCC (item_middle)
-      expect(relative_order(scoped_ids)).to eq([item_new.id, item_old.id, item_middle.id])
+      expect(relative_order(scoped_ids)).to eq([ item_new.id, item_old.id, item_middle.id ])
     end
   end
 
@@ -100,12 +100,12 @@ RSpec.describe "Admin OrderItems sort", type: :request do
     it "falls back silently to FIFO without 5xx" do
       get_index(sort: "nope_doesnt_exist")
       expect(response).to have_http_status(:ok)
-      expect(relative_order(scoped_ids)).to eq([item_old.id, item_middle.id, item_new.id])
+      expect(relative_order(scoped_ids)).to eq([ item_old.id, item_middle.id, item_new.id ])
     end
 
     it "treats missing sort param as FIFO" do
       get_index(sort: nil)
-      expect(relative_order(scoped_ids)).to eq([item_old.id, item_middle.id, item_new.id])
+      expect(relative_order(scoped_ids)).to eq([ item_old.id, item_middle.id, item_new.id ])
     end
   end
 
@@ -128,8 +128,8 @@ RSpec.describe "Admin OrderItems sort", type: :request do
 
     it "uses id as deterministic tiebreaker when promised dates are equal" do
       get_index(sort: "promised_completion_date_asc")
-      tied = relative_order([tied_item_1.id, tied_item_2.id])
-      expect(tied).to eq([tied_item_1.id, tied_item_2.id])
+      tied = relative_order([ tied_item_1.id, tied_item_2.id ])
+      expect(tied).to eq([ tied_item_1.id, tied_item_2.id ])
     end
   end
 
