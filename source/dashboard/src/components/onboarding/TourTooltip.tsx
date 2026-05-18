@@ -73,8 +73,6 @@ export function TourTooltip({
       aria-describedby={bodyId}
       tabIndex={-1}
     >
-      <div className="tour-tooltip__arrow" aria-hidden="true" />
-
       <h2 id={titleId} className="tour-tooltip__title">
         {title}
       </h2>

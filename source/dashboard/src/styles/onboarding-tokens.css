@@ -178,43 +178,32 @@
   gap: 8px;
 }
 
-/* Arrow */
-.tour-tooltip__arrow {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  background: var(--tour-bg);
-  border: 1px solid var(--tour-border);
-  transform: rotate(45deg);
+/* ---------------------------------------------------------------------------
+ * React-Joyride's own arrow + floater.
+ *
+ * The floater is the wrapping container Joyride places around our tooltip;
+ * Joyride also injects an SVG arrow as a sibling of the tooltip. We adopt
+ * its arrow (which is repositioned automatically on placement flips and
+ * viewport collisions) and skin it with our tokens — we used to render a
+ * second CSS arrow inside our tooltip which produced a visible duplicate.
+ * ------------------------------------------------------------------------- */
+.react-joyride__floater {
+  /* Smooth the transform-driven repositioning that happens when Joyride
+   * jumps to the next step. Joyride only animates opacity by default, so
+   * the floater jumps to the new coordinates which feels abrupt. */
+  transition:
+    transform 280ms var(--tour-ease-standard),
+    opacity   200ms var(--tour-ease-standard) !important;
+  filter: none !important; /* we have our own shadow on .tour-tooltip */
 }
 
-.tour-tooltip[data-position="top"] .tour-tooltip__arrow {
-  bottom: -6px;
-  left: 50%;
-  margin-left: -5px;
-  border-top: none;
-  border-left: none;
+.react-joyride__arrow {
+  color: var(--tour-bg) !important;
 }
-.tour-tooltip[data-position="bottom"] .tour-tooltip__arrow {
-  top: -6px;
-  left: 50%;
-  margin-left: -5px;
-  border-bottom: none;
-  border-right: none;
-}
-.tour-tooltip[data-position="left"] .tour-tooltip__arrow {
-  right: -6px;
-  top: 50%;
-  margin-top: -5px;
-  border-bottom: none;
-  border-left: none;
-}
-.tour-tooltip[data-position="right"] .tour-tooltip__arrow {
-  left: -6px;
-  top: 50%;
-  margin-top: -5px;
-  border-top: none;
-  border-right: none;
+.react-joyride__arrow polygon {
+  /* The SVG inherits color via `fill: currentColor`, but pinning the polygon
+   * directly avoids surprises if Joyride changes that inline. */
+  fill: var(--tour-bg);
 }
 
 @keyframes tour-tooltip-in-from-top {
