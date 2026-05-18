@@ -93,6 +93,47 @@ RSpec.describe "Payments Webhook", type: :request do
     end
   end
 
+  describe "onboarding first-sale promotion" do
+    let!(:store) { StoreSetting.instance }
+    let!(:admin) { create(:user, email: "admin1@example.com", role: "admin") }
+
+    before do
+      allow(Stripe::Webhook).to receive(:construct_event).and_return(succeeded_event)
+    end
+
+    it "promotes completed users to phase_2_ready on the first paid order" do
+      # The dev/test DB ships with seed paid orders that interfere with the
+      # "count == 1" guard, so stub the count check rather than wipe the
+      # table (FK-dense Order has child rows that block bulk delete).
+      allow(Order).to receive_message_chain(:where, :count).and_return(1)
+      progress = create(:onboarding_progress, :completed, user: admin, store_setting: store)
+
+      post webhook_url, params: raw_payload, headers: webhook_headers
+      expect(response).to have_http_status(:ok)
+
+      expect(progress.reload.status).to eq("phase_2_ready")
+    end
+
+    it "does not promote on subsequent paid orders" do
+      allow(Order).to receive_message_chain(:where, :count).and_return(2)
+      progress = create(:onboarding_progress, :completed, user: admin, store_setting: store)
+
+      post webhook_url, params: raw_payload, headers: webhook_headers
+
+      expect(progress.reload.status).to eq("completed")
+    end
+
+    it "does not break the payment flow if onboarding promotion raises" do
+      allow(OnboardingProgress).to receive(:fire_first_sale!).and_raise(StandardError, "boom")
+
+      expect {
+        post webhook_url, params: raw_payload, headers: webhook_headers
+      }.to change(Order, :count).by(1)
+
+      expect(response).to have_http_status(:ok)
+    end
+  end
+
   describe "invalid webhook signature" do
     it "returns 400 bad_request on signature verification failure" do
       allow(Stripe::Webhook).to receive(:construct_event)

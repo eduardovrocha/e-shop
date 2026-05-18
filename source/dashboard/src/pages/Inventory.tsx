@@ -209,7 +209,7 @@ export default function Inventory() {
       </div>
 
       {/* col-span-full: tabela */}
-      <div className="col-span-full">
+      <div className="col-span-full" data-tour="inventory-row">
         <DataTable
           columns={columns}
           data={variants}

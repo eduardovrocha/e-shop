@@ -139,16 +139,14 @@ module Api
         # Idempotent: moves every admin that already finished Phase 1 to phase_2_ready.
         # Users still in_progress / skipped / not_started are not touched.
         def first_sale
-          affected = OnboardingProgress
-            .where(store_setting_id: store_setting.id, status: "completed")
-            .update_all(status: "phase_2_ready", updated_at: Time.current)
+          affected = OnboardingProgress.fire_first_sale!(store_setting: store_setting)
 
           if affected.positive?
             TelemetryService.track(
               event:            "tour_first_sale_after_completion",
               user_id:          nil,
               store_setting_id: store_setting.id,
-              properties:       { affected: affected }
+              properties:       { affected: affected, source: "manual_endpoint" }
             )
           end
 

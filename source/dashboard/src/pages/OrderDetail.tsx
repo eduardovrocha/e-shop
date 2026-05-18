@@ -269,7 +269,7 @@ export default function OrderDetail() {
 
         {/* Status + Link Público — dividem a linha em 2 colunas iguais */}
         <div className="col-span-full grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className={!trackingUrl ? 'md:col-span-2' : undefined}>
+          <Card className={!trackingUrl ? 'md:col-span-2' : undefined} data-tour="order-status-panel">
             <CardHeader>
               <CardTitle className="text-base">Status</CardTitle>
             </CardHeader>

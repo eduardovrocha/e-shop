@@ -12,6 +12,15 @@ class OnboardingProgress < ApplicationRecord
   validate :completed_steps_is_array
   validate :skipped_steps_is_array
 
+  # Promotes every admin that finished Phase 1 to phase_2_ready for the given
+  # store. Called from the Stripe webhook on the first paid order and from
+  # the admin endpoint POST /events/first-sale. Idempotent — re-runs return
+  # zero affected once the population is already phase_2_ready.
+  def self.fire_first_sale!(store_setting:)
+    where(store_setting_id: store_setting.id, status: "completed")
+      .update_all(status: "phase_2_ready", updated_at: Time.current)
+  end
+
   def add_completed_step(step_id)
     return if step_id.blank?
     self.completed_steps = (Array(completed_steps) + [ step_id.to_s ]).uniq
@@ -28,7 +37,10 @@ class OnboardingProgress < ApplicationRecord
 
   def mark_started!
     self.started_at  ||= Time.current
-    self.status        = "in_progress" if status == "not_started"
+    # not_started / phase_2_ready → in_progress. Other statuses are
+    # left alone (already in_progress, completed, or skipped — the
+    # caller-facing intent is "user wants the tour to run").
+    self.status = "in_progress" if status == "not_started" || status == "phase_2_ready"
     save!
   end
 

@@ -8,6 +8,7 @@ import { TourViewportGuard } from './TourViewportGuard'
 import { useViewportTooNarrow } from './useViewportGuard'
 import { PHASE_1_STEPS } from './steps/phase1'
 import { PHASE_2_STEPS } from './steps/phase2'
+import { latestPaidOrderId } from './steps/conditions'
 import { isStepEligible, type TourStepDefinition } from './steps/types'
 import { trackTourTelemetry } from './tour-telemetry'
 import { onboardingService, type OnboardingProgress, type TourStatus, type UpdateProgressPayload } from '@/services/onboardingService'
@@ -61,6 +62,7 @@ export function TourProvider({
   const [joyrideRun, setJoyrideRun] = useState(false)
   const [skipModalOpen, setSkipModalOpen] = useState(false)
   const [viewportGuardDismissed, setViewportGuardDismissed] = useState(false)
+  const [resolvedOrderId, setResolvedOrderId] = useState<number | null>(null)
 
   const currentPhase: 1 | 2 | null = progress?.current_phase ?? null
 
@@ -133,11 +135,24 @@ export function TourProvider({
     if (loading || !progress || autoTriggered.current) return
     if (joyrideRun) return
 
-    if (progress.status === 'not_started' || progress.status === 'in_progress') {
+    const triggers = [ 'not_started', 'in_progress', 'phase_2_ready' ]
+    if (triggers.includes(progress.status)) {
       autoTriggered.current = true
       setJoyrideRun(true)
     }
   }, [loading, progress, joyrideRun, disableAutoTrigger])
+
+  // When Phase 2 kicks in, fetch the latest paid order so step 2.1's
+  // `/orders/:id` route can be resolved dynamically.
+  useEffect(() => {
+    if (disableBackendSync) return
+    if (currentPhase !== 2) return
+    if (resolvedOrderId !== null) return
+
+    let cancelled = false
+    latestPaidOrderId().then((id) => { if (!cancelled && id !== null) setResolvedOrderId(id) })
+    return () => { cancelled = true }
+  }, [currentPhase, resolvedOrderId, disableBackendSync])
 
   // ---------- Navigation between steps ---------------------------------------
 
@@ -159,14 +174,22 @@ export function TourProvider({
     })
   }, [])
 
+  const resolveRoute = useCallback((route: string): string => {
+    if (route.includes(':id') && resolvedOrderId !== null) {
+      return route.replace(':id', String(resolvedOrderId))
+    }
+    return route
+  }, [resolvedOrderId])
+
   const goToStep = useCallback(async (nextIndex: number) => {
     if (nextIndex < 0 || nextIndex >= visibleSteps.length) return
 
     const step = visibleSteps[nextIndex]
+    const targetRoute = resolveRoute(step.route)
 
-    if (step.route && step.route !== location.pathname) {
-      navigate(step.route)
-      trackTourTelemetry('tour_step_route_mismatch', { step_id: step.id, from: location.pathname, to: step.route })
+    if (step.route && targetRoute !== location.pathname) {
+      navigate(targetRoute)
+      trackTourTelemetry('tour_step_route_mismatch', { step_id: step.id, from: location.pathname, to: targetRoute })
     }
 
     if (step.target) {
@@ -179,7 +202,7 @@ export function TourProvider({
 
     setStepIndex(nextIndex)
     queuePersist({ current_step_id: step.id })
-  }, [visibleSteps, location.pathname, navigate, waitForTarget, queuePersist])
+  }, [visibleSteps, location.pathname, navigate, waitForTarget, queuePersist, resolveRoute])
 
   // ---------- Public API ------------------------------------------------------
 
@@ -294,7 +317,18 @@ export function TourProvider({
   const currentStep = visibleSteps[stepIndex]
   const showAsModal = joyrideRun && currentStep?.asModal === true
   const isLastInPhase = stepIndex === visibleSteps.length - 1
-  const isWelcome = currentStep?.id === 'welcome'
+  const isWelcome      = currentStep?.id === 'welcome'
+  const isPhase2Entry  = currentStep?.id === 'phase_2_entry'
+  const isEntryModal   = isWelcome || isPhase2Entry
+
+  const dismissPhase2Entry = useCallback(() => {
+    // "Agora não" — close the modal for this session. Status stays
+    // phase_2_ready on the backend, so the next page-load (full mount,
+    // fresh autoTriggered ref) brings the modal back. We do NOT reset
+    // autoTriggered here, otherwise the effect would re-fire and the
+    // modal would never close in the current session.
+    setJoyrideRun(false)
+  }, [])
 
   function TooltipRenderer(props: TooltipRenderProps) {
     const stepIdx = props.index
@@ -360,9 +394,13 @@ export function TourProvider({
           title={currentStep.title}
           body={<p>{currentStep.body}</p>}
           primaryAction={{
-            label: isWelcome ? 'Começar tour →' : (isLastInPhase ? 'Fechar' : 'Próximo →'),
+            label:
+              isWelcome      ? 'Começar tour →' :
+              isPhase2Entry  ? 'Sim, mostrar →' :
+              isLastInPhase  ? 'Fechar' :
+                               'Próximo →',
             onClick: () => {
-              if (isWelcome) {
+              if (isEntryModal) {
                 void start().then(() => next())
               } else if (isLastInPhase) {
                 void completePhase(currentStep.phase)
@@ -372,11 +410,15 @@ export function TourProvider({
             },
           }}
           secondaryAction={
-            isWelcome
-              ? { label: 'Pular por agora', onClick: requestSkip }
-              : undefined
+            isWelcome      ? { label: 'Pular por agora', onClick: requestSkip } :
+            isPhase2Entry  ? { label: 'Agora não',       onClick: dismissPhase2Entry } :
+                             undefined
           }
-          onDismiss={isWelcome ? requestSkip : () => void completePhase(currentStep.phase)}
+          onDismiss={
+            isWelcome      ? requestSkip :
+            isPhase2Entry  ? dismissPhase2Entry :
+                             () => void completePhase(currentStep.phase)
+          }
         />
       )}
 

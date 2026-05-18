@@ -84,7 +84,7 @@ export default function Customers() {
       </div>
 
       {/* col-span-full: tabela */}
-      <div className="col-span-full">
+      <div className="col-span-full" data-tour="customer-card">
         <DataTable
           columns={columns}
           data={customers}

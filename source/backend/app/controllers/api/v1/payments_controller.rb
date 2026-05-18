@@ -347,7 +347,31 @@ module Api
         CustomerUpsertService.call(order)
         OrderBroadcastService.call(order) if newly_created
 
+        # First paid order ever? Promote completed onboarding users to
+        # phase_2_ready so the operational tour fires on their next login.
+        # Guarded by `newly_created` (skip on webhook retries) and the
+        # paid-order count (skip on all subsequent sales).
+        if newly_created && Order.where(status: %w[paid shipped delivered]).count == 1
+          fire_onboarding_first_sale
+        end
+
         Rails.logger.info "[Stripe] Order #{order.number || order.id} paid — intent=#{intent.id} total=#{intent.amount}"
+      end
+
+      def fire_onboarding_first_sale
+        store = StoreSetting.instance
+        affected = OnboardingProgress.fire_first_sale!(store_setting: store)
+        return if affected.zero?
+
+        TelemetryService.track(
+          event:            "tour_first_sale_after_completion",
+          user_id:          nil,
+          store_setting_id: store.id,
+          properties:       { affected: affected, source: "stripe_webhook" }
+        )
+      rescue StandardError => e
+        # Onboarding side-effect must never break the payment flow.
+        Rails.logger.warn "[Onboarding] first-sale promotion failed: #{e.class}: #{e.message}"
       end
 
       def parse_promised_completion_snapshot(metadata)
