@@ -204,6 +204,66 @@
 }
 
 /* ---------------------------------------------------------------------------
+ * Floating beacon — pulsing dot that marks the current step's target.
+ *
+ * Two concentric circles: an outer ring that pulses outwards (scale + fade)
+ * and an inner dot that pulses in place. Mirrors Joyride's beacon visual
+ * without using Joyride's pre-tooltip beacon flow.
+ * ------------------------------------------------------------------------- */
+.tour-beacon {
+  position: fixed;
+  width: 36px;
+  height: 36px;
+  pointer-events: none;
+  z-index: var(--tour-z-highlight);
+}
+
+.tour-beacon__outer,
+.tour-beacon__inner {
+  position: absolute;
+  border-radius: 50%;
+  display: block;
+}
+
+.tour-beacon__outer {
+  inset: 0;
+  background-color: rgba(79, 70, 229, 0.2);
+  border: 2px solid var(--tour-accent);
+  opacity: 0.9;
+  animation: tour-beacon-outer 1.2s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.tour-beacon__inner {
+  top: 50%;
+  left: 50%;
+  width: 50%;
+  height: 50%;
+  background-color: var(--tour-accent);
+  opacity: 0.7;
+  transform: translate(-50%, -50%);
+  animation: tour-beacon-inner 1.2s ease-in-out infinite;
+}
+
+@keyframes tour-beacon-outer {
+  0%   { transform: scale(1);   opacity: 0.9; }
+  45%  { opacity: 0.7; }
+  100% { transform: scale(1.7); opacity: 0;   }
+}
+
+@keyframes tour-beacon-inner {
+  0%, 100% { transform: translate(-50%, -50%) scale(1);   opacity: 0.7; }
+  50%      { transform: translate(-50%, -50%) scale(0.6); opacity: 0.9; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tour-beacon__outer,
+  .tour-beacon__inner {
+    animation: none !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
  * Custom arrow as a rotated-square ::before.
  *
  * Same background as the tooltip. Border only on the two OUTWARD edges of

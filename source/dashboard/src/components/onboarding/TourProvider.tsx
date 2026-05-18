@@ -5,6 +5,7 @@ import { TourTooltip } from './TourTooltip'
 import { TourModal } from './TourModal'
 import { SkipTourModal } from './SkipTourModal'
 import { TourViewportGuard } from './TourViewportGuard'
+import { TourBeacon } from './TourBeacon'
 import { useViewportTooNarrow } from './useViewportGuard'
 import { PHASE_1_STEPS } from './steps/phase1'
 import { PHASE_2_STEPS } from './steps/phase2'
@@ -159,43 +160,6 @@ export function TourProvider({
     latestPaidOrderId().then((id) => { if (!cancelled && id !== null) setResolvedOrderId(id) })
     return () => { cancelled = true }
   }, [currentPhase, resolvedOrderId, disableBackendSync])
-
-  // ---------- Highlight ring on the current step's target --------------------
-  //
-  // Visual spec section 6 — instead of dimming the page, mark the focused
-  // element with a pulsing ring. We toggle the .tour-highlight class
-  // imperatively on the current step's target so the highlight follows the
-  // tooltip from step to step. The target may not be mounted at the exact
-  // moment stepIndex flips (route navigation is async), so a MutationObserver
-  // catches it as soon as it lands.
-
-  useEffect(() => {
-    const current = visibleSteps[stepIndex]
-    if (!joyrideRun || !current || current.asModal || !current.target) return
-
-    const selector = current.target
-    let node: Element | null = document.querySelector(selector)
-    if (node) node.classList.add('tour-highlight')
-
-    let observer: MutationObserver | null = null
-    if (!node) {
-      observer = new MutationObserver(() => {
-        const found = document.querySelector(selector)
-        if (found) {
-          node = found
-          node.classList.add('tour-highlight')
-          observer?.disconnect()
-          observer = null
-        }
-      })
-      observer.observe(document.body, { childList: true, subtree: true })
-    }
-
-    return () => {
-      observer?.disconnect()
-      node?.classList.remove('tour-highlight')
-    }
-  }, [stepIndex, visibleSteps, joyrideRun])
 
   // ---------- Navigation between steps ---------------------------------------
 
@@ -464,27 +428,32 @@ export function TourProvider({
       {children}
 
       {joyrideRun && joyrideSteps.length > 0 && !showAsModal && (
-        <Joyride
-          steps={joyrideSteps}
-          run={joyrideRun}
-          stepIndex={positionedStepIndex}
-          continuous
-          onEvent={handleJoyrideEvent}
-          tooltipComponent={TooltipRenderer}
-          options={{
-            hideOverlay:      true,
-            overlayColor:     'transparent',
-            primaryColor:     '#4F46E5',
-            spotlightRadius:  8,
-            zIndex:           9999,
-            arrowSize:        8,
-            // Never auto-scroll between steps — if the next target is
-            // already visible, leave the page where the user put it.
-            // Joyride still flips placement on viewport collisions, so a
-            // step at the edge stays usable without yanking the scroll.
-            skipScroll: true,
-          }}
-        />
+        <>
+          <Joyride
+            steps={joyrideSteps}
+            run={joyrideRun}
+            stepIndex={positionedStepIndex}
+            continuous
+            onEvent={handleJoyrideEvent}
+            tooltipComponent={TooltipRenderer}
+            options={{
+              hideOverlay:      true,
+              overlayColor:     'transparent',
+              primaryColor:     '#4F46E5',
+              spotlightRadius:  8,
+              zIndex:           9999,
+              arrowSize:        8,
+              // Never auto-scroll between steps — if the next target is
+              // already visible, leave the page where the user put it.
+              // Joyride still flips placement on viewport collisions, so a
+              // step at the edge stays usable without yanking the scroll.
+              skipScroll: true,
+            }}
+          />
+          {currentStep?.target && (
+            <TourBeacon targetSelector={currentStep.target} />
+          )}
+        </>
       )}
 
       {showAsModal && currentStep && (
