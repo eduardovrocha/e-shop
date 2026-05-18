@@ -46,13 +46,25 @@ export function AdminHeader() {
       <div className="flex items-center gap-2">
         {/* Connection status pill */}
         {connectionStatus !== 'connected' && (
-          <span className="hidden sm:flex items-center gap-1.5 rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground">
-            <span className={[
-              'h-1.5 w-1.5 rounded-full',
-              connectionStatus === 'connecting' ? 'bg-yellow-400 animate-pulse' : 'bg-red-400',
-            ].join(' ')} />
-            {connectionStatus === 'connecting' ? 'conectando...' : 'desconectado'}
-          </span>
+          connectionStatus === 'unauthorized' ? (
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="hidden sm:flex items-center gap-1.5 rounded-full border border-red-300 bg-red-50 px-2 py-0.5 text-[10px] text-red-700 hover:bg-red-100"
+              title="Sessão expirada — clique para entrar novamente"
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+              sessão expirada — entrar novamente
+            </button>
+          ) : (
+            <span className="hidden sm:flex items-center gap-1.5 rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground">
+              <span className={[
+                'h-1.5 w-1.5 rounded-full',
+                connectionStatus === 'connecting' ? 'bg-yellow-400 animate-pulse' : 'bg-red-400',
+              ].join(' ')} />
+              {connectionStatus === 'connecting' ? 'conectando...' : 'desconectado'}
+            </span>
+          )
         )}
 
         {/* Notifications */}

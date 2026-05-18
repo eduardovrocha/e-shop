@@ -15,7 +15,7 @@ export interface OrderNotification {
   receivedAt: string
 }
 
-export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected'
+export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'unauthorized'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -59,6 +59,10 @@ export function useOrderNotifications() {
   const retryRef    = useRef<ReturnType<typeof setTimeout> | null>(null)
   const attemptRef  = useRef(0)
   const unmountedRef = useRef(false)
+  // Set when the server tells us not to reconnect (e.g. auth rejected).
+  // Stops the onclose handler from scheduling another retry. Cleared on
+  // every connect() so a fresh login resets the loop.
+  const stoppedRef  = useRef(false)
 
   // ── Subscribe to channel after welcome ──────────────────────────────────────
 
@@ -81,6 +85,17 @@ export function useOrderNotifications() {
         attemptRef.current = 0
         break
       case 'ping':
+        break
+      case 'disconnect':
+        // Server-initiated disconnect (e.g. reason: 'unauthorized'). When
+        // reconnect is false, stop the retry loop — otherwise we hammer
+        // the server every 30s. The user needs to log in again.
+        if (msg.reconnect === false) {
+          stoppedRef.current = true
+          if (!unmountedRef.current) {
+            setStatus(msg.reason === 'unauthorized' ? 'unauthorized' : 'disconnected')
+          }
+        }
         break
       default: {
         // Broadcast message from server
@@ -115,6 +130,7 @@ export function useOrderNotifications() {
     if (unmountedRef.current || !isAuthenticated) return
     if (wsRef.current?.readyState === WebSocket.OPEN) return
 
+    stoppedRef.current = false
     setStatus('connecting')
 
     const ws = new WebSocket(cableUrl())
@@ -128,8 +144,9 @@ export function useOrderNotifications() {
 
     ws.onclose = () => {
       if (unmountedRef.current) return
-      setStatus('disconnected')
       wsRef.current = null
+      if (stoppedRef.current) return  // server said don't reconnect
+      setStatus('disconnected')
       const delay = Math.min(1000 * 2 ** attemptRef.current, BACKOFF_MAX)
       attemptRef.current += 1
       retryRef.current = setTimeout(connect, delay)

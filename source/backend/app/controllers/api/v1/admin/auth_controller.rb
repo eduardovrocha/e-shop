@@ -24,7 +24,12 @@ module Api
               httponly:  true,
               secure:    Rails.env.production?,
               same_site: :strict,
-              expires:   24.hours.from_now
+              expires:   24.hours.from_now,
+              # Parent-domain scope in prod so dashboard.* and api.* share
+              # the cookie (needed for Action Cable WS handshake to /cable
+              # served from dashboard.andrequice.store). Host-only in dev
+              # because browsers reject the Domain attribute on localhost.
+              domain:    Rails.env.production? ? ".andrequice.store" : nil
             }
             render json: {
               user: {
@@ -41,7 +46,7 @@ module Api
         end
 
         def logout
-          cookies.delete(:admin_token)
+          cookies.delete(:admin_token, domain: Rails.env.production? ? ".andrequice.store" : nil)
           head :no_content
         end
       end
