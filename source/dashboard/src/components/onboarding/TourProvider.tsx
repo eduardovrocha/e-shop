@@ -3,6 +3,9 @@ import { Joyride, ACTIONS, EVENTS, type EventData, type Step, type TooltipRender
 import { useLocation, useNavigate } from 'react-router-dom'
 import { TourTooltip } from './TourTooltip'
 import { TourModal } from './TourModal'
+import { SkipTourModal } from './SkipTourModal'
+import { TourViewportGuard } from './TourViewportGuard'
+import { useViewportTooNarrow } from './useViewportGuard'
 import { PHASE_1_STEPS } from './steps/phase1'
 import { PHASE_2_STEPS } from './steps/phase2'
 import { isStepEligible, type TourStepDefinition } from './steps/types'
@@ -25,6 +28,7 @@ interface TourContextValue {
   prev:             () => void
   skipStep:         () => void
   skipTour:         (opts: { permanently: boolean }) => Promise<void>
+  requestSkip:      () => void
   completePhase:    (phase: 1 | 2) => Promise<void>
   resumeFromStep:   (stepId: string) => void
 }
@@ -38,18 +42,26 @@ interface TourProviderProps {
    * components can call useTour without crashing.
    */
   disableBackendSync?: boolean
+  /** Disable automatic welcome / resume effect (used by unit tests). */
+  disableAutoTrigger?: boolean
 }
 
-export function TourProvider({ children, disableBackendSync = false }: TourProviderProps) {
+export function TourProvider({
+  children,
+  disableBackendSync = false,
+  disableAutoTrigger = false,
+}: TourProviderProps) {
   const navigate = useNavigate()
   const location = useLocation()
+  const viewportTooNarrow = useViewportTooNarrow()
 
-  const [progress, setProgress] = useState<OnboardingProgress | null>(null)
-  const [loading,  setLoading]  = useState(true)
-  const [stepIndex, setStepIndex] = useState(0)
+  const [progress,   setProgress]   = useState<OnboardingProgress | null>(null)
+  const [loading,    setLoading]    = useState(true)
+  const [stepIndex,  setStepIndex]  = useState(0)
   const [joyrideRun, setJoyrideRun] = useState(false)
+  const [skipModalOpen, setSkipModalOpen] = useState(false)
+  const [viewportGuardDismissed, setViewportGuardDismissed] = useState(false)
 
-  // Active phase derived from progress
   const currentPhase: 1 | 2 | null = progress?.current_phase ?? null
 
   const allSteps = useMemo<TourStepDefinition[]>(() => {
@@ -57,10 +69,23 @@ export function TourProvider({ children, disableBackendSync = false }: TourProvi
     return PHASE_1_STEPS
   }, [currentPhase])
 
-  const visibleSteps = useMemo(
-    () => allSteps.filter(isStepEligible),
-    [allSteps],
+  // `visibleSteps` is resolved asynchronously because conditions may probe
+  // the backend. While the resolution runs we expose the synchronous subset
+  // so the UI never blocks on a slow probe.
+  const [visibleSteps, setVisibleSteps] = useState<TourStepDefinition[]>(() =>
+    allSteps.filter((s) => s.enabled !== false && !s.condition),
   )
+
+  useEffect(() => {
+    let cancelled = false
+    Promise.all(allSteps.map((s) => Promise.resolve(isStepEligible(s)).then((ok) => ({ s, ok }))))
+      .then((results) => {
+        if (cancelled) return
+        setVisibleSteps(results.filter((r) => r.ok).map((r) => r.s))
+      })
+      .catch(() => { /* keep current visibleSteps */ })
+    return () => { cancelled = true }
+  }, [allSteps])
 
   // ---------- Backend sync ----------------------------------------------------
 
@@ -87,7 +112,6 @@ export function TourProvider({ children, disableBackendSync = false }: TourProvi
       .then((p) => {
         if (cancelled) return
         setProgress(p)
-        // Restore stepIndex from current_step_id
         if (p.current_step_id) {
           const phaseSteps = p.current_phase === 2 ? PHASE_2_STEPS : PHASE_1_STEPS
           const idx = phaseSteps.findIndex((s) => s.id === p.current_step_id)
@@ -99,6 +123,21 @@ export function TourProvider({ children, disableBackendSync = false }: TourProvi
 
     return () => { cancelled = true }
   }, [disableBackendSync])
+
+  // ---------- Auto-trigger: first login + resume ------------------------------
+
+  const autoTriggered = useRef(false)
+
+  useEffect(() => {
+    if (disableAutoTrigger) return
+    if (loading || !progress || autoTriggered.current) return
+    if (joyrideRun) return
+
+    if (progress.status === 'not_started' || progress.status === 'in_progress') {
+      autoTriggered.current = true
+      setJoyrideRun(true)
+    }
+  }, [loading, progress, joyrideRun, disableAutoTrigger])
 
   // ---------- Navigation between steps ---------------------------------------
 
@@ -125,18 +164,15 @@ export function TourProvider({ children, disableBackendSync = false }: TourProvi
 
     const step = visibleSteps[nextIndex]
 
-    // 1. Navigate if route does not match
     if (step.route && step.route !== location.pathname) {
       navigate(step.route)
       trackTourTelemetry('tour_step_route_mismatch', { step_id: step.id, from: location.pathname, to: step.route })
     }
 
-    // 2. Wait for target to mount (only relevant for positioned tooltips)
     if (step.target) {
       const found = await waitForTarget(step.target)
       if (!found) {
         trackTourTelemetry('tour_step_target_missed', { step_id: step.id, target: step.target })
-        // Skip past it silently — try next eligible step
         return goToStep(nextIndex + 1)
       }
     }
@@ -148,11 +184,10 @@ export function TourProvider({ children, disableBackendSync = false }: TourProvi
   // ---------- Public API ------------------------------------------------------
 
   const start = useCallback(async () => {
+    setJoyrideRun(true)
     if (!disableBackendSync) {
       try { setProgress(await onboardingService.start()) } catch { /* offline ok */ }
     }
-    setStepIndex(0)
-    setJoyrideRun(true)
   }, [disableBackendSync])
 
   const next = useCallback(() => {
@@ -171,10 +206,13 @@ export function TourProvider({ children, disableBackendSync = false }: TourProvi
 
   const skipTour = useCallback(async ({ permanently }: { permanently: boolean }) => {
     setJoyrideRun(false)
+    setSkipModalOpen(false)
     if (!disableBackendSync) {
       try { setProgress(await onboardingService.skip(permanently)) } catch { /* offline ok */ }
     }
   }, [disableBackendSync])
+
+  const requestSkip = useCallback(() => setSkipModalOpen(true), [])
 
   const completePhase = useCallback(async (phase: 1 | 2) => {
     setJoyrideRun(false)
@@ -204,14 +242,15 @@ export function TourProvider({ children, disableBackendSync = false }: TourProvi
     prev,
     skipStep,
     skipTour,
+    requestSkip,
     completePhase,
     resumeFromStep,
   }), [
     loading, progress, currentPhase, visibleSteps, stepIndex,
-    start, next, prev, skipStep, skipTour, completePhase, resumeFromStep,
+    start, next, prev, skipStep, skipTour, requestSkip, completePhase, resumeFromStep,
   ])
 
-  // ---------- Joyride steps ---------------------------------------------------
+  // ---------- Joyride wiring --------------------------------------------------
 
   const positionedSteps = useMemo(
     () => visibleSteps.filter((s) => !s.asModal),
@@ -227,12 +266,12 @@ export function TourProvider({ children, disableBackendSync = false }: TourProvi
 
   const joyrideSteps = useMemo<Step[]>(
     () => positionedSteps.map((s) => ({
-      target:   s.target ?? 'body',
-      content:  s.body,
-      title:    s.title,
-      placement: s.position ?? 'bottom',
+      target:        s.target ?? 'body',
+      content:       s.body,
+      title:         s.title,
+      placement:     s.position ?? 'bottom',
       disableBeacon: true,
-      data: { stepId: s.id, phase: s.phase },
+      data:          { stepId: s.id, phase: s.phase },
     })),
     [positionedSteps],
   )
@@ -243,20 +282,19 @@ export function TourProvider({ children, disableBackendSync = false }: TourProvi
       if (action === ACTIONS.NEXT) next()
       else if (action === ACTIONS.PREV) prev()
       else if (action === ACTIONS.SKIP || action === ACTIONS.CLOSE) {
-        void skipTour({ permanently: false })
+        requestSkip()
       }
     } else if (type === EVENTS.TARGET_NOT_FOUND) {
       const current = visibleSteps[stepIndex]
       if (current) trackTourTelemetry('tour_step_target_missed', { step_id: current.id, target: current.target })
       next()
     }
-  }, [next, prev, skipTour, visibleSteps, stepIndex])
+  }, [next, prev, requestSkip, visibleSteps, stepIndex])
 
-  // Render the current asModal step (if any) outside Joyride
   const currentStep = visibleSteps[stepIndex]
   const showAsModal = joyrideRun && currentStep?.asModal === true
-
   const isLastInPhase = stepIndex === visibleSteps.length - 1
+  const isWelcome = currentStep?.id === 'welcome'
 
   function TooltipRenderer(props: TooltipRenderProps) {
     const stepIdx = props.index
@@ -279,11 +317,25 @@ export function TourProvider({ children, disableBackendSync = false }: TourProvi
     )
   }
 
+  // Viewport guard short-circuit: when the tour wants to run on a narrow
+  // viewport, show the explanatory card and pause everything else.
+  if (joyrideRun && viewportTooNarrow && !viewportGuardDismissed) {
+    return (
+      <TourContext.Provider value={value}>
+        {children}
+        <TourViewportGuard onDismiss={() => {
+          setViewportGuardDismissed(true)
+          setJoyrideRun(false)
+        }} />
+      </TourContext.Provider>
+    )
+  }
+
   return (
     <TourContext.Provider value={value}>
       {children}
 
-      {joyrideRun && joyrideSteps.length > 0 && (
+      {joyrideRun && joyrideSteps.length > 0 && !showAsModal && (
         <Joyride
           steps={joyrideSteps}
           run={joyrideRun}
@@ -308,9 +360,11 @@ export function TourProvider({ children, disableBackendSync = false }: TourProvi
           title={currentStep.title}
           body={<p>{currentStep.body}</p>}
           primaryAction={{
-            label: isLastInPhase ? 'Fechar' : 'Próximo →',
+            label: isWelcome ? 'Começar tour →' : (isLastInPhase ? 'Fechar' : 'Próximo →'),
             onClick: () => {
-              if (isLastInPhase) {
+              if (isWelcome) {
+                void start().then(() => next())
+              } else if (isLastInPhase) {
                 void completePhase(currentStep.phase)
               } else {
                 next()
@@ -318,13 +372,20 @@ export function TourProvider({ children, disableBackendSync = false }: TourProvi
             },
           }}
           secondaryAction={
-            stepIndex === 0
-              ? { label: 'Pular por agora', onClick: () => void skipTour({ permanently: false }) }
+            isWelcome
+              ? { label: 'Pular por agora', onClick: requestSkip }
               : undefined
           }
-          onDismiss={() => void skipTour({ permanently: false })}
+          onDismiss={isWelcome ? requestSkip : () => void completePhase(currentStep.phase)}
         />
       )}
+
+      <SkipTourModal
+        open={skipModalOpen}
+        onSkipNow={() => void skipTour({ permanently: false })}
+        onSkipPermanently={() => void skipTour({ permanently: true })}
+        onContinue={() => setSkipModalOpen(false)}
+      />
     </TourContext.Provider>
   )
 }

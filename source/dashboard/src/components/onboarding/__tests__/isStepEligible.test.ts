@@ -37,4 +37,20 @@ describe('isStepEligible', () => {
   it('treats disabled as taking precedence over condition', () => {
     expect(isStepEligible(makeStep({ enabled: false, condition: () => true }))).toBe(false)
   })
+
+  it('returns a Promise that resolves true when condition is an async truthy', async () => {
+    const result = isStepEligible(makeStep({ condition: async () => true }))
+    expect(result).toBeInstanceOf(Promise)
+    expect(await (result as Promise<boolean>)).toBe(true)
+  })
+
+  it('resolves a rejected async condition as not-eligible', async () => {
+    const result = isStepEligible(makeStep({ condition: async () => { throw new Error('boom') } }))
+    expect(await (result as Promise<boolean>)).toBe(false)
+  })
+
+  it('resolves async condition returning false as not-eligible', async () => {
+    const result = isStepEligible(makeStep({ condition: async () => false }))
+    expect(await (result as Promise<boolean>)).toBe(false)
+  })
 })

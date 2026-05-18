@@ -201,6 +201,7 @@ export default function Settings() {
                   </div>
                   <Input
                     id="headline-primary"
+                    data-tour="store-config-name"
                     value={headlinePrimary}
                     onChange={(e) => setHeadlinePrimary(e.target.value)}
                     maxLength={80}
@@ -299,7 +300,7 @@ export default function Settings() {
 
       {/* ───────────────────────────── Loja ───────────────────────────── */}
       {activeTab === 'loja' && (
-        <div className="col-span-full">
+        <div className="col-span-full" data-tour="store-config-contact">
           <form onSubmit={handleGeneralSave}>
             <Card>
               <CardHeader>

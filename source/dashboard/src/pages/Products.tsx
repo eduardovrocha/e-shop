@@ -129,7 +129,7 @@ export default function Products() {
           title="Produtos"
           subtitle={meta ? `${meta.total_count} produtos cadastrados` : 'Carregando...'}
           actions={
-            <Button size="sm" onClick={() => navigate('/products/new')}>
+            <Button size="sm" data-tour="products-new" onClick={() => navigate('/products/new')}>
               <Plus className="h-4 w-4" />
               Novo produto
             </Button>

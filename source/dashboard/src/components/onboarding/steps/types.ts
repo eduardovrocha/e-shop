@@ -39,10 +39,10 @@ export interface TourStepDefinition {
 
   /**
    * Optional runtime predicate. If returns false the step is skipped.
-   * Useful for steps that only apply to certain store configurations
-   * (e.g. step 1.7 only when the user just created a made-to-order product).
+   * Supports async checks (e.g. querying the API for the latest product's
+   * `fulfillment_mode` to decide if the production step applies).
    */
-  condition?: () => boolean
+  condition?: () => boolean | Promise<boolean>
 
   /**
    * Render as a centered modal instead of a positioned tooltip.
@@ -52,14 +52,25 @@ export interface TourStepDefinition {
 }
 
 /**
- * Returns whether a step is currently eligible to render. Steps explicitly
- * disabled (or with a condition that resolves to false) are skipped.
+ * Resolves whether a step is currently eligible to render.
+ *
+ * Synchronous fast-path:
+ *   - `enabled === false` → not eligible
+ *   - no `condition` → eligible
+ *   - sync `condition` → its truthiness
+ *
+ * Async fallback when `condition` returns a Promise. Failures resolve to
+ * not-eligible — the safer default if a backend probe fails mid-tour.
  */
-export function isStepEligible(step: TourStepDefinition): boolean {
+export function isStepEligible(step: TourStepDefinition): boolean | Promise<boolean> {
   if (step.enabled === false) return false
   if (!step.condition)        return true
   try {
-    return Boolean(step.condition())
+    const result = step.condition()
+    if (result instanceof Promise) {
+      return result.then(Boolean).catch(() => false)
+    }
+    return Boolean(result)
   } catch {
     return false
   }

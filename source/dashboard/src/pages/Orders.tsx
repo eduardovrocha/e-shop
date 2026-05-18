@@ -128,7 +128,7 @@ export default function Orders() {
       </div>
 
       {/* col-span-full: tabela */}
-      <div className="col-span-full">
+      <div className="col-span-full" data-tour="orders-table">
         <DataTable
           columns={columns}
           data={orders}

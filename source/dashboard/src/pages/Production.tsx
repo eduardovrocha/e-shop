@@ -332,7 +332,7 @@ export default function Production() {
       </Card>
 
       {/* Colunas */}
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-3" data-tour="production-list">
         <Column
           title="Fila"
           ariaLabel="Itens na fila aguardando início de produção"

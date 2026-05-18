@@ -207,7 +207,7 @@ export default function Shipping() {
       </div>
 
       {/* col-span-full: abas de navegação */}
-      <div className="col-span-full border-b border-border">
+      <div className="col-span-full border-b border-border" data-tour="shipping-config">
         <nav className="-mb-px flex gap-1" aria-label="Abas de configuração de frete">
           {TABS.map((tab) => (
             <button
