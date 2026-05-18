@@ -19,6 +19,7 @@ vi.mock('@/services/productsService', () => ({
 }))
 
 import { TourProvider } from '../TourProvider'
+import { TourReplayButton } from '../TourReplayButton'
 import { onboardingService } from '@/services/onboardingService'
 import { PHASE_1_STEPS } from '../steps/phase1'
 
@@ -26,6 +27,7 @@ function renderTour() {
   return render(
     <MemoryRouter initialEntries={['/']}>
       <TourProvider>
+        <TourReplayButton />
         <div data-testid="app-content">app</div>
       </TourProvider>
     </MemoryRouter>,
@@ -44,10 +46,21 @@ const baseProgress = {
   next_eligible_phase_2_at: null,
 }
 
-describe('Phase 1 — auto-trigger and welcome flow', () => {
+/**
+ * Helper — drives the user through the only path that opens the tour:
+ * click the replay button, then pick "Setup inicial" in the catalog.
+ */
+async function openPhase1ViaCatalog(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByTestId('tour-replay-button'))
+  await user.click(await screen.findByTestId('tour-catalog-phase-1'))
+  await screen.findByText('Bem-vindo à sua loja.')
+}
+
+describe('Phase 1 — manual replay through the catalog', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     ;(onboardingService.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(baseProgress)
+    ;(onboardingService.reset as ReturnType<typeof vi.fn>).mockResolvedValue(baseProgress)
     ;(onboardingService.start as ReturnType<typeof vi.fn>).mockResolvedValue({
       ...baseProgress, status: 'in_progress', started_at: '2026-05-17T00:00:00Z',
     })
@@ -59,14 +72,23 @@ describe('Phase 1 — auto-trigger and welcome flow', () => {
     })
   })
 
-  it('shows the welcome modal when status=not_started', async () => {
+  it('does NOT auto-open the welcome modal on mount when status=not_started', async () => {
     renderTour()
-    expect(await screen.findByText('Bem-vindo à sua loja.')).toBeInTheDocument()
-    expect(screen.getByText('Começar tour →')).toBeInTheDocument()
-    expect(screen.getByText('Pular por agora')).toBeInTheDocument()
+    await waitFor(() => expect(onboardingService.fetch).toHaveBeenCalled())
+    expect(screen.queryByText('Bem-vindo à sua loja.')).not.toBeInTheDocument()
   })
 
-  it('does not auto-trigger when status=completed', async () => {
+  it('does NOT auto-open the welcome modal when status=in_progress (no resume on login)', async () => {
+    ;(onboardingService.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...baseProgress, status: 'in_progress', current_step_id: 'welcome',
+    })
+    renderTour()
+    await waitFor(() => expect(onboardingService.fetch).toHaveBeenCalled())
+    expect(screen.queryByText('Bem-vindo à sua loja.')).not.toBeInTheDocument()
+    expect(onboardingService.start).not.toHaveBeenCalled()
+  })
+
+  it('does NOT auto-open when status=completed or skipped', async () => {
     ;(onboardingService.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ...baseProgress, status: 'completed', completed_at: '2026-05-17T00:00:00Z',
     })
@@ -75,19 +97,18 @@ describe('Phase 1 — auto-trigger and welcome flow', () => {
     expect(screen.queryByText('Bem-vindo à sua loja.')).not.toBeInTheDocument()
   })
 
-  it('does not auto-trigger when status=skipped', async () => {
-    ;(onboardingService.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ...baseProgress, status: 'skipped',
-    })
+  it('opening Setup via catalog shows the welcome modal', async () => {
+    const user = userEvent.setup()
     renderTour()
-    await waitFor(() => expect(onboardingService.fetch).toHaveBeenCalled())
-    expect(screen.queryByText('Bem-vindo à sua loja.')).not.toBeInTheDocument()
+    await openPhase1ViaCatalog(user)
+    expect(screen.getByText('Começar tour →')).toBeInTheDocument()
+    expect(screen.getByText('Pular por agora')).toBeInTheDocument()
   })
 
   it('clicking "Começar tour →" calls backend.start', async () => {
     const user = userEvent.setup()
     renderTour()
-    await screen.findByText('Bem-vindo à sua loja.')
+    await openPhase1ViaCatalog(user)
 
     await user.click(screen.getByText('Começar tour →'))
     await waitFor(() => expect(onboardingService.start).toHaveBeenCalled())
@@ -96,7 +117,7 @@ describe('Phase 1 — auto-trigger and welcome flow', () => {
   it('clicking "Pular por agora" opens the skip confirmation modal', async () => {
     const user = userEvent.setup()
     renderTour()
-    await screen.findByText('Bem-vindo à sua loja.')
+    await openPhase1ViaCatalog(user)
 
     await user.click(screen.getByText('Pular por agora'))
     expect(await screen.findByText('Pular o tour?')).toBeInTheDocument()
@@ -108,7 +129,7 @@ describe('Phase 1 — auto-trigger and welcome flow', () => {
   it('"Não mostrar mais" calls skip(permanently=true)', async () => {
     const user = userEvent.setup()
     renderTour()
-    await screen.findByText('Bem-vindo à sua loja.')
+    await openPhase1ViaCatalog(user)
 
     await user.click(screen.getByText('Pular por agora'))
     await user.click(screen.getByTestId('skip-tour-permanent'))
@@ -118,7 +139,7 @@ describe('Phase 1 — auto-trigger and welcome flow', () => {
   it('"Pular agora" calls skip(permanently=false)', async () => {
     const user = userEvent.setup()
     renderTour()
-    await screen.findByText('Bem-vindo à sua loja.')
+    await openPhase1ViaCatalog(user)
 
     await user.click(screen.getByText('Pular por agora'))
     await user.click(screen.getByTestId('skip-tour-now'))
@@ -128,23 +149,13 @@ describe('Phase 1 — auto-trigger and welcome flow', () => {
   it('"Continuar tour" closes the skip modal without calling backend.skip', async () => {
     const user = userEvent.setup()
     renderTour()
-    await screen.findByText('Bem-vindo à sua loja.')
+    await openPhase1ViaCatalog(user)
 
     await user.click(screen.getByText('Pular por agora'))
     await user.click(screen.getByTestId('skip-tour-continue'))
 
     await waitFor(() => expect(screen.queryByText('Pular o tour?')).not.toBeInTheDocument())
     expect(onboardingService.skip).not.toHaveBeenCalled()
-  })
-
-  it('auto-resumes when status=in_progress (does not fire start)', async () => {
-    ;(onboardingService.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ...baseProgress, status: 'in_progress', current_step_id: 'welcome', started_at: '2026-05-17T00:00:00Z',
-    })
-    renderTour()
-    await waitFor(() => expect(onboardingService.fetch).toHaveBeenCalled())
-    // We are joyrideRun=true but did NOT call /start
-    expect(onboardingService.start).not.toHaveBeenCalled()
   })
 })
 
@@ -174,7 +185,6 @@ describe('Phase 1 — step list integrity', () => {
 
   it('uses dashboard real route paths (English)', () => {
     const routes = new Set(PHASE_1_STEPS.map((s) => s.route))
-    // expects the real routes, not PT spec paths
     expect(routes).toContain('/settings')
     expect(routes).toContain('/orders')
     expect(routes).toContain('/products')

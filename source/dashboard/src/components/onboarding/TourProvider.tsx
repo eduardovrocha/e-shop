@@ -49,14 +49,11 @@ interface TourProviderProps {
    * components can call useTour without crashing.
    */
   disableBackendSync?: boolean
-  /** Disable automatic welcome / resume effect (used by unit tests). */
-  disableAutoTrigger?: boolean
 }
 
 export function TourProvider({
   children,
   disableBackendSync = false,
-  disableAutoTrigger = false,
 }: TourProviderProps) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -138,21 +135,11 @@ export function TourProvider({
     return () => { cancelled = true }
   }, [disableBackendSync])
 
-  // ---------- Auto-trigger: first login + resume ------------------------------
-
-  const autoTriggered = useRef(false)
-
-  useEffect(() => {
-    if (disableAutoTrigger) return
-    if (loading || !progress || autoTriggered.current) return
-    if (joyrideRun) return
-
-    const triggers = [ 'not_started', 'in_progress', 'phase_2_ready' ]
-    if (triggers.includes(progress.status)) {
-      autoTriggered.current = true
-      setJoyrideRun(true)
-    }
-  }, [loading, progress, joyrideRun, disableAutoTrigger])
+  // The tour never auto-launches on login or status changes. Users open it
+  // explicitly via "Admin → Refazer tour" in the header dropdown, which
+  // routes through the TourCatalogModal → replayPhase(n) path. This keeps
+  // the dashboard quiet on every page-load and means the same UX whether
+  // you're a brand-new admin or someone who already finished the tour.
 
   // When Phase 2 kicks in, fetch the latest paid order so step 2.1's
   // `/orders/:id` route can be resolved dynamically.
@@ -284,7 +271,6 @@ export function TourProvider({
     setStepIndex(0)
     setSkipModalOpen(false)
     setCatalogModalOpen(false)
-    autoTriggered.current = false
 
     if (phase === 1) {
       if (!disableBackendSync) {
@@ -400,11 +386,8 @@ export function TourProvider({
   const isEntryModal   = isWelcome || isPhase2Entry
 
   const dismissPhase2Entry = useCallback(() => {
-    // "Agora não" — close the modal for this session. Status stays
-    // phase_2_ready on the backend, so the next page-load (full mount,
-    // fresh autoTriggered ref) brings the modal back. We do NOT reset
-    // autoTriggered here, otherwise the effect would re-fire and the
-    // modal would never close in the current session.
+    // "Agora não" — close the entry modal. Status stays phase_2_ready on
+    // the backend so the user can re-trigger via "Admin → Refazer tour".
     setJoyrideRun(false)
   }, [])
 

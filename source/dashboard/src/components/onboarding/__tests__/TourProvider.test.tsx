@@ -39,7 +39,7 @@ function Consumer() {
 function renderProvider({ disableBackendSync = false } = {}) {
   return render(
     <MemoryRouter initialEntries={['/']}>
-      <TourProvider disableBackendSync={disableBackendSync} disableAutoTrigger>
+      <TourProvider disableBackendSync={disableBackendSync}>
         <Consumer />
       </TourProvider>
     </MemoryRouter>,

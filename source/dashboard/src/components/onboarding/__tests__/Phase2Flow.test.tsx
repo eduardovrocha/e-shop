@@ -23,6 +23,7 @@ vi.mock('@/services/ordersService', () => ({
 }))
 
 import { TourProvider } from '../TourProvider'
+import { TourReplayButton } from '../TourReplayButton'
 import { onboardingService } from '@/services/onboardingService'
 import { ordersService } from '@/services/ordersService'
 import { PHASE_2_STEPS } from '../steps/phase2'
@@ -32,6 +33,7 @@ function renderTour(initialEntry = '/') {
   return render(
     <MemoryRouter initialEntries={[ initialEntry ]}>
       <TourProvider>
+        <TourReplayButton />
         <div data-testid="app-content">app</div>
       </TourProvider>
     </MemoryRouter>,
@@ -50,11 +52,20 @@ const phase2ReadyProgress = {
   next_eligible_phase_2_at: null,
 }
 
-describe('Phase 2 — entry modal and auto-trigger', () => {
+async function openPhase2ViaCatalog(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByTestId('tour-replay-button'))
+  await user.click(await screen.findByTestId('tour-catalog-phase-2'))
+  await screen.findByText('Sua primeira venda chegou!')
+}
+
+describe('Phase 2 — manual replay through the catalog', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     __resetConditionsCache()
-    ;(onboardingService.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(phase2ReadyProgress)
+    ;(onboardingService.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...phase2ReadyProgress, status: 'completed',
+    })
+    ;(onboardingService.update as ReturnType<typeof vi.fn>).mockResolvedValue(phase2ReadyProgress)
     ;(onboardingService.start as ReturnType<typeof vi.fn>).mockResolvedValue({
       ...phase2ReadyProgress, status: 'in_progress',
     })
@@ -66,26 +77,34 @@ describe('Phase 2 — entry modal and auto-trigger', () => {
     })
   })
 
-  it('shows the phase 2 entry modal when status=phase_2_ready', async () => {
+  it('does NOT auto-open the phase 2 entry modal when status=phase_2_ready', async () => {
+    ;(onboardingService.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(phase2ReadyProgress)
     renderTour()
-    expect(await screen.findByText('Sua primeira venda chegou!')).toBeInTheDocument()
+    await waitFor(() => expect(onboardingService.fetch).toHaveBeenCalled())
+    expect(screen.queryByText('Sua primeira venda chegou!')).not.toBeInTheDocument()
+  })
+
+  it('opening Operação via catalog shows the phase 2 entry modal', async () => {
+    const user = userEvent.setup()
+    renderTour()
+    await openPhase2ViaCatalog(user)
     expect(screen.getByText('Sim, mostrar →')).toBeInTheDocument()
     expect(screen.getByText('Agora não')).toBeInTheDocument()
   })
 
-  it('clicking "Sim, mostrar →" calls backend.start (which flips phase_2_ready → in_progress)', async () => {
+  it('clicking "Sim, mostrar →" calls backend.start', async () => {
     const user = userEvent.setup()
     renderTour()
-    await screen.findByText('Sua primeira venda chegou!')
+    await openPhase2ViaCatalog(user)
 
     await user.click(screen.getByText('Sim, mostrar →'))
     await waitFor(() => expect(onboardingService.start).toHaveBeenCalled())
   })
 
-  it('clicking "Agora não" closes the modal without touching the backend', async () => {
+  it('clicking "Agora não" closes the entry modal', async () => {
     const user = userEvent.setup()
     renderTour()
-    await screen.findByText('Sua primeira venda chegou!')
+    await openPhase2ViaCatalog(user)
 
     await user.click(screen.getByText('Agora não'))
 
@@ -93,15 +112,15 @@ describe('Phase 2 — entry modal and auto-trigger', () => {
       expect(screen.queryByText('Sua primeira venda chegou!')).not.toBeInTheDocument()
     )
     expect(onboardingService.skip).not.toHaveBeenCalled()
-    expect(onboardingService.update).not.toHaveBeenCalled()
   })
 
   it('fetches the latest paid order when entering Phase 2 (for dynamic /orders/:id)', async () => {
     ;(ordersService.list as ReturnType<typeof vi.fn>).mockResolvedValue({
       orders: [{ id: 42 }],
     })
+    const user = userEvent.setup()
     renderTour()
-    await screen.findByText('Sua primeira venda chegou!')
+    await openPhase2ViaCatalog(user)
     await waitFor(() =>
       expect(ordersService.list).toHaveBeenCalledWith(expect.objectContaining({ status: 'paid' }))
     )
