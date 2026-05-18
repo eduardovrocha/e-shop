@@ -377,6 +377,12 @@ export function TourProvider({
     const stepIdx = props.index
     const stepDef = positionedSteps[stepIdx]
     if (!stepDef) return null
+    // Controlled mode: bypass Joyride's button-event machinery and call our
+    // provider methods directly. Going through `primaryProps.onClick` with a
+    // synthetic MouseEvent leaves Joyride's controls.next() in a half-fired
+    // state and the STEP_AFTER event never reaches our onEvent handler, so
+    // "Próximo" appears to do nothing. Talking to the provider is also more
+    // predictable — we already own stepIndex.
     return (
       <TourTooltip
         title={stepDef.title}
@@ -387,9 +393,9 @@ export function TourProvider({
         position={stepDef.position}
         isFirstStep={stepIdx === 0}
         isLastStep={stepIdx === positionedSteps.length - 1}
-        onPrev={() => props.backProps.onClick({} as React.MouseEvent<HTMLElement>)}
-        onNext={() => props.primaryProps.onClick({} as React.MouseEvent<HTMLElement>)}
-        onSkip={() => props.skipProps.onClick({} as React.MouseEvent<HTMLElement>)}
+        onPrev={prev}
+        onNext={next}
+        onSkip={requestSkip}
       />
     )
   }
