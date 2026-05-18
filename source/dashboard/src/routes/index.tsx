@@ -1,8 +1,9 @@
 import { lazy, Suspense } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import AdminLayout from '@/layouts/AdminLayout'
 import { LoadingState } from '@/components/LoadingState'
+import { TourProvider } from '@/components/onboarding/TourProvider'
 
 const Login = lazy(() => import('@/pages/Login'))
 const Dashboard = lazy(() => import('@/pages/Dashboard'))
@@ -40,10 +41,13 @@ export default function AppRoutes() {
         <Route
           element={
             <RequireAuth>
-              <AdminLayout />
+              <TourProvider>
+                <Outlet />
+              </TourProvider>
             </RequireAuth>
           }
         >
+        <Route element={<AdminLayout />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/orders" element={<Orders />} />
           <Route path="/orders/:id" element={<OrderDetail />} />
@@ -60,6 +64,7 @@ export default function AppRoutes() {
           <Route path="/coupons/:id/edit" element={<Navigate to="/" replace />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/shipping" element={<Shipping />} />
+        </Route>
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
