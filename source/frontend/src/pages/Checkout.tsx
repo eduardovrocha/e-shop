@@ -188,6 +188,11 @@ export default function Checkout() {
 
   // ── Guards: empty cart → /catalog, missing required data → /cart ────────
   useEffect(() => {
+    // Once a PaymentIntent has been created, the cart can legitimately go
+    // empty after confirmPayment succeeds (handleSuccess clears it before
+    // navigating to /pedido-confirmado). Skipping the guard prevents the
+    // redirect from racing the success navigation.
+    if (intent) return
     if (items.length === 0) {
       navigate('/catalog', { replace: true })
       return
@@ -201,7 +206,7 @@ export default function Checkout() {
     if (missingContact || missingDelivery) {
       navigate('/cart', { replace: true })
     }
-  }, [items.length, contact, deliveryMethod, shippingAddress, selectedShipping, addressExtra, navigate])
+  }, [intent, items.length, contact, deliveryMethod, shippingAddress, selectedShipping, addressExtra, navigate])
 
   // ── Derived totals ──────────────────────────────────────────────────────
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0)

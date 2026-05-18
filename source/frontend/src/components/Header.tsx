@@ -51,7 +51,7 @@ export function Header({ showBack = false, title, transparent = false }: HeaderP
           className="absolute left-1/2 -translate-x-1/2 font-serif text-2xl font-semibold text-andrequice-navy hover:text-andrequice-copper transition-colors"
           aria-label="Ir para início"
         >
-          {title ?? 'Andrequicé'}
+          {title ?? 'Andrequicé Store'}
         </Link>
 
         {/* Right — Cart */}

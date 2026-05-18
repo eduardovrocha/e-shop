@@ -76,5 +76,28 @@ RSpec.describe Production::AdvanceQueueJob, type: :job do
       expect(older.reload.production_status).to eq("in_production")
       expect(newer.reload.production_status).to eq("paid")
     end
+
+    # Regression guard for the admin visual-sort feature: the UI now lets an
+    # admin reorder the queue by "Urgência (prazo mais próximo)", but the
+    # job is *only* allowed to promote by FIFO. If a future refactor ever
+    # threads the visual sort into the job, this spec breaks loudly.
+    it "ignores promised_completion_date and promotes by FIFO" do
+      old_far_deadline = create_item(status: :paid)
+      old_far_deadline.update_columns(
+        created_at: 3.days.ago,
+        promised_completion_date: 30.days.from_now.to_date
+      )
+      new_tight_deadline = create_item(status: :paid)
+      new_tight_deadline.update_columns(
+        created_at: 1.hour.ago,
+        promised_completion_date: 1.day.from_now.to_date
+      )
+
+      product.update!(production_capacity: 1)
+      described_class.new.perform(product.id)
+
+      expect(old_far_deadline.reload.production_status).to eq("in_production")
+      expect(new_tight_deadline.reload.production_status).to eq("paid")
+    end
   end
 end

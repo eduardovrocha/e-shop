@@ -2,6 +2,24 @@ module Api
   module V1
     module Admin
       class OrderItemsController < BaseController
+        # Visual sorts for the production queue column. Maps a public sort key
+        # to a deterministic ORDER BY (tiebreaker on created_at + id so the
+        # auto-refresh keeps the same order between pollings).
+        # IMPORTANT: this is purely visual. AdvanceQueueJob still promotes by
+        # created_at ASC regardless of what the admin picks here.
+        SORTABLE_QUEUE_FIELDS = {
+          "created_at_asc"               => { "order_items.created_at" => :asc,  "order_items.id" => :asc },
+          "created_at_desc"              => { "order_items.created_at" => :desc, "order_items.id" => :desc },
+          "promised_completion_date_asc" => { "order_items.promised_completion_date" => :asc, "order_items.created_at" => :asc, "order_items.id" => :asc },
+          "customer_name_asc"            => { "orders.customer_name" => :asc, "order_items.created_at" => :asc, "order_items.id" => :asc },
+          "product_name_asc"             => { "products.name" => :asc, "order_items.created_at" => :asc, "order_items.id" => :asc }
+        }.freeze
+
+        # Sorts that require joining the orders table.
+        SORTS_REQUIRING_ORDERS_JOIN = %w[customer_name_asc].freeze
+        # Sorts that require joining the product_variants + products tables.
+        SORTS_REQUIRING_PRODUCT_JOIN = %w[product_name_asc].freeze
+
         # GET /api/v1/admin/order_items
         # Filters: production_status, order_status, fulfillment_mode,
         #          had_production, product_id, q, sort
@@ -113,13 +131,25 @@ module Api
         end
 
         def apply_sort(scope)
+          # Sorts internal to the producing/done columns (Fase 2B) keep their
+          # original hardcoded behavior.
           case params[:sort]
-          when "created_at_asc"             then scope.order(:created_at)
-          when "created_at_desc"            then scope.order(created_at: :desc)
-          when "production_started_at_asc"  then scope.order(:production_started_at)
-          when "production_completed_at_desc" then scope.order(production_completed_at: :desc)
-          else scope.order(:created_at)
+          when "production_started_at_asc"
+            return scope.order(production_started_at: :asc, id: :asc)
+          when "production_completed_at_desc"
+            return scope.order(production_completed_at: :desc, id: :desc)
           end
+
+          # Queue column: use the visual SORTABLE_QUEUE_FIELDS map. Invalid /
+          # missing keys fall back silently to FIFO.
+          key   = SORTABLE_QUEUE_FIELDS.key?(params[:sort].to_s) ? params[:sort].to_s : "created_at_asc"
+          order = SORTABLE_QUEUE_FIELDS[key]
+
+          # order_item belongs_to :order (1:1) and through product_variant -> product
+          # (also 1:1) — no row multiplication, so no distinct needed.
+          scope = scope.joins(:order)                    if SORTS_REQUIRING_ORDERS_JOIN.include?(key)
+          scope = scope.joins(product_variant: :product) if SORTS_REQUIRING_PRODUCT_JOIN.include?(key)
+          scope.order(order)
         end
 
         def serialize(item)

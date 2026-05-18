@@ -370,7 +370,7 @@ function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-andrequice-cream/40 flex flex-col">
       <Header />
-      <div className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+      <div className="flex-1 w-full max-w-6xl mx-auto px-4 pb-10 pt-8">
         {children}
       </div>
       <Footer />

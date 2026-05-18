@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Factory, RefreshCw, Search, Loader2, Clock, Hammer, TrendingUp, XCircle } from 'lucide-react'
+import { Factory, RefreshCw, Search, Loader2, Clock, Hammer, TrendingUp, XCircle, Info, ArrowDownAZ } from 'lucide-react'
 import { PageTitle } from '@/components/PageTitle'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { MetricCard } from '@/components/MetricCard'
 import {
   Select,
@@ -26,9 +27,36 @@ import {
 } from '@/hooks/useOrderItems'
 import { useProductionMetrics } from '@/hooks/useProductionMetrics'
 import type { AdminOrderItem } from '@/services/orderItemsService'
-import { formatDate } from '@/lib/utils'
+import { formatDate, formatDateTime } from '@/lib/utils'
 
 const REFRESH_INTERVAL_MS = 30_000
+
+// Visual sort options for the queue column. Order here matches the dropdown.
+// IMPORTANT: this is purely visual. AdvanceQueueJob still promotes by
+// created_at ASC regardless of which option is selected.
+const QUEUE_SORT_OPTIONS = [
+  { value: 'created_at_asc',               label: 'Mais antigos primeiro (FIFO)' },
+  { value: 'created_at_desc',              label: 'Mais recentes primeiro' },
+  { value: 'promised_completion_date_asc', label: 'Urgência (prazo mais próximo)' },
+  { value: 'customer_name_asc',            label: 'Cliente (A → Z)' },
+  { value: 'product_name_asc',             label: 'Produto (A → Z)' },
+] as const
+type QueueSortValue = typeof QUEUE_SORT_OPTIONS[number]['value']
+const DEFAULT_QUEUE_SORT: QueueSortValue = 'created_at_asc'
+const QUEUE_SORT_STORAGE_KEY = 'admin.production.queue_sort'
+
+function isValidQueueSort(v: string | null): v is QueueSortValue {
+  return !!v && QUEUE_SORT_OPTIONS.some((o) => o.value === v)
+}
+
+function readPersistedQueueSort(): QueueSortValue {
+  try {
+    const v = localStorage.getItem(QUEUE_SORT_STORAGE_KEY)
+    return isValidQueueSort(v) ? v : DEFAULT_QUEUE_SORT
+  } catch {
+    return DEFAULT_QUEUE_SORT
+  }
+}
 
 function daysAgo(iso: string | null | undefined): number {
   if (!iso) return 0
@@ -92,6 +120,11 @@ function ItemCard({
           {item.product_name}
           {item.size && <span className="text-muted-foreground"> · {item.size}</span>}
         </p>
+        {column === 'queue' && (
+          <p className="text-xs text-muted-foreground">
+            Pedido em {formatDateTime(item.created_at)}
+          </p>
+        )}
         <p className="text-xs text-muted-foreground">{timeLabel}</p>
         <PromisedDate date={item.promised_completion_date} />
 
@@ -144,6 +177,14 @@ export default function Production() {
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [tabVisible, setTabVisible] = useState(() => !document.hidden)
+  const [queueSort, setQueueSort] = useState<QueueSortValue>(() => readPersistedQueueSort())
+
+  // Persist sort changes so the preference survives reload / navigation.
+  // Repeated selection of the same value is a no-op for both setState and
+  // localStorage (React bails out on identical state).
+  useEffect(() => {
+    try { localStorage.setItem(QUEUE_SORT_STORAGE_KEY, queueSort) } catch { /* ignore */ }
+  }, [queueSort])
 
   useEffect(() => {
     const id = setTimeout(() => setDebouncedSearch(search), 300)
@@ -167,7 +208,7 @@ export default function Production() {
   )
 
   const queueQuery = useOrderItems(
-    { ...baseParams, production_status: 'paid', fulfillment_mode: 'made_to_order', sort: 'created_at_asc' },
+    { ...baseParams, production_status: 'paid', fulfillment_mode: 'made_to_order', sort: queueSort },
     { refetchInterval }
   )
   const producingQuery = useOrderItems(
@@ -300,6 +341,43 @@ export default function Production() {
           items={queueQuery.data?.order_items ?? []}
           loading={queueQuery.isFetching}
           empty="Nenhum item na fila."
+          headerExtra={
+            <Select
+              value={queueSort}
+              onValueChange={(v) => {
+                if (isValidQueueSort(v)) setQueueSort(v)
+              }}
+            >
+              <SelectTrigger
+                id="queue-sort"
+                aria-label={`Ordenar fila — atual: ${
+                  QUEUE_SORT_OPTIONS.find((o) => o.value === queueSort)?.label ?? ''
+                }`}
+                title="Ordenar fila"
+                className="h-8 w-auto gap-1.5 px-2 text-xs font-normal shrink-0"
+              >
+                <ArrowDownAZ className="h-4 w-4" aria-hidden="true" />
+                <span>Ordenar</span>
+              </SelectTrigger>
+              <SelectContent align="end">
+                {QUEUE_SORT_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          }
+          belowHeader={
+            queueSort !== DEFAULT_QUEUE_SORT ? (
+              <Badge variant="warning" className="flex items-start gap-1.5 w-full whitespace-normal text-[11px] font-normal leading-snug py-1.5">
+                <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" aria-hidden="true" />
+                <span>
+                  Ordem visual alterada — a produção continua sendo promovida automaticamente por FIFO.
+                </span>
+              </Badge>
+            ) : null
+          }
           renderItem={(item) => (
             <ItemCard
               key={item.id}
@@ -441,6 +519,8 @@ function Column({
   loading,
   empty,
   renderItem,
+  headerExtra,
+  belowHeader,
 }: {
   title: string
   ariaLabel: string
@@ -450,20 +530,24 @@ function Column({
   loading: boolean
   empty: string
   renderItem: (item: AdminOrderItem) => React.ReactNode
+  headerExtra?: React.ReactNode
+  belowHeader?: React.ReactNode
 }) {
   return (
     <section aria-label={ariaLabel} className="space-y-3">
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center justify-between text-base">
+        <CardHeader className="pb-3 space-y-2">
+          <CardTitle className="flex items-center justify-between gap-3 text-base">
             <span className="flex items-center gap-2">
               {icon}
               {title}
+              <span className="text-xs font-normal text-muted-foreground">
+                ({loading ? <Loader2 className="h-3 w-3 inline animate-spin" /> : count})
+              </span>
             </span>
-            <span className="text-xs text-muted-foreground">
-              {loading ? <Loader2 className="h-3 w-3 inline animate-spin" /> : count}
-            </span>
+            {headerExtra}
           </CardTitle>
+          {belowHeader}
         </CardHeader>
       </Card>
       {items.length === 0 ? (
