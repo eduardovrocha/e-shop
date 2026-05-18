@@ -83,7 +83,7 @@ export const PHASE_1_STEPS: TourStepDefinition[] = [
     phase:     1,
     route:     '/production',
     target:    '[data-tour="production-list"]',
-    position:  'bottom',
+    position:  'top',
     title:     'Acompanhe a produção aqui.',
     body:      'Como esse produto é feito sob encomenda, cada pedido entra nesta fila com as etapas que você definir — corte, costura, embalagem, o que fizer sentido para o seu fluxo.',
     condition: storeHasManufacturedProduct,

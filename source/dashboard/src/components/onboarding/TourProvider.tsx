@@ -435,12 +435,17 @@ export function TourProvider({
           onEvent={handleJoyrideEvent}
           tooltipComponent={TooltipRenderer}
           options={{
-            hideOverlay:     true,
-            overlayColor:    'transparent',
-            primaryColor:    '#4F46E5',
-            spotlightRadius: 8,
-            zIndex:          9999,
-            arrowSize:       8,
+            hideOverlay:      true,
+            overlayColor:     'transparent',
+            primaryColor:     '#4F46E5',
+            spotlightRadius:  8,
+            zIndex:           9999,
+            arrowSize:        8,
+            // Never auto-scroll between steps — if the next target is
+            // already visible, leave the page where the user put it.
+            // Joyride still flips placement on viewport collisions, so a
+            // step at the edge stays usable without yanking the scroll.
+            skipScroll: true,
           }}
         />
       )}
