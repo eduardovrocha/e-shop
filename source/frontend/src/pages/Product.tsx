@@ -303,7 +303,7 @@ export default function Product() {
               <div>
                 <p className="font-sans font-semibold text-andrequice-navy text-sm">Artesanal e Premium</p>
                 <p className="font-sans text-xs text-andrequice-border leading-relaxed mt-0.5">
-                  Algodão 100% penteado · Arte exclusiva · Produção local
+                  Arte exclusiva · Produção local
                 </p>
               </div>
             </div>
