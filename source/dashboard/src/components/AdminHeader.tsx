@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
-import { Menu, Bell, LogOut, ChevronDown } from 'lucide-react'
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
+import { Menu, Bell, LogOut, ChevronDown, HelpCircle } from 'lucide-react'
 import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
 import { Button } from './ui/button'
@@ -7,11 +8,12 @@ import { Badge } from './ui/badge'
 import api from '@/services/api'
 import { useOrderNotifications } from '@/hooks/useOrderNotifications'
 import { NotificationDropdown } from './NotificationDropdown'
-import { TourReplayButton } from './onboarding/TourReplayButton'
+import { useTour } from './onboarding/useTour'
 
 export function AdminHeader() {
   const { toggleSidebar } = useUIStore()
   const { user, logout } = useAuthStore()
+  const { replayTour }   = useTour()
 
   const { orders, unreadCount, markAsRead, markAllAsRead, connectionStatus } = useOrderNotifications()
   const [notifOpen, setNotifOpen] = useState(false)
@@ -90,31 +92,54 @@ export function AdminHeader() {
           />
         </div>
 
-        {/* Replay onboarding tour */}
-        <TourReplayButton />
+        {/* User menu — Radix dropdown */}
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger asChild>
+            <button
+              type="button"
+              className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted data-[state=open]:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label="Menu do usuário"
+              data-testid="user-menu-trigger"
+            >
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-navy text-xs font-semibold text-white">
+                {user?.name?.charAt(0).toUpperCase() ?? 'A'}
+              </div>
+              <div className="hidden md:block text-left">
+                <p className="text-xs font-medium leading-tight">{user?.name ?? 'Admin'}</p>
+                <p className="text-[10px] text-muted-foreground">{user?.email ?? 'admin@andrequice.com.br'}</p>
+              </div>
+              <ChevronDown className="h-3 w-3 text-muted-foreground" />
+            </button>
+          </DropdownMenu.Trigger>
 
-        {/* User menu */}
-        <div className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted">
-          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-navy text-xs font-semibold text-white">
-            {user?.name?.charAt(0).toUpperCase() ?? 'A'}
-          </div>
-          <div className="hidden md:block">
-            <p className="text-xs font-medium leading-tight">{user?.name ?? 'Admin'}</p>
-            <p className="text-[10px] text-muted-foreground">{user?.email ?? 'admin@andrequice.com.br'}</p>
-          </div>
-          <ChevronDown className="h-3 w-3 text-muted-foreground" />
-        </div>
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content
+              align="end"
+              sideOffset={6}
+              className="z-50 min-w-[200px] overflow-hidden rounded-md border border-border bg-card p-1 shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+            >
+              <DropdownMenu.Item
+                onSelect={() => { void replayTour() }}
+                className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-muted focus:bg-muted"
+                data-testid="user-menu-replay-tour"
+              >
+                <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                Refazer tour
+              </DropdownMenu.Item>
 
-        {/* Logout */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-muted-foreground hover:text-destructive"
-          onClick={handleLogout}
-          title="Sair"
-        >
-          <LogOut className="h-4 w-4" />
-        </Button>
+              <DropdownMenu.Separator className="my-1 h-px bg-border" />
+
+              <DropdownMenu.Item
+                onSelect={handleLogout}
+                className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-destructive outline-none data-[highlighted]:bg-destructive/10 focus:bg-destructive/10"
+                data-testid="user-menu-logout"
+              >
+                <LogOut className="h-4 w-4" />
+                Sair
+              </DropdownMenu.Item>
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
       </div>
     </header>
   )
