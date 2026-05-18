@@ -1,16 +1,26 @@
 <%= @store_name %> — Acompanhamento de Pedido
 ==========================================
 
+<% if @is_paid %>
+PEDIDO CONFIRMADO!
+Recebemos seu pagamento com sucesso.<% if @order.customer_email.present? %>
+Enviamos a confirmação para <%= @order.customer_email %>.<% end %>
+<% else %>
 <%= @subject_base %>
+<% end %>
 
 Pedido: <%= @order.number %>
 Data:   <%= @order.created_at.strftime("%d/%m/%Y") %>
 Status: <%= OrderStatusHistory.title_for(@status) %>
+<% if @is_paid && @payment_ref %>
+Ref:    <%= @payment_ref %>
+<% end %>
 
 Acompanhe seu pedido em:
 <%= @public_url %>
 
 ---
+<% unless @is_paid %>
 
 HISTÓRICO
 ---------
@@ -19,6 +29,7 @@ HISTÓRICO
 <% end %>
 
 ---
+<% end %>
 <% if @show_promise %>
 
 PRAZO DE ENVIO
@@ -32,7 +43,7 @@ Algumas peças são artesanais e feitas sob demanda. O prazo da transportadora s
 RESUMO DO PEDIDO
 ----------------
 <% @items_view.each do |item| %>
-• <%= item[:name] %><% if item[:size].present? %> (Tam. <%= item[:size] %>)<% end %>
+• <%= item[:name] %><% if item[:size].present? %> (Tam. <%= item[:size] %>)<% end %> [<%= item[:fulfillment_mode] == "made_to_order" ? "Sob encomenda" : "Pronta entrega" %>]
   <%= item[:quantity] %> un. × R$ <%= format("%.2f", item[:unit_price_cents] / 100.0) %> = R$ <%= format("%.2f", item[:subtotal_cents] / 100.0) %>
 <% end %>
 
@@ -42,6 +53,34 @@ Frete:    R$ <%= format("%.2f", @order.shipping_fee_cents / 100.0) %>
 <% end %>
 Total:    R$ <%= format("%.2f", @order.total_cents / 100.0) %>
 
+<% if @is_paid %>
+---
+
+CONTATO
+-------
+<% if @order.customer_name.present?  %><%= @order.customer_name  %>
+<% end %><% if @order.customer_email.present? %><%= @order.customer_email %>
+<% end %><% if @order.customer_phone.present? %><%= @order.customer_phone %>
+<% end %>
+
+ENTREGA
+-------
+<% if @is_pickup %>
+Retirada presencial
+<% elsif @shipping_fields[:address].present? %>
+<%= @shipping_fields[:address] %><%= ", #{@shipping_fields[:number]}" if @shipping_fields[:number].present? %>
+<% if @shipping_fields[:complement].present? %><%= @shipping_fields[:complement] %>
+<% end %><% if @shipping_fields[:city].present? %><%= @shipping_fields[:city] %><%= " - #{@shipping_fields[:state]}" if @shipping_fields[:state].present? %>
+<% end %><% if @shipping_fields[:cep].present? %>CEP <%= @shipping_fields[:cep] %>
+<% end %><% if @order.carrier.present? %><%= @order.carrier %><%= " · #{@order.shipping_service}" if @order.shipping_service.present? %>
+<% end %><% end %>
+
+---
+
+Use o link de acompanhamento acima para visualizar o status, o rastreio
+e — se for o caso — cancelar itens artesanais ainda não enviados.
+
+<% end %>
 <% if @order.tracking_code.present? %>
 ---
 

@@ -16,6 +16,7 @@ class OrderMailer < ApplicationMailer
   def status_update(order, status)
     @order         = order
     @status        = status
+    @is_paid       = status == "paid"
     @store_name    = StoreSetting.instance.event_name.presence || "Andrequicé"
     @support_email = Rails.application.credentials.dig(:mail, :support)
     @public_url    = order.public_tracking_url
@@ -26,6 +27,19 @@ class OrderMailer < ApplicationMailer
                                           .where(products: { fulfillment_mode: Product.fulfillment_modes[:made_to_order] })
                                           .exists?
     @show_promise = order.promised_completion_date.present? && @has_made_to_order
+    @payment_ref  = order.stripe_intent_id.to_s.last(10).upcase.presence
+    # shipping_address is a JSONB hash on the orders table — accept either
+    # symbol/string keys for legacy safety.
+    addr             = order.shipping_address.is_a?(Hash) ? order.shipping_address : {}
+    @shipping_fields = {
+      cep:        addr["cep"]        || addr[:cep],
+      address:    addr["address"]    || addr[:address],
+      number:     addr["number"]     || addr[:number],
+      complement: addr["complement"] || addr[:complement],
+      city:       addr["city"]       || addr[:city],
+      state:      addr["state"]      || addr[:state],
+    }
+    @is_pickup = order.delivery_method == "pickup"
 
     mail(
       to:      order.customer_email,
@@ -62,6 +76,7 @@ class OrderMailer < ApplicationMailer
       unit_price_cents: item.unit_price_cents.to_i,
       subtotal_cents:   item.subtotal_cents.to_i,
       image_url:        product_image_url(product),
+      fulfillment_mode: product&.fulfillment_mode || "from_stock",
     }
   end
 
@@ -74,6 +89,7 @@ class OrderMailer < ApplicationMailer
       unit_price_cents: item["unit_price_cents"].to_i,
       subtotal_cents:   item["subtotal_cents"].to_i,
       image_url:        nil, # legacy snapshot — no FK back to product
+      fulfillment_mode: item["fulfillment_mode"] || "from_stock",
     }
   end
 
