@@ -140,7 +140,7 @@ describe('EC8 — step ids are stable across versions', () => {
   })
 })
 
-describe('Replay tour — "Refazer tour" button in dashboard chrome', () => {
+describe('Replay tour — "Refazer tour" opens a catalog with selectable phases', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     ;(onboardingService.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -148,6 +148,9 @@ describe('Replay tour — "Refazer tour" button in dashboard chrome', () => {
     })
     ;(onboardingService.reset as ReturnType<typeof vi.fn>).mockResolvedValue({
       ...baseProgress, status: 'not_started',
+    })
+    ;(onboardingService.update as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...baseProgress, status: 'phase_2_ready', current_phase: 2,
     })
   })
 
@@ -157,14 +160,55 @@ describe('Replay tour — "Refazer tour" button in dashboard chrome', () => {
     expect(screen.getByTestId('tour-replay-button')).toHaveAccessibleName('Refazer tour')
   })
 
-  it('clicking it calls onboardingService.reset and reopens the welcome modal', async () => {
+  it('clicking the button opens the catalog modal with both phases listed', async () => {
     const user = userEvent.setup()
     renderTour()
     await waitFor(() => expect(onboardingService.fetch).toHaveBeenCalled())
 
     await user.click(screen.getByTestId('tour-replay-button'))
 
+    expect(await screen.findByTestId('tour-catalog-modal')).toBeInTheDocument()
+    expect(screen.getByTestId('tour-catalog-phase-1')).toHaveTextContent('Setup inicial')
+    expect(screen.getByTestId('tour-catalog-phase-2')).toHaveTextContent('Operação')
+    expect(onboardingService.reset).not.toHaveBeenCalled()
+  })
+
+  it('picking "Setup inicial" calls onboardingService.reset and reopens the welcome modal', async () => {
+    const user = userEvent.setup()
+    renderTour()
+    await waitFor(() => expect(onboardingService.fetch).toHaveBeenCalled())
+
+    await user.click(screen.getByTestId('tour-replay-button'))
+    await user.click(await screen.findByTestId('tour-catalog-phase-1'))
+
     await waitFor(() => expect(onboardingService.reset).toHaveBeenCalled())
     expect(await screen.findByText('Bem-vindo à sua loja.')).toBeInTheDocument()
+  })
+
+  it('picking "Operação" flips status to phase_2_ready and shows the phase 2 entry modal', async () => {
+    const user = userEvent.setup()
+    renderTour()
+    await waitFor(() => expect(onboardingService.fetch).toHaveBeenCalled())
+
+    await user.click(screen.getByTestId('tour-replay-button'))
+    await user.click(await screen.findByTestId('tour-catalog-phase-2'))
+
+    await waitFor(() =>
+      expect(onboardingService.update).toHaveBeenCalledWith(expect.objectContaining({ status: 'phase_2_ready' }))
+    )
+    expect(await screen.findByText('Sua primeira venda chegou!')).toBeInTheDocument()
+  })
+
+  it('"Cancelar" closes the catalog without touching the backend', async () => {
+    const user = userEvent.setup()
+    renderTour()
+    await waitFor(() => expect(onboardingService.fetch).toHaveBeenCalled())
+
+    await user.click(screen.getByTestId('tour-replay-button'))
+    await user.click(await screen.findByTestId('tour-catalog-cancel'))
+
+    await waitFor(() => expect(screen.queryByTestId('tour-catalog-modal')).not.toBeInTheDocument())
+    expect(onboardingService.reset).not.toHaveBeenCalled()
+    expect(onboardingService.update).not.toHaveBeenCalled()
   })
 })

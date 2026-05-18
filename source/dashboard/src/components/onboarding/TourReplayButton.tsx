@@ -5,20 +5,18 @@ import { Button } from '@/components/ui/button'
 /**
  * "Refazer tour" entry point that lives in the dashboard chrome.
  *
- * Calls TourProvider#replayTour which resets the user's progress on the
- * backend, rewinds the local state to step 0, and launches the welcome
- * modal. Per the spec (sec 12.7) the button is visible at all times and
- * works regardless of the current tour status — completed users get the
- * tour back, skipped users get it back, in-progress users restart.
+ * Opens the tour catalog modal so the user can pick which phase to replay
+ * (setup inicial or operação). The provider does the actual reset / state
+ * flip once a phase is chosen.
  */
 export function TourReplayButton() {
-  const { replayTour } = useTour()
+  const { requestReplay } = useTour()
 
   return (
     <Button
       variant="ghost"
       size="icon"
-      onClick={() => { void replayTour() }}
+      onClick={requestReplay}
       title="Refazer tour"
       aria-label="Refazer tour"
       data-testid="tour-replay-button"

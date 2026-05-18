@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { TourTooltip } from './TourTooltip'
 import { TourModal } from './TourModal'
 import { SkipTourModal } from './SkipTourModal'
+import { TourCatalogModal } from './TourCatalogModal'
 import { TourViewportGuard } from './TourViewportGuard'
 import { TourBeacon } from './TourBeacon'
 import { useViewportTooNarrow } from './useViewportGuard'
@@ -33,7 +34,10 @@ interface TourContextValue {
   requestSkip:      () => void
   completePhase:    (phase: 1 | 2) => Promise<void>
   resumeFromStep:   (stepId: string) => void
-  replayTour:       () => Promise<void>
+  /** Opens the catalog modal so the user can pick which phase to replay. */
+  requestReplay:    () => void
+  /** Resets state and re-launches the chosen phase's entry modal. */
+  replayPhase:      (phase: 1 | 2) => Promise<void>
 }
 
 export const TourContext = createContext<TourContextValue | null>(null)
@@ -62,7 +66,8 @@ export function TourProvider({
   const [loading,    setLoading]    = useState(true)
   const [stepIndex,  setStepIndex]  = useState(0)
   const [joyrideRun, setJoyrideRun] = useState(false)
-  const [skipModalOpen, setSkipModalOpen] = useState(false)
+  const [skipModalOpen,    setSkipModalOpen]    = useState(false)
+  const [catalogModalOpen, setCatalogModalOpen] = useState(false)
   const [viewportGuardDismissed, setViewportGuardDismissed] = useState(false)
   const [resolvedOrderId, setResolvedOrderId] = useState<number | null>(null)
 
@@ -269,27 +274,55 @@ export function TourProvider({
     }
   }, [visibleSteps])
 
-  // "Refazer tour" — user-initiated full reset (spec section 5.4 + 12.7).
-  const replayTour = useCallback(async () => {
+  const requestReplay = useCallback(() => setCatalogModalOpen(true), [])
+
+  // "Refazer tour" — user-initiated replay of a specific phase. Phase 1 is
+  // a full reset; Phase 2 just flips the backend back to phase_2_ready so
+  // the entry modal re-appears without wiping completed history.
+  const replayPhase = useCallback(async (phase: 1 | 2) => {
     setJoyrideRun(false)
     setStepIndex(0)
     setSkipModalOpen(false)
+    setCatalogModalOpen(false)
     autoTriggered.current = false
-    if (!disableBackendSync) {
-      try { setProgress(await onboardingService.reset()) } catch { /* offline ok */ }
+
+    if (phase === 1) {
+      if (!disableBackendSync) {
+        try { setProgress(await onboardingService.reset()) } catch { /* offline ok */ }
+      } else {
+        setProgress({
+          status:                   'not_started',
+          current_phase:            1,
+          current_step_id:          null,
+          completed_steps:          [],
+          skipped_steps:            [],
+          started_at:               null,
+          completed_at:             null,
+          last_seen_at:             null,
+          next_eligible_phase_2_at: null,
+        })
+      }
     } else {
-      // Test path: synthesize a not_started progress so the entry flow kicks in.
-      setProgress({
-        status:                   'not_started',
-        current_phase:            1,
-        current_step_id:          null,
-        completed_steps:          [],
-        skipped_steps:            [],
-        started_at:               null,
-        completed_at:             null,
-        last_seen_at:             null,
-        next_eligible_phase_2_at: null,
-      })
+      if (!disableBackendSync) {
+        try {
+          setProgress(await onboardingService.update({
+            status:          'phase_2_ready',
+            current_step_id: null,
+          }))
+        } catch { /* offline ok */ }
+      } else {
+        setProgress({
+          status:                   'phase_2_ready',
+          current_phase:            2,
+          current_step_id:          null,
+          completed_steps:          [],
+          skipped_steps:            [],
+          started_at:               new Date().toISOString(),
+          completed_at:             new Date().toISOString(),
+          last_seen_at:             new Date().toISOString(),
+          next_eligible_phase_2_at: null,
+        })
+      }
     }
     setJoyrideRun(true)
   }, [disableBackendSync])
@@ -310,11 +343,12 @@ export function TourProvider({
     requestSkip,
     completePhase,
     resumeFromStep,
-    replayTour,
+    requestReplay,
+    replayPhase,
   }), [
     loading, progress, currentPhase, visibleSteps, stepIndex,
     start, next, prev, skipStep, skipTour, requestSkip,
-    completePhase, resumeFromStep, replayTour,
+    completePhase, resumeFromStep, requestReplay, replayPhase,
   ])
 
   // ---------- Joyride wiring --------------------------------------------------
@@ -495,6 +529,12 @@ export function TourProvider({
         onSkipNow={() => void skipTour({ permanently: false })}
         onSkipPermanently={() => void skipTour({ permanently: true })}
         onContinue={() => setSkipModalOpen(false)}
+      />
+
+      <TourCatalogModal
+        open={catalogModalOpen}
+        onClose={() => setCatalogModalOpen(false)}
+        onSelectPhase={(phase) => void replayPhase(phase)}
       />
     </TourContext.Provider>
   )
