@@ -15,13 +15,19 @@ module Api
         def update
           @progress.assign_attributes(allowed_update_attrs)
 
+          time_on_step_ms = params[:time_on_step_ms].presence&.to_i
+
           if params[:completed_step].present?
             @progress.add_completed_step(params[:completed_step])
             TelemetryService.track(
               event:            "tour_step_viewed",
               user_id:          current_admin.id,
               store_setting_id: store_setting.id,
-              properties:       { step_id: params[:completed_step], phase: @progress.current_phase }
+              properties:       {
+                step_id:         params[:completed_step],
+                phase:           @progress.current_phase,
+                time_on_step_ms: time_on_step_ms
+              }.compact
             )
           end
 
@@ -31,7 +37,11 @@ module Api
               event:            "tour_step_skipped",
               user_id:          current_admin.id,
               store_setting_id: store_setting.id,
-              properties:       { step_id: params[:skipped_step], phase: @progress.current_phase }
+              properties:       {
+                step_id:         params[:skipped_step],
+                phase:           @progress.current_phase,
+                time_on_step_ms: time_on_step_ms
+              }.compact
             )
           end
 
@@ -101,10 +111,17 @@ module Api
         end
 
         # POST /api/v1/admin/onboarding/progress/reset
+        #
+        # Any admin can reset their own progress (used by the "Refazer tour"
+        # button in the help menu). Only super_admin can target another user
+        # (for support workflows — EC7).
         def reset
-          return render(json: { error: "forbidden" }, status: :forbidden) unless current_admin.role == "super_admin"
+          target_user_id = params[:user_id].presence&.to_i || current_admin.id
 
-          target_user_id = params[:user_id].presence || current_admin.id
+          if target_user_id != current_admin.id && current_admin.role != "super_admin"
+            return render(json: { error: "forbidden" }, status: :forbidden)
+          end
+
           progress = OnboardingProgress.find_or_initialize_by(
             user_id:          target_user_id,
             store_setting_id: store_setting.id

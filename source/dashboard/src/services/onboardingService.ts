@@ -20,10 +20,12 @@ export interface OnboardingProgress {
 }
 
 export interface UpdateProgressPayload {
-  current_step_id?: string | null
-  completed_step?:  string
-  skipped_step?:    string
-  status?:          TourStatus
+  current_step_id?:  string | null
+  completed_step?:   string
+  skipped_step?:     string
+  status?:           TourStatus
+  /** Milliseconds the user spent on the step before this transition. */
+  time_on_step_ms?:  number
 }
 
 const BASE = '/admin/onboarding'

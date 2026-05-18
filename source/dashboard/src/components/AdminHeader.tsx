@@ -7,6 +7,7 @@ import { Badge } from './ui/badge'
 import api from '@/services/api'
 import { useOrderNotifications } from '@/hooks/useOrderNotifications'
 import { NotificationDropdown } from './NotificationDropdown'
+import { TourReplayButton } from './onboarding/TourReplayButton'
 
 export function AdminHeader() {
   const { toggleSidebar } = useUIStore()
@@ -88,6 +89,9 @@ export function AdminHeader() {
             triggerRef={bellRef}
           />
         </div>
+
+        {/* Replay onboarding tour */}
+        <TourReplayButton />
 
         {/* User menu */}
         <div className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted">

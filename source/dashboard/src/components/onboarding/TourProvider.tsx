@@ -32,6 +32,7 @@ interface TourContextValue {
   requestSkip:      () => void
   completePhase:    (phase: 1 | 2) => Promise<void>
   resumeFromStep:   (stepId: string) => void
+  replayTour:       () => Promise<void>
 }
 
 export const TourContext = createContext<TourContextValue | null>(null)
@@ -63,6 +64,11 @@ export function TourProvider({
   const [skipModalOpen, setSkipModalOpen] = useState(false)
   const [viewportGuardDismissed, setViewportGuardDismissed] = useState(false)
   const [resolvedOrderId, setResolvedOrderId] = useState<number | null>(null)
+
+  // Time-on-step tracker for the spec section 11 telemetry property. We
+  // capture an entry timestamp every time the user lands on a step and
+  // compute the delta on transition.
+  const stepEnteredAtRef = useRef<number>(Date.now())
 
   const currentPhase: 1 | 2 | null = progress?.current_phase ?? null
 
@@ -181,11 +187,13 @@ export function TourProvider({
     return route
   }, [resolvedOrderId])
 
-  const goToStep = useCallback(async (nextIndex: number) => {
+  const goToStep = useCallback(async (nextIndex: number, completedPrevious = false) => {
     if (nextIndex < 0 || nextIndex >= visibleSteps.length) return
 
-    const step = visibleSteps[nextIndex]
-    const targetRoute = resolveRoute(step.route)
+    const previousStep = visibleSteps[stepIndex]
+    const step         = visibleSteps[nextIndex]
+    const targetRoute  = resolveRoute(step.route)
+    const elapsedMs    = Date.now() - stepEnteredAtRef.current
 
     if (step.route && targetRoute !== location.pathname) {
       navigate(targetRoute)
@@ -201,8 +209,15 @@ export function TourProvider({
     }
 
     setStepIndex(nextIndex)
-    queuePersist({ current_step_id: step.id })
-  }, [visibleSteps, location.pathname, navigate, waitForTarget, queuePersist, resolveRoute])
+    queuePersist({
+      current_step_id: step.id,
+      ...(completedPrevious && previousStep ? {
+        completed_step:  previousStep.id,
+        time_on_step_ms: elapsedMs,
+      } : {}),
+    })
+    stepEnteredAtRef.current = Date.now()
+  }, [visibleSteps, stepIndex, location.pathname, navigate, waitForTarget, queuePersist, resolveRoute])
 
   // ---------- Public API ------------------------------------------------------
 
@@ -214,7 +229,7 @@ export function TourProvider({
   }, [disableBackendSync])
 
   const next = useCallback(() => {
-    void goToStep(stepIndex + 1)
+    void goToStep(stepIndex + 1, /* completedPrevious */ true)
   }, [goToStep, stepIndex])
 
   const prev = useCallback(() => {
@@ -222,8 +237,9 @@ export function TourProvider({
   }, [goToStep, stepIndex])
 
   const skipStep = useCallback(() => {
-    const current = visibleSteps[stepIndex]
-    if (current) queuePersist({ skipped_step: current.id })
+    const current   = visibleSteps[stepIndex]
+    const elapsedMs = Date.now() - stepEnteredAtRef.current
+    if (current) queuePersist({ skipped_step: current.id, time_on_step_ms: elapsedMs })
     void goToStep(stepIndex + 1)
   }, [visibleSteps, stepIndex, queuePersist, goToStep])
 
@@ -252,6 +268,31 @@ export function TourProvider({
     }
   }, [visibleSteps])
 
+  // "Refazer tour" — user-initiated full reset (spec section 5.4 + 12.7).
+  const replayTour = useCallback(async () => {
+    setJoyrideRun(false)
+    setStepIndex(0)
+    setSkipModalOpen(false)
+    autoTriggered.current = false
+    if (!disableBackendSync) {
+      try { setProgress(await onboardingService.reset()) } catch { /* offline ok */ }
+    } else {
+      // Test path: synthesize a not_started progress so the entry flow kicks in.
+      setProgress({
+        status:                   'not_started',
+        current_phase:            1,
+        current_step_id:          null,
+        completed_steps:          [],
+        skipped_steps:            [],
+        started_at:               null,
+        completed_at:             null,
+        last_seen_at:             null,
+        next_eligible_phase_2_at: null,
+      })
+    }
+    setJoyrideRun(true)
+  }, [disableBackendSync])
+
   const value = useMemo<TourContextValue>(() => ({
     loading,
     progress,
@@ -268,9 +309,11 @@ export function TourProvider({
     requestSkip,
     completePhase,
     resumeFromStep,
+    replayTour,
   }), [
     loading, progress, currentPhase, visibleSteps, stepIndex,
-    start, next, prev, skipStep, skipTour, requestSkip, completePhase, resumeFromStep,
+    start, next, prev, skipStep, skipTour, requestSkip,
+    completePhase, resumeFromStep, replayTour,
   ])
 
   // ---------- Joyride wiring --------------------------------------------------

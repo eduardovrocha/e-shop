@@ -177,14 +177,27 @@ RSpec.describe "Admin Onboarding Progress", type: :request do
   end
 
   describe "POST /api/v1/admin/onboarding/progress/reset" do
-    it "is forbidden for non-super-admin" do
+    it "allows a regular admin to reset their own progress (Refazer tour)" do
       create(:onboarding_progress, :completed, user: admin, store_setting: store)
 
       post "/api/v1/admin/onboarding/progress/reset", headers: admin_headers
+      expect(response).to have_http_status(:ok)
+      expect(OnboardingProgress.find_by(user: admin).status).to eq("not_started")
+    end
+
+    it "forbids a regular admin from resetting someone else's progress" do
+      other = create(:user, email: "victim@example.com", role: "admin")
+      create(:onboarding_progress, :completed, user: other, store_setting: store)
+
+      post "/api/v1/admin/onboarding/progress/reset",
+        params:  { user_id: other.id },
+        headers: admin_headers,
+        as:      :json
+
       expect(response).to have_http_status(:forbidden)
     end
 
-    it "resets the calling super_admin's own progress when no user_id is given" do
+    it "allows super_admin to reset their own progress" do
       create(:onboarding_progress, :completed, user: super_admin, store_setting: store)
 
       post "/api/v1/admin/onboarding/progress/reset", headers: super_admin_headers
@@ -197,7 +210,7 @@ RSpec.describe "Admin Onboarding Progress", type: :request do
       expect(reset.completed_at).to be_nil
     end
 
-    it "resets a target user's progress when user_id is provided" do
+    it "allows super_admin to reset another user's progress (support workflow)" do
       create(:onboarding_progress, :completed, user: admin, store_setting: store)
 
       post "/api/v1/admin/onboarding/progress/reset",
@@ -259,6 +272,52 @@ RSpec.describe "Admin Onboarding Progress", type: :request do
       expect {
         create(:onboarding_progress, user: admin, store_setting: store)
       }.to raise_error(ActiveRecord::RecordInvalid)
+    end
+  end
+
+  # EC4 — Multiple operators on the same store have independent progress.
+  describe "EC4 — multi-operator isolation" do
+    it "keeps each user's progress independent under the same store" do
+      other = create(:user, email: "operator@example.com", role: "admin")
+      other_headers = { "Authorization" => "Bearer #{JwtService.encode(user_id: other.id)}" }
+
+      create(:onboarding_progress, :completed, user: admin, store_setting: store)
+
+      get "/api/v1/admin/onboarding/progress", headers: other_headers
+      expect(response.parsed_body["status"]).to eq("not_started")
+
+      get "/api/v1/admin/onboarding/progress", headers: admin_headers
+      expect(response.parsed_body["status"]).to eq("completed")
+    end
+  end
+
+  # Spec section 11 — propagation of time_on_step_ms to the telemetry call.
+  describe "telemetry — time_on_step_ms" do
+    before { create(:onboarding_progress, :in_progress, user: admin, store_setting: store) }
+
+    it "forwards time_on_step_ms into the tour_step_viewed payload" do
+      expect(TelemetryService).to receive(:track).with(
+        hash_including(
+          event:      "tour_step_viewed",
+          properties: hash_including(time_on_step_ms: 4321)
+        )
+      )
+
+      patch "/api/v1/admin/onboarding/progress",
+        params:  { completed_step: "welcome", time_on_step_ms: 4321 },
+        headers: admin_headers,
+        as:      :json
+    end
+
+    it "omits time_on_step_ms when not provided (no nil leak)" do
+      expect(TelemetryService).to receive(:track).with(
+        hash_including(event: "tour_step_viewed", properties: hash_excluding(:time_on_step_ms))
+      )
+
+      patch "/api/v1/admin/onboarding/progress",
+        params:  { completed_step: "welcome" },
+        headers: admin_headers,
+        as:      :json
     end
   end
 end
