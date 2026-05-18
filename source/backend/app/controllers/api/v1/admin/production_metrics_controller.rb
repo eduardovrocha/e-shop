@@ -19,14 +19,15 @@ module Api
           queue_scope = base.where.not(production_started_at: nil)
                             .where(production_started_at: since..)
           queue_pairs = queue_scope.pluck(:created_at, :production_started_at)
-          queue_hours = queue_pairs.map { |c, s| (s - c) / 3600.0 }
+          queue_hours = queue_pairs.filter_map { |c, s| ((s - c) / 3600.0) if c && s }
           avg_queue_time_hours = average(queue_hours)
 
           # ── Production time (in_production → ready_to_ship)
-          prod_scope = base.where.not(production_completed_at: nil)
+          prod_scope = base.where.not(production_started_at: nil)
+                           .where.not(production_completed_at: nil)
                            .where(production_completed_at: since..)
-          prod_pairs = prod_scope.pluck(:production_started_at, :production_completed_at).compact
-          prod_hours = prod_pairs.map { |s, c| (c - s) / 3600.0 }
+          prod_pairs = prod_scope.pluck(:production_started_at, :production_completed_at)
+          prod_hours = prod_pairs.filter_map { |s, c| ((c - s) / 3600.0) if s && c }
           avg_production_time_hours = average(prod_hours)
 
           # ── Throughput: items that reached shipped/delivered in the window.
