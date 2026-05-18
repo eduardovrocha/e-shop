@@ -57,6 +57,17 @@ Rails.application.routes.draw do
           post :test_connection, on: :collection
         end
         resources :shipping_carriers, only: %i[index update]
+
+        # Onboarding tour progress
+        scope :onboarding do
+          get   "progress",                to: "onboarding_progress#show"
+          patch "progress",                to: "onboarding_progress#update"
+          post  "progress/start",          to: "onboarding_progress#start"
+          post  "progress/complete-phase", to: "onboarding_progress#complete_phase"
+          post  "progress/skip",           to: "onboarding_progress#skip"
+          post  "progress/reset",          to: "onboarding_progress#reset"
+          post  "events/first-sale",       to: "onboarding_progress#first_sale"
+        end
       end
     end
   end

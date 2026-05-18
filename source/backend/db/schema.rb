@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_16_203104) do
+ActiveRecord::Schema[7.2].define(version: 2026_05_17_220000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -89,6 +89,26 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_16_203104) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["email"], name: "index_customers_on_email", unique: true
+  end
+
+  create_table "onboarding_progresses", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "store_setting_id", null: false
+    t.string "status", default: "not_started", null: false
+    t.integer "current_phase", default: 1, null: false
+    t.string "current_step_id"
+    t.jsonb "completed_steps", default: [], null: false
+    t.jsonb "skipped_steps", default: [], null: false
+    t.datetime "started_at"
+    t.datetime "completed_at"
+    t.datetime "last_seen_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["store_setting_id"], name: "index_onboarding_progresses_on_store_setting_id"
+    t.index ["user_id", "store_setting_id"], name: "index_onboarding_progresses_on_user_and_store", unique: true
+    t.index ["user_id"], name: "index_onboarding_progresses_on_user_id"
+    t.check_constraint "current_phase = ANY (ARRAY[1, 2])", name: "onboarding_progresses_phase_check"
+    t.check_constraint "status::text = ANY (ARRAY['not_started'::character varying, 'in_progress'::character varying, 'completed'::character varying, 'skipped'::character varying, 'phase_2_ready'::character varying]::text[])", name: "onboarding_progresses_status_check"
   end
 
   create_table "order_items", force: :cascade do |t|
@@ -284,6 +304,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_16_203104) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "customer_addresses", "customers"
+  add_foreign_key "onboarding_progresses", "store_settings", on_delete: :cascade
+  add_foreign_key "onboarding_progresses", "users", on_delete: :cascade
   add_foreign_key "order_items", "orders"
   add_foreign_key "order_items", "product_variants"
   add_foreign_key "order_items", "products"
