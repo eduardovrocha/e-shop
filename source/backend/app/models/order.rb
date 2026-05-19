@@ -73,7 +73,7 @@ class Order < ApplicationRecord
   # single line: "Visa •••• 1234 · 3x de R$ 50,00 sem juros". Falls back
   # gracefully when fields are missing so legacy orders still render.
   def payment_summary
-    [card_label, installment_label].compact.join(" · ")
+    [ card_label, installment_label ].compact.join(" · ")
   end
 
   def public_tracking_url
