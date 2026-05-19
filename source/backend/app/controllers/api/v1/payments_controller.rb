@@ -6,6 +6,20 @@ module Api
       # POST /api/v1/payments/create_intent
       def create_intent
         items = params.require(:items)
+        # Normalize the snapshot up front — items.to_json on ActionController
+        # ::Parameters can drop fields when nothing has been permitted, which
+        # caused enrich_items_snapshot to receive entries with a missing
+        # variant_id and persist zeroed prices / blank names. Building a plain
+        # Array<Hash> with string keys here makes the Stripe metadata payload
+        # deterministic regardless of Rails param-permit semantics.
+        items_metadata_snapshot = items.map do |i|
+          {
+            "id"         => i[:id].to_i.positive? ? i[:id].to_i : nil,
+            "variant_id" => i[:variant_id].to_i,
+            "size"       => i[:size].to_s.presence,
+            "quantity"   => [ i[:quantity].to_i, 1 ].max
+          }
+        end
         delivery_method = params.fetch(:delivery_method, "pickup")
 
         unless Order::DELIVERY_METHODS.include?(delivery_method)
@@ -55,7 +69,7 @@ module Api
             delivery_method:    delivery_method,
             items_total_cents:  items_total,
             shipping_fee_cents: shipping_fee,
-            items_snapshot:     items.to_json,
+            items_snapshot:     items_metadata_snapshot.to_json,
             customer_name:      params[:customer_name],
             customer_email:     params[:customer_email],
             customer_phone:     params[:customer_phone],
