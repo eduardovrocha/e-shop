@@ -458,24 +458,36 @@ module Api
         end
       end
 
-      # Enriches the raw frontend snapshot with server-authoritative prices.
-      # Freezes unit_price_cents and subtotal_cents at the moment of purchase —
-      # these values never change even if variant prices are updated later.
+      # Enriches the raw frontend snapshot with server-authoritative data.
+      # Treats the variant as source of truth (never trust the snapshot for
+      # billing-visible fields) — name, size, and price all come from the
+      # variant record. Freezes unit_price_cents and subtotal_cents at the
+      # moment of purchase so the receipt reflects what the buyer agreed to,
+      # not whatever the variant price is updated to later.
       def enrich_items_snapshot(raw_items)
         variant_ids = raw_items.map { |i| (i["variant_id"] || i[:variant_id]).to_i }.uniq
         variants    = ProductVariant.includes(:product).where(id: variant_ids).index_by(&:id)
 
+        missing_variant_ids = variant_ids - variants.keys
+        if missing_variant_ids.any?
+          Rails.logger.warn "[Order] enrich_items_snapshot: variant ids missing in DB: #{missing_variant_ids.inspect} (raw_items=#{raw_items.inspect})"
+        end
+
         raw_items.map do |item|
-          variant_id      = (item["variant_id"] || item[:variant_id]).to_i
-          variant         = variants[variant_id]
-          qty             = [ (item["quantity"] || item[:quantity]).to_i, 1 ].max
-          unit_price_cents = variant&.price_cents || 0
+          variant_id       = (item["variant_id"] || item[:variant_id]).to_i
+          variant          = variants[variant_id]
+          product          = variant&.product
+          qty              = [ (item["quantity"] || item[:quantity]).to_i, 1 ].max
+          unit_price_cents = variant&.price_cents.to_i
 
           {
             "id"               => item["id"] || item[:id],
             "variant_id"       => variant_id,
-            "name"             => item["name"] || item[:name] || variant&.product&.name,
-            "size"             => item["size"] || item[:size] || variant&.size,
+            "name"             => product&.name.presence ||
+                                  (item["name"] || item[:name]).presence ||
+                                  "Item",
+            "size"             => variant&.size.presence ||
+                                  (item["size"] || item[:size]).presence,
             "quantity"         => qty,
             "unit_price_cents" => unit_price_cents,
             "subtotal_cents"   => unit_price_cents * qty
