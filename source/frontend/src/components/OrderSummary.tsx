@@ -2,6 +2,7 @@ import type { CartItem } from '@/store/cartStore'
 import { Badge } from '@/components/Badge'
 import { PriceTag } from '@/components/PriceTag'
 import { formatPrice } from '@/lib/utils'
+import { formatInstallmentLabel, type InstallmentCount } from '@/utils/installments'
 
 // Reused by /cart and /checkout. Pure presentation — receives derived
 // totals from the parent (which already owns the cart store and shipping
@@ -18,6 +19,10 @@ interface OrderSummaryProps {
   cta?: React.ReactNode
   footer?: React.ReactNode
   collapsibleOnMobile?: boolean
+  // When set, renders an installment line beneath Total. Omit on pages
+  // that don't drive a payment yet (e.g. /cart) — the line is invisible
+  // until the buyer picks a count in /checkout.
+  installmentCount?: InstallmentCount
 }
 
 function ItemRow({ item }: { item: CartItem }) {
@@ -87,8 +92,10 @@ function SealsRow() {
 function SummaryBody({
   items, subtotal, shippingFee, shippingFreeLabel,
   promisedCompletionDate, promisedLabel, cta, footer,
+  installmentCount,
 }: Omit<OrderSummaryProps, 'collapsibleOnMobile'>) {
   const total = subtotal + (shippingFee ?? 0)
+  const totalCents = Math.round(total * 100)
 
   return (
     <div className="flex flex-col">
@@ -123,6 +130,12 @@ function SummaryBody({
         <span className="font-sans font-semibold text-andrequice-navy">Total</span>
         <PriceTag value={total} size="lg" />
       </div>
+
+      {installmentCount && (
+        <p className="mt-1 text-right text-xs text-andrequice-brown tabular-nums">
+          {formatInstallmentLabel(totalCents, installmentCount)}
+        </p>
+      )}
 
       {promisedCompletionDate && (
         <div className="mt-3 rounded-xl bg-andrequice-sand/40 border border-andrequice-sand px-3 py-2.5">

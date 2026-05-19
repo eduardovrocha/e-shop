@@ -52,6 +52,7 @@ Subtotal: R$ <%= format("%.2f", @order.items_total_cents / 100.0) %>
 Frete:    R$ <%= format("%.2f", @order.shipping_fee_cents / 100.0) %>
 <% end %>
 Total:    R$ <%= format("%.2f", @order.total_cents / 100.0) %>
+Pagamento: <%= @order.payment_summary %>
 
 <% if @is_paid %>
 ---
@@ -68,11 +69,21 @@ ENTREGA
 <% if @is_pickup %>
 Retirada presencial
 <% elsif @shipping_fields[:address].present? %>
-<%= @shipping_fields[:address] %><%= ", #{@shipping_fields[:number]}" if @shipping_fields[:number].present? %>
-<% if @shipping_fields[:complement].present? %><%= @shipping_fields[:complement] %>
-<% end %><% if @shipping_fields[:city].present? %><%= @shipping_fields[:city] %><%= " - #{@shipping_fields[:state]}" if @shipping_fields[:state].present? %>
-<% end %><% if @shipping_fields[:cep].present? %>CEP <%= @shipping_fields[:cep] %>
-<% end %><% if @order.carrier.present? %><%= @order.carrier %><%= " · #{@order.shipping_service}" if @order.shipping_service.present? %>
+<%
+  address_line = "#{@shipping_fields[:address]}"
+  address_line += ", #{@shipping_fields[:number]}" if @shipping_fields[:number].present?
+  city_state   = @shipping_fields[:city].present? \
+    ? "#{@shipping_fields[:city]}#{" - #{@shipping_fields[:state]}" if @shipping_fields[:state].present?}" \
+    : nil
+  address_parts = [
+    address_line,
+    @shipping_fields[:complement].presence,
+    city_state,
+    @shipping_fields[:cep].present? ? "CEP #{@shipping_fields[:cep]}" : nil
+  ].compact
+%>
+<%= address_parts.join(" · ") %>
+<% if @order.carrier.present? %><%= @order.carrier %><%= " · #{@order.shipping_service}" if @order.shipping_service.present? %>
 <% end %><% end %>
 
 ---

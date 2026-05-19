@@ -246,6 +246,11 @@
                     R$ <%= format("%.2f", @order.total_cents / 100.0) %>
                   </td>
                 </tr>
+                <tr>
+                  <td colspan="2" align="right" style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#8a7560;padding:2px 0 0;">
+                    <%= @order.payment_summary %>
+                  </td>
+                </tr>
               </table>
             </td>
           </tr>
@@ -288,24 +293,22 @@
                         Retirada presencial
                       </p>
                     <% elsif @shipping_fields[:address].present? %>
-                      <p style="margin:0 0 4px;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:600;color:#0D2B45;line-height:1.4;">
-                        <%= @shipping_fields[:address] %><%= ", #{@shipping_fields[:number]}" if @shipping_fields[:number].present? %>
+                      <%
+                        address_line = "#{@shipping_fields[:address]}"
+                        address_line += ", #{@shipping_fields[:number]}" if @shipping_fields[:number].present?
+                        city_state   = @shipping_fields[:city].present? \
+                          ? "#{@shipping_fields[:city]}#{" - #{@shipping_fields[:state]}" if @shipping_fields[:state].present?}" \
+                          : nil
+                        address_parts = [
+                          address_line,
+                          @shipping_fields[:complement].presence,
+                          city_state,
+                          @shipping_fields[:cep].present? ? "CEP #{@shipping_fields[:cep]}" : nil
+                        ].compact
+                      %>
+                      <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#0D2B45;line-height:1.4;">
+                        <%= address_parts.join(" · ") %>
                       </p>
-                      <% if @shipping_fields[:complement].present? %>
-                        <p style="margin:0 0 4px;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#4A2E1A;line-height:1.4;">
-                          <%= @shipping_fields[:complement] %>
-                        </p>
-                      <% end %>
-                      <% if @shipping_fields[:city].present? %>
-                        <p style="margin:0 0 4px;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#4A2E1A;line-height:1.4;">
-                          <%= @shipping_fields[:city] %><%= " - #{@shipping_fields[:state]}" if @shipping_fields[:state].present? %>
-                        </p>
-                      <% end %>
-                      <% if @shipping_fields[:cep].present? %>
-                        <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#4A2E1A;line-height:1.4;">
-                          CEP <%= @shipping_fields[:cep] %>
-                        </p>
-                      <% end %>
                     <% end %>
                     <% if @order.carrier.present? %>
                       <p style="margin:10px 0 0;padding-top:10px;border-top:1px solid #E8D1B0;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#8a7560;line-height:1.4;">
@@ -320,7 +323,7 @@
 
           <!-- "O que acontece agora" -->
           <tr>
-            <td style="padding:16px 40px 0;">
+            <td style="padding:16px 40px;">
               <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#FAF5EE;border:1px solid #E8D1B0;border-radius:12px;">
                 <tr>
                   <td style="padding:16px 20px;">

@@ -45,6 +45,11 @@ module Api
           amount: total,
           currency: "brl",
           automatic_payment_methods: { enabled: true },
+          payment_method_options: {
+            card: {
+              installments: { enabled: true }
+            }
+          },
           metadata: {
             source:             "andrequice-web",
             delivery_method:    delivery_method,
@@ -304,6 +309,8 @@ module Api
             nil
           end
 
+        payment_details = extract_payment_details(intent)
+
         newly_created = false
         order = Order.find_or_create_by!(stripe_intent_id: intent.id) do |o|
           o.customer_name            = metadata["customer_name"]
@@ -316,9 +323,17 @@ module Api
           o.items                    = items_snapshot
           o.shipping_address         = shipping_address
           o.promised_completion_date = aggregated_promised_date
+          o.installment_count        = payment_details[:installment_count]
+          o.payment_brand            = payment_details[:brand]
+          o.payment_last4            = payment_details[:last4]
           o.status                   = "paid"
           newly_created              = true
         end
+
+        # Backfill payment fields on duplicate webhooks when columns are
+        # still nil (e.g. order created before these fields existed, or
+        # first webhook arrived before the charge was fully populated).
+        backfill_payment_fields!(order, payment_details) unless newly_created
 
         # For duplicate webhook events the order already exists — just ensure paid
         unless newly_created
@@ -378,6 +393,39 @@ module Api
         JSON.parse(metadata["promised_completion_snapshot"] || "[]")
       rescue JSON::ParserError
         []
+      end
+
+      # Retrieves the latest charge from Stripe and extracts the payment
+      # method details we display on receipts: installment plan count (nil
+      # when à-vista), card brand, and last4. All failures are swallowed
+      # and logged — billing-display data is not load-bearing for order
+      # creation, and a Stripe outage must not block the webhook.
+      def extract_payment_details(intent)
+        empty = { installment_count: nil, brand: nil, last4: nil }
+        charge_id = intent.respond_to?(:latest_charge) ? intent.latest_charge : nil
+        return empty if charge_id.blank?
+
+        charge = Stripe::Charge.retrieve(charge_id)
+        card   = charge.payment_method_details&.card
+        {
+          installment_count: card&.installments&.plan&.count,
+          brand:             card&.brand,
+          last4:             card&.last4
+        }
+      rescue Stripe::StripeError => e
+        Rails.logger.warn "[Stripe] Failed to read payment details for intent #{intent.id}: #{e.message}"
+        empty
+      end
+
+      # Updates only the columns that arrived blank on a duplicate webhook.
+      # Never overwrites existing values — once persisted, the first reading
+      # of the charge is the canonical one.
+      def backfill_payment_fields!(order, details)
+        updates = {}
+        updates[:installment_count] = details[:installment_count] if order.installment_count.nil? && details[:installment_count]
+        updates[:payment_brand]     = details[:brand]             if order.payment_brand.blank?  && details[:brand].present?
+        updates[:payment_last4]     = details[:last4]             if order.payment_last4.blank?  && details[:last4].present?
+        order.update!(updates) if updates.any?
       end
 
       # Creates one OrderItem row per item in the snapshot and stamps the

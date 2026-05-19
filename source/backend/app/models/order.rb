@@ -53,6 +53,29 @@ class Order < ApplicationRecord
     total_cents / 100.0
   end
 
+  # Display-friendly card brand labels for the payment summary line.
+  # Stripe returns lowercase tokens (visa, mastercard, amex …) — we map
+  # the ones we expect and titleize anything else as a safe fallback.
+  CARD_BRAND_LABELS = {
+    "visa"             => "Visa",
+    "mastercard"       => "Mastercard",
+    "amex"             => "American Express",
+    "elo"              => "Elo",
+    "hipercard"        => "Hipercard",
+    "diners"           => "Diners",
+    "discover"         => "Discover",
+    "jcb"              => "JCB",
+    "unionpay"         => "UnionPay"
+  }.freeze
+
+  # Human-readable payment summary for receipts/emails. Combines the
+  # captured card method (brand + last4) with the installment plan into a
+  # single line: "Visa •••• 1234 · 3x de R$ 50,00 sem juros". Falls back
+  # gracefully when fields are missing so legacy orders still render.
+  def payment_summary
+    [card_label, installment_label].compact.join(" · ")
+  end
+
   def public_tracking_url
     host = ENV.fetch("FRONTEND_URL", "http://localhost").sub(/\/$/, "")
     "#{host}/track/#{tracking_token}"
@@ -97,6 +120,25 @@ class Order < ApplicationRecord
   end
 
   private
+
+  def card_label
+    brand = CARD_BRAND_LABELS[payment_brand.to_s.downcase] || payment_brand.to_s.titleize.presence
+    last4 = payment_last4.presence
+    return nil if brand.blank? && last4.blank?
+    return "Cartão •••• #{last4}" if brand.blank?
+    return brand if last4.blank?
+    "#{brand} •••• #{last4}"
+  end
+
+  def installment_label
+    count = installment_count.to_i
+    if count >= 2
+      per_cents = (total_cents.to_f / count).round
+      "#{count}x de R$ #{format('%.2f', per_cents / 100.0).tr('.', ',')} sem juros"
+    else
+      "à vista"
+    end
+  end
 
   # Transitions via OrderStatusService when the move is legal under the
   # configured VALID_TRANSITIONS. The service handles history + notifications.

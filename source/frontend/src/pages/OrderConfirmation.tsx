@@ -8,6 +8,7 @@ import { useCartStore, type CartItem } from '@/store/cartStore'
 import { useCheckoutStore } from '@/store/checkoutStore'
 import { formatPrice } from '@/lib/utils'
 import { formatShippingLine } from '@/utils/shipping'
+import { formatInstallmentLabel, type InstallmentCount } from '@/utils/installments'
 
 // Snapshot shape passed in via location.state.order from Checkout.tsx
 // at the moment Stripe confirmPayment succeeds.
@@ -17,6 +18,7 @@ interface OrderSnapshot {
   subtotalCents: number
   shippingFeeCents: number
   promisedDate: string | null // YYYY-MM-DD
+  installmentCount?: InstallmentCount
   deliveryMethod: 'delivery' | 'pickup'
   contact: { name: string; email: string; phone: string }
   shippingAddress: { cep: string; street: string; city: string; state: string } | null
@@ -280,6 +282,13 @@ export default function OrderConfirmation() {
                 {formatPrice(order.totalCents / 100)}
               </dd>
             </div>
+            {order.installmentCount && (
+              <div className="flex justify-end pt-0.5">
+                <dd className="text-xs text-andrequice-brown tabular-nums">
+                  {formatInstallmentLabel(order.totalCents, order.installmentCount)}
+                </dd>
+              </div>
+            )}
           </dl>
         </section>
 
@@ -309,19 +318,14 @@ export default function OrderConfirmation() {
               {isPickup ? (
                 <p className="text-sm font-medium text-andrequice-navy">Retirada presencial</p>
               ) : order.shippingAddress ? (
-                <>
-                  <p className="text-sm font-medium text-andrequice-navy">
-                    {order.shippingAddress.street}
-                    {order.addressExtra.number ? `, ${order.addressExtra.number}` : ''}
-                  </p>
-                  {order.addressExtra.complement && (
-                    <p className="text-sm text-andrequice-brown">{order.addressExtra.complement}</p>
-                  )}
-                  <p className="text-sm text-andrequice-brown">
-                    {order.shippingAddress.city} - {order.shippingAddress.state}
-                  </p>
-                  <p className="text-sm text-andrequice-brown">CEP {order.shippingAddress.cep}</p>
-                </>
+                <p className="text-sm text-andrequice-navy">
+                  {[
+                    `${order.shippingAddress.street}${order.addressExtra.number ? `, ${order.addressExtra.number}` : ''}`,
+                    order.addressExtra.complement || null,
+                    `${order.shippingAddress.city} - ${order.shippingAddress.state}`,
+                    `CEP ${order.shippingAddress.cep}`,
+                  ].filter(Boolean).join(' · ')}
+                </p>
               ) : null}
               {shippingLine && (
                 <>

@@ -20,6 +20,8 @@ import { useCheckoutStore } from '@/store/checkoutStore'
 import { useStore } from '@/hooks/useStore'
 import { formatPrice, formatCep, formatPhoneBR } from '@/lib/utils'
 import { formatShippingLine } from '@/utils/shipping'
+import { InstallmentSelector } from '@/components/InstallmentSelector'
+import type { InstallmentCount } from '@/utils/installments'
 
 // ── Stripe Appearance ─────────────────────────────────────────────────────────
 
@@ -59,12 +61,16 @@ function PaymentSection({
   customerName,
   customerEmail,
   customerPhone,
+  installmentCount,
+  onInstallmentCountChange,
   onSuccess,
 }: {
   intent: PaymentIntentResponse
   customerName: string
   customerEmail: string
   customerPhone: string
+  installmentCount: InstallmentCount
+  onInstallmentCountChange: (count: InstallmentCount) => void
   onSuccess: () => void
 }) {
   const stripe = useStripe()
@@ -79,6 +85,23 @@ function PaymentSection({
     setConfirming(true)
     setPaymentError(null)
 
+    // Stripe's installments.plan is only sent when count >= 2 — keeps the
+    // 1x payload byte-equivalent to the pre-installments flow (regression
+    // zero on à-vista). Loja absorve o custo: total enviado é idêntico.
+    const paymentMethodOptions = installmentCount === 1
+      ? undefined
+      : {
+          card: {
+            installments: {
+              plan: {
+                count: installmentCount,
+                interval: 'month' as const,
+                type: 'fixed_count' as const,
+              },
+            },
+          },
+        }
+
     const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
       confirmParams: {
@@ -90,16 +113,29 @@ function PaymentSection({
             phone: customerPhone,
           },
         },
+        ...(paymentMethodOptions && { payment_method_options: paymentMethodOptions }),
       },
       redirect: 'if_required',
     })
 
     if (error) {
-      setPaymentError(
-        error.code === 'card_declined'
-          ? 'Pagamento recusado. Verifique os dados do cartão ou tente outro método.'
-          : error.message ?? 'Erro ao processar pagamento. Tente novamente.'
-      )
+      const rawMessage = error.message ?? ''
+      const isInstallmentsUnsupported =
+        error.code === 'installments_plan_not_available' ||
+        /installment/i.test(rawMessage)
+
+      if (isInstallmentsUnsupported) {
+        setPaymentError(
+          `Este cartão não permite parcelamento em ${installmentCount}x. ` +
+          'Selecione outra quantidade de parcelas ou utilize outro cartão.'
+        )
+      } else {
+        setPaymentError(
+          error.code === 'card_declined'
+            ? 'Pagamento recusado. Verifique os dados do cartão ou tente outro método.'
+            : rawMessage || 'Erro ao processar pagamento. Tente novamente.'
+        )
+      }
       setConfirming(false)
     } else if (paymentIntent?.status === 'succeeded') {
       onSuccess()
@@ -137,6 +173,13 @@ function PaymentSection({
           </div>
         </div>
       )}
+
+      <InstallmentSelector
+        totalCents={intent.total_cents}
+        value={installmentCount}
+        onChange={onInstallmentCountChange}
+        disabled={confirming}
+      />
 
       <PaymentElement
         options={{
@@ -184,6 +227,7 @@ export default function Checkout() {
   const [intent, setIntent] = useState<PaymentIntentResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
+  const [installmentCount, setInstallmentCount] = useState<InstallmentCount>(1)
   const paymentRef = useRef<HTMLDivElement>(null)
 
   // ── Guards: empty cart → /catalog, missing required data → /cart ────────
@@ -310,6 +354,7 @@ export default function Checkout() {
       subtotalCents:     intent.items_total_cents,
       shippingFeeCents:  intent.shipping_fee_cents,
       promisedDate:      intent.aggregated_promised_completion_date ?? null,
+      installmentCount,
       deliveryMethod,
       contact: { ...contact },
       shippingAddress: shippingAddress ? { ...shippingAddress } : null,
@@ -322,7 +367,7 @@ export default function Checkout() {
     } catch {
       /* storage full or unavailable — fall back to location.state path */
     }
-  }, [intent, items, deliveryMethod, contact, shippingAddress, addressExtra, selectedShipping])
+  }, [intent, items, deliveryMethod, contact, shippingAddress, addressExtra, selectedShipping, installmentCount])
 
   const handleSuccess = useCallback(() => {
     // In-element confirmation (no 3DS redirect): pull the snapshot we just
@@ -464,25 +509,16 @@ export default function Checkout() {
                       )}
                     </>
                   ) : shippingAddress ? (
-                    <>
-                      <p className="text-sm font-medium text-andrequice-navy">
-                        {shippingAddress.street}
-                        {addressExtra.number ? `, ${addressExtra.number}` : ''}
-                      </p>
-                      {addressExtra.complement && (
-                        <p className="text-sm text-andrequice-brown">
-                          {addressExtra.complement}
-                        </p>
-                      )}
-                      <p className="text-sm text-andrequice-brown">
-                        {shippingAddress.city}
-                        {shippingAddress.city && shippingAddress.state ? ' - ' : ''}
-                        {shippingAddress.state}
-                      </p>
-                      <p className="text-sm text-andrequice-brown">
-                        CEP {formatCep(shippingAddress.cep)}
-                      </p>
-                    </>
+                    <p className="text-sm text-andrequice-navy">
+                      {[
+                        `${shippingAddress.street}${addressExtra.number ? `, ${addressExtra.number}` : ''}`,
+                        addressExtra.complement || null,
+                        shippingAddress.city && shippingAddress.state
+                          ? `${shippingAddress.city} - ${shippingAddress.state}`
+                          : (shippingAddress.city || shippingAddress.state || null),
+                        shippingAddress.cep ? `CEP ${formatCep(shippingAddress.cep)}` : null,
+                      ].filter(Boolean).join(' · ')}
+                    </p>
                   ) : null}
 
                   {shippingLine && (
@@ -538,6 +574,8 @@ export default function Checkout() {
                     customerName={contact.name}
                     customerEmail={contact.email}
                     customerPhone={contact.phone}
+                    installmentCount={installmentCount}
+                    onInstallmentCountChange={setInstallmentCount}
                     onSuccess={handleSuccess}
                   />
                 </Elements>
@@ -552,6 +590,7 @@ export default function Checkout() {
               subtotal={subtotal}
               shippingFee={shippingFee}
               promisedCompletionDate={promisedLabel}
+              installmentCount={intent ? installmentCount : undefined}
             />
           </aside>
         </div>
