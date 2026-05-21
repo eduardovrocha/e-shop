@@ -26,6 +26,17 @@ module Api
           return render json: { error: "Método de entrega inválido" }, status: :unprocessable_entity
         end
 
+        # Pickup can be turned off via two switches in the admin panel
+        # (StoreSetting.pickup_enabled OR ShippingSetting.local_pickup_enabled).
+        # Either one being off blocks the pickup flow; the storefront mirrors
+        # the same AND. Guard server-side so a stale client can't sneak
+        # through a pickup order while the store is delivery-only.
+        if delivery_method == "pickup" &&
+           !(StoreSetting.instance.pickup_enabled && ShippingSetting.instance.local_pickup_enabled)
+          return render json: { error: "Retirada presencial indisponível no momento" },
+                        status: :unprocessable_entity
+        end
+
         # Stock validation only applies to from_stock items; made_to_order
         # items are produced on demand and have no stock to check.
         validate_stock!(items)

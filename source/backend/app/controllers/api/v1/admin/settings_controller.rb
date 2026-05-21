@@ -21,7 +21,7 @@ module Api
           params.require(:store_setting).permit(
             :contact_email, :whatsapp_number,
             :pickup_zipcode, :pickup_street, :pickup_number, :pickup_complement,
-            :pickup_city, :pickup_state,
+            :pickup_city, :pickup_state, :pickup_enabled,
             :free_shipping_above_cents, :shipping_fee_cents
           )
         end

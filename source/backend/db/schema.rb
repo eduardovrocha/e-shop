@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_21_144918) do
+ActiveRecord::Schema[7.2].define(version: 2026_05_21_155442) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -355,6 +355,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_21_144918) do
     t.string "headline_secondary", default: "nossa devoção.", null: false
     t.text "headline_description", default: "Camisetas artesanais da Festa de Andrequicé. Arte, fé e tradição em cada peça.", null: false
     t.text "footer_description", default: "Camisetas artesanais da Festa de Andrequicé — fé, tradição e arte do interior de Minas Gerais.", null: false
+    t.boolean "pickup_enabled", default: true, null: false
   end
 
   create_table "stripe_mode_changes", force: :cascade do |t|

@@ -11,6 +11,7 @@ export interface StoreSettings {
   pickup_complement: string
   pickup_city: string
   pickup_state: string
+  pickup_enabled: boolean
   whatsapp_number: string
   free_shipping_above_cents: number
   shipping_fee_cents: number

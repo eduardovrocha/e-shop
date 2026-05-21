@@ -23,6 +23,9 @@ interface ShippingOption {
   service: string
   price_cents: number
   delivery_days: number
+  // Backend flags rows that should appear but aren't selectable — currently
+  // only the "Retirada na loja" row when the admin's master switch is off.
+  disabled?: boolean
 }
 
 // ── Cart line item — same data contract as the previous version,
@@ -166,6 +169,15 @@ export default function Cart() {
     setDeliveryMethod, setSelectedShipping, setShippingAddress,
     setContact, setAddressExtra,
   } = useCheckoutStore()
+
+  // If the admin turned pickup off while the buyer had it selected in a
+  // persisted checkout state, snap them back to delivery on render.
+  // Uses `pickup_available` which already ANDs both admin toggles.
+  useEffect(() => {
+    if (store && store.pickup_available === false && deliveryMethod === 'pickup') {
+      setDeliveryMethod('delivery')
+    }
+  }, [store, deliveryMethod, setDeliveryMethod])
 
   // ── Bloco 2 — local form state for CEP + shipping option list ──────────
   const [cep, setCep] = useState(shippingAddress?.cep ?? '')
@@ -427,30 +439,63 @@ export default function Cart() {
                 <p className="font-sans text-xs text-andrequice-border">Calcule o frete pelo CEP</p>
               </div>
             </button>
-            <button
-              type="button"
-              onClick={() => handleMethodChange('pickup')}
-              aria-pressed={deliveryMethod === 'pickup'}
-              className={[
-                'flex items-center gap-4 w-full p-4 rounded-xl border-2 text-left transition-all',
-                deliveryMethod === 'pickup'
-                  ? 'border-andrequice-gold bg-andrequice-gold/5'
-                  : 'border-andrequice-sand bg-white hover:border-andrequice-border',
-              ].join(' ')}
-            >
-              <div className={[
-                'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0',
-                deliveryMethod === 'pickup' ? 'border-andrequice-gold' : 'border-andrequice-border',
-              ].join(' ')}>
-                {deliveryMethod === 'pickup' && <div className="w-2.5 h-2.5 rounded-full bg-andrequice-gold" />}
-              </div>
-              <div>
-                <p className="font-sans font-medium text-andrequice-navy text-sm">Retirada presencial</p>
-                <p className="font-sans text-xs text-andrequice-border">
-                  Grátis{store?.pickup_city ? ` · ${store.pickup_city} - ${store.pickup_state}` : ''}
-                </p>
-              </div>
-            </button>
+            {(() => {
+              // `store === null` while loading; treat the option as available
+              // by default. Disabled state fires when EITHER admin toggle is
+              // off — `pickup_available` is the AND of StoreSetting.pickup_enabled
+              // and ShippingSetting.local_pickup_enabled (computed in /api/v1/store).
+              const pickupDisabled = store?.pickup_available === false
+              return (
+                <button
+                  type="button"
+                  onClick={pickupDisabled ? undefined : () => handleMethodChange('pickup')}
+                  aria-pressed={deliveryMethod === 'pickup'}
+                  aria-disabled={pickupDisabled}
+                  disabled={pickupDisabled}
+                  className={[
+                    'flex items-center gap-4 w-full p-4 rounded-xl border-2 text-left transition-all',
+                    pickupDisabled
+                      ? 'border-andrequice-sand bg-andrequice-sand/30 cursor-not-allowed opacity-60'
+                      : deliveryMethod === 'pickup'
+                        ? 'border-andrequice-gold bg-andrequice-gold/5'
+                        : 'border-andrequice-sand bg-white hover:border-andrequice-border',
+                  ].join(' ')}
+                  title={pickupDisabled ? 'Retirada presencial indisponível no momento' : undefined}
+                >
+                  <div className={[
+                    'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0',
+                    pickupDisabled
+                      ? 'border-andrequice-border'
+                      : deliveryMethod === 'pickup'
+                        ? 'border-andrequice-gold'
+                        : 'border-andrequice-border',
+                  ].join(' ')}>
+                    {!pickupDisabled && deliveryMethod === 'pickup' && (
+                      <div className="w-2.5 h-2.5 rounded-full bg-andrequice-gold" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-sans font-medium text-andrequice-navy text-sm">
+                      Retirada presencial
+                      {pickupDisabled && (
+                        <span className="ml-2 inline-flex items-center rounded bg-andrequice-sand px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-andrequice-brown">
+                          Indisponível
+                        </span>
+                      )}
+                    </p>
+                    <p className="font-sans text-xs text-andrequice-border">
+                      {pickupDisabled
+                        ? 'Retirada na loja indisponível no momento.'
+                        : (
+                          <>
+                            Grátis{store?.pickup_city ? ` · ${store.pickup_city} - ${store.pickup_state}` : ''}
+                          </>
+                        )}
+                    </p>
+                  </div>
+                </button>
+              )
+            })()}
           </div>
 
           {/* CEP + service options (delivery only) */}
@@ -477,21 +522,32 @@ export default function Cart() {
               {shippingOptions && shippingOptions.length > 0 && (
                 <ul className="flex flex-col divide-y divide-andrequice-sand rounded-xl border border-andrequice-sand overflow-hidden">
                   {shippingOptions.map((opt) => {
-                    const isCheapest = cheapest?.service_id === opt.service_id && opt.price_cents > 0
+                    const optDisabled = opt.disabled === true
+                    // Visual-only flags should not apply to a disabled row.
+                    const isCheapest = !optDisabled && cheapest?.service_id === opt.service_id && opt.price_cents > 0
                     const isFastest =
+                      !optDisabled &&
                       fastest?.service_id === opt.service_id &&
                       fastest?.service_id !== cheapest?.service_id
                     const isSelected =
+                      !optDisabled &&
                       selectedShipping?.service === opt.service &&
                       selectedShipping?.carrier === opt.carrier
                     return (
                       <li key={`${opt.provider}-${opt.service_id}`}>
                         <button
                           type="button"
-                          onClick={() => handleSelectOption(opt)}
+                          onClick={optDisabled ? undefined : () => handleSelectOption(opt)}
+                          disabled={optDisabled}
+                          aria-disabled={optDisabled}
+                          title={optDisabled ? 'Indisponível no momento' : undefined}
                           className={[
                             'w-full flex items-center justify-between gap-4 px-4 py-3 text-left transition-colors',
-                            isSelected ? 'bg-andrequice-sand/60' : 'bg-white hover:bg-andrequice-sand/30',
+                            optDisabled
+                              ? 'bg-andrequice-sand/30 cursor-not-allowed opacity-60'
+                              : isSelected
+                                ? 'bg-andrequice-sand/60'
+                                : 'bg-white hover:bg-andrequice-sand/30',
                           ].join(' ')}
                         >
                           <div className="flex items-center gap-3 min-w-0">
@@ -504,6 +560,11 @@ export default function Cart() {
                             <div className="min-w-0">
                               <p className="truncate text-sm font-medium text-andrequice-navy">
                                 {opt.carrier} — {opt.service}
+                                {optDisabled && (
+                                  <span className="ml-2 inline-flex items-center rounded bg-andrequice-sand px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-andrequice-brown">
+                                    Indisponível
+                                  </span>
+                                )}
                               </p>
                               <p className="text-xs text-andrequice-border">
                                 {opt.delivery_days === 0

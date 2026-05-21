@@ -185,6 +185,28 @@ RSpec.describe Shipping::CalculatorService, type: :service do
         expect(pickup[:price_cents]).to eq(0)
         expect(pickup[:carrier]).to eq("Retirada")
       end
+
+      it "marca a opção como disabled quando StoreSetting.pickup_enabled está desligado" do
+        StoreSetting.instance.update!(pickup_enabled: false)
+
+        results = described_class.new.calculate(to_zipcode: "04568000", items: items)
+        pickup = results.find { |r| r[:service_id] == -1 }
+
+        expect(pickup).not_to be_nil
+        expect(pickup[:disabled]).to be(true)
+      ensure
+        StoreSetting.instance.update!(pickup_enabled: true)
+      end
+
+      it "ordena opções desabilitadas no final da lista" do
+        StoreSetting.instance.update!(pickup_enabled: false)
+
+        results = described_class.new.calculate(to_zipcode: "04568000", items: items)
+        # Pickup é price_cents:0; sem o tie-break de disabled iria pro topo.
+        expect(results.last[:service_id]).to eq(-1)
+      ensure
+        StoreSetting.instance.update!(pickup_enabled: true)
+      end
     end
 
     context "com frete grátis habilitado" do

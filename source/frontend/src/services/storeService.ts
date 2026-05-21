@@ -11,6 +11,13 @@ export interface StoreInfo {
   pickup_complement: string
   pickup_city: string
   pickup_state: string
+  // Raw store-level toggle (StoreSetting.pickup_enabled). Kept for backwards
+  // compatibility; the storefront should usually use `pickup_available`.
+  pickup_enabled: boolean
+  // Effective availability — backend ANDs StoreSetting.pickup_enabled with
+  // ShippingSetting.local_pickup_enabled, so either switch being off
+  // disables the "Retirada presencial" card in the cart.
+  pickup_available: boolean
 }
 
 export interface StoreHeadline {

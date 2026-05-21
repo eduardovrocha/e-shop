@@ -13,7 +13,17 @@ module Api
           pickup_number:             settings.pickup_number,
           pickup_complement:         settings.pickup_complement,
           pickup_city:               settings.pickup_city,
-          pickup_state:              settings.pickup_state
+          pickup_state:              settings.pickup_state,
+          # Whether the "Retirada presencial" delivery option appears in the
+          # storefront. Toggled via /admin/settings; the Cart card hides
+          # entirely when false, and the backend rejects delivery_method=pickup.
+          pickup_enabled:            settings.pickup_enabled,
+          # Effective pickup availability — ANDs the store-level toggle with
+          # the shipping-setting toggle so either one can disable the option.
+          # Frontend uses THIS field to decide whether to enable the card,
+          # not pickup_enabled alone. Both must be true for the card to be
+          # selectable.
+          pickup_available:          settings.pickup_enabled && ShippingSetting.instance.local_pickup_enabled
         }
       end
     end

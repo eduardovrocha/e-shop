@@ -59,6 +59,7 @@ export default function Settings() {
   const [pickupState, setPickupState] = useState('')
   const [zipcodeLoading, setZipcodeLoading] = useState(false)
   const [whatsappNumber, setWhatsappNumber] = useState('')
+  const [pickupEnabled, setPickupEnabled] = useState(true)
   const [freeShippingAbove, setFreeShippingAbove] = useState('')
   const [shippingFee, setShippingFee] = useState('')
 
@@ -75,6 +76,7 @@ export default function Settings() {
       setPickupComplement(settings.pickup_complement)
       setPickupCity(settings.pickup_city)
       setPickupState(settings.pickup_state)
+      setPickupEnabled(settings.pickup_enabled ?? true)
       setWhatsappNumber(maskWhatsApp(settings.whatsapp_number))
       setFreeShippingAbove((settings.free_shipping_above_cents / 100).toFixed(2))
       setShippingFee((settings.shipping_fee_cents / 100).toFixed(2))
@@ -106,6 +108,18 @@ export default function Settings() {
   const handleWhatsAppSave = (e: FormEvent) => {
     e.preventDefault()
     saveSection({ whatsapp_number: whatsappNumber })
+  }
+
+  const handlePickupEnabledToggle = async (next: boolean) => {
+    setPickupEnabled(next)
+    try {
+      await updateMutation.mutateAsync({ pickup_enabled: next })
+      toast.success(next ? 'Retirada presencial habilitada.' : 'Retirada presencial desabilitada.')
+    } catch {
+      // Revert UI on failure so what's on-screen always matches the server.
+      setPickupEnabled(!next)
+      toast.error('Erro ao atualizar.')
+    }
   }
 
   const handleShippingSave = (e: FormEvent) => {
@@ -496,7 +510,40 @@ export default function Settings() {
 
       {/* ───────────────────────────── Frete ───────────────────────────── */}
       {activeTab === 'frete' && (
-        <div className="col-span-full">
+        <div className="col-span-full space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <CardTitle className="text-base">Retirada presencial</CardTitle>
+                  <CardDescription>
+                    Quando desabilitado, a opção de retirada na loja é ocultada do checkout
+                    e o backend rejeita pedidos com esse método de entrega.
+                  </CardDescription>
+                </div>
+                <label className="inline-flex cursor-pointer items-center gap-2">
+                  <span className="text-sm font-medium">
+                    {pickupEnabled ? 'Habilitada' : 'Desabilitada'}
+                  </span>
+                  <input
+                    type="checkbox"
+                    role="switch"
+                    aria-label="Habilitar retirada presencial"
+                    checked={pickupEnabled}
+                    onChange={(e) => handlePickupEnabledToggle(e.target.checked)}
+                    disabled={disabled}
+                    className="h-5 w-9 cursor-pointer appearance-none rounded-full bg-muted transition-colors checked:bg-emerald-500 relative after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-transform checked:after:translate-x-4"
+                  />
+                </label>
+              </div>
+            </CardHeader>
+            {pickupEnabled && (
+              <CardContent className="text-xs text-muted-foreground">
+                O endereço de retirada é gerenciado na aba <strong>Loja</strong>.
+              </CardContent>
+            )}
+          </Card>
+
           <form onSubmit={handleShippingSave}>
             <Card>
               <CardHeader>

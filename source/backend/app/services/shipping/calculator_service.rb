@@ -11,8 +11,14 @@ module Shipping
       setting = ShippingSetting.instance
       results = []
 
+      # Inject the pickup option whenever ShippingSetting.local_pickup_enabled
+      # is on. When the Cart-level master switch (StoreSetting.pickup_enabled)
+      # is off, we still surface the option but flag it as disabled so the
+      # storefront can render it as visibly-unavailable rather than hide it
+      # outright — matches the same UX as the "Retirada presencial" card.
       if setting.local_pickup_enabled
-        results << pickup_option
+        store_allows_pickup = StoreSetting.instance.pickup_enabled
+        results << pickup_option.merge(disabled: !store_allows_pickup)
       end
 
       if setting.free_shipping_enabled
@@ -32,7 +38,14 @@ module Shipping
         results.concat(options.map(&:to_h))
       end
 
-      results.sort_by { |r| [ r[:price_cents], r[:delivery_days] ] }
+      # Normalize the disabled flag so the frontend doesn't have to check
+      # for undefined. The pickup row may carry disabled: true; everything
+      # else is always selectable.
+      results = results.map { |r| { disabled: false }.merge(r) }
+
+      # Sort selectable rows first, then by price + speed within each bucket
+      # so disabled entries land at the bottom of the list.
+      results.sort_by { |r| [ r[:disabled] ? 1 : 0, r[:price_cents], r[:delivery_days] ] }
     end
 
     private
