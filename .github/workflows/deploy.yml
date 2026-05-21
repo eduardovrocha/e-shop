@@ -10,11 +10,27 @@ jobs:
 
     steps:
       - name: Setup SSH key
+        env:
+          SSH_DEPLOY_KEY: ${{ secrets.SSH_DEPLOY_KEY }}
+          VPS_HOST:       ${{ secrets.VPS_HOST }}
+          VPS_USER:       ${{ secrets.VPS_USER }}
         run: |
+          set -x
+          # Validate required secrets up-front so the failure is obvious
+          # instead of being masked by a downstream command exiting 1.
+          : "${SSH_DEPLOY_KEY:?SSH_DEPLOY_KEY secret está vazio ou ausente}"
+          : "${VPS_HOST:?VPS_HOST secret está vazio ou ausente}"
+          : "${VPS_USER:?VPS_USER secret está vazio ou ausente}"
+
           install -m 700 -d ~/.ssh
-          echo "${{ secrets.SSH_DEPLOY_KEY }}" > ~/.ssh/deploy_key
+          # printf preserves multi-line content predictably; echo can mangle
+          # backslashes/escapes depending on shell built-in vs /bin/echo.
+          printf '%s\n' "$SSH_DEPLOY_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+          # ssh-keyscan stderr is intentionally NOT silenced so DNS or
+          # connection failures surface here instead of later in `ssh -i`.
+          ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts
 
       - name: Run update.sh on server
         run: |
