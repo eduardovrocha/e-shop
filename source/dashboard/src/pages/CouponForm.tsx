@@ -390,6 +390,11 @@ export default function CouponForm() {
                 value={form.total_usage_limit ?? ''}
                 onChange={(e) => setForm((p) => ({ ...p, total_usage_limit: e.target.value ? Number(e.target.value) : null }))}
               />
+              <p className="text-xs text-muted-foreground">
+                Número máximo de resgates somando todos os clientes. Quando atingir
+                esse total, o cupom passa para o status <strong>Esgotado</strong>{' '}
+                e o checkout deixa de aceitá-lo. Deixe em branco para uso ilimitado.
+              </p>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="per_customer_limit">Limite por cliente (vazio = sem limite)</Label>
@@ -400,6 +405,11 @@ export default function CouponForm() {
                 value={form.per_customer_limit ?? ''}
                 onChange={(e) => setForm((p) => ({ ...p, per_customer_limit: e.target.value ? Number(e.target.value) : null }))}
               />
+              <p className="text-xs text-muted-foreground">
+                Quantas vezes o <strong>mesmo e-mail</strong> pode resgatar este cupom.
+                A contagem usa o e-mail informado no checkout (sem necessidade de login).
+                Deixe em branco para permitir uso repetido pelo mesmo cliente.
+              </p>
             </div>
           </CardContent>
         </Card>

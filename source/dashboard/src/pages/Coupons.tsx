@@ -92,8 +92,9 @@ export default function Coupons() {
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as CouponStatus | '')}
           className="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+          aria-label="Filtrar por status"
         >
-          <option value="">Todos os status</option>
+          <option value="">Status</option>
           <option value="active">Ativo</option>
           <option value="inactive">Inativo</option>
           <option value="expired">Expirado</option>
@@ -104,8 +105,9 @@ export default function Coupons() {
           value={codeFilter}
           onChange={(e) => setCodeFilter(e.target.value as CodeType | '')}
           className="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+          aria-label="Filtrar por tipo"
         >
-          <option value="">Todos os tipos</option>
+          <option value="">Tipos</option>
           <option value="public">Código público</option>
           <option value="unique">Códigos únicos</option>
         </select>
