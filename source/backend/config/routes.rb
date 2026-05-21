@@ -28,6 +28,10 @@ Rails.application.routes.draw do
           post :switch_mode, on: :collection
         end
 
+        resource :release, only: %i[show], controller: "release" do
+          post :wipe, on: :collection
+        end
+
         resources :orders, only: %i[index show update] do
           member do
             post :resend_email

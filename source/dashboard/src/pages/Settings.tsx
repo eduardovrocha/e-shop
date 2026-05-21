@@ -10,17 +10,19 @@ import { Badge } from '@/components/ui/badge'
 import { Link } from 'react-router-dom'
 import { useSettings, useUpdateSettings, useUpdateHeadline } from '@/hooks/useSettings'
 import { useStripeAdminSettings } from '@/hooks/useStripeAdminSettings'
+import { ReleaseTab } from '@/components/settings/ReleaseTab'
 import { useToast } from '@/hooks/useToast'
 import { cn } from '@/lib/utils'
 import type { StoreSettings, HeadlineSettings } from '@/services/settingsService'
 
-type Tab = 'apresentacao' | 'loja' | 'integracoes' | 'frete'
+type Tab = 'apresentacao' | 'loja' | 'integracoes' | 'frete' | 'release'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'apresentacao', label: 'Apresentação' },
   { id: 'loja',         label: 'Loja' },
   { id: 'integracoes',  label: 'Integrações' },
   { id: 'frete',        label: 'Frete' },
+  { id: 'release',      label: 'Release' },
 ]
 
 const maskWhatsApp = (value: string) => {
@@ -554,6 +556,9 @@ export default function Settings() {
           </form>
         </div>
       )}
+
+      {/* ───────────────────────────── Release ───────────────────────────── */}
+      {activeTab === 'release' && <ReleaseTab />}
     </AdminPageGrid>
   )
 }

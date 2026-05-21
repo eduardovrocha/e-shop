@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_21_111927) do
+ActiveRecord::Schema[7.2].define(version: 2026_05_21_123929) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -233,6 +233,17 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_21_111927) do
     t.check_constraint "width_mm IS NULL OR width_mm > 0", name: "chk_products_width_mm_positive"
   end
 
+  create_table "release_executions", force: :cascade do |t|
+    t.bigint "user_id"
+    t.string "ip_address"
+    t.integer "orders_deleted", default: 0, null: false
+    t.integer "order_items_deleted", default: 0, null: false
+    t.integer "customers_deleted", default: 0, null: false
+    t.datetime "executed_at", null: false
+    t.index ["executed_at"], name: "index_release_executions_on_executed_at", order: :desc
+    t.index ["user_id"], name: "index_release_executions_on_user_id"
+  end
+
   create_table "shipping_carriers", force: :cascade do |t|
     t.integer "me_service_id", null: false
     t.string "name", null: false
@@ -337,5 +348,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_21_111927) do
   add_foreign_key "order_status_histories", "orders"
   add_foreign_key "orders", "customers"
   add_foreign_key "product_variants", "products"
+  add_foreign_key "release_executions", "users"
   add_foreign_key "stripe_mode_changes", "users"
 end
