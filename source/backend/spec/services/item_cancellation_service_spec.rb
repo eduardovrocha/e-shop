@@ -41,12 +41,15 @@ RSpec.describe ItemCancellationService do
     end
 
     it "passes the right metadata and amount to Stripe" do
+      # Second positional arg is Stripe RequestOptions ({ api_key: ... })
+      # sourced from StripeSetting.current — assert presence, not value.
       expect(Stripe::Refund).to receive(:create).with(
         hash_including(
           payment_intent: order.stripe_intent_id,
           amount:         8_400,
           metadata:       hash_including(order_item_id: item.id, cancellation_percentage: 70)
-        )
+        ),
+        hash_including(:api_key)
       ).and_return(OpenStruct.new(id: "re_x"))
 
       described_class.new(order_item: item, reason: "x", actor: admin, actor_type: :admin).call

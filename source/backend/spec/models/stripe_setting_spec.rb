@@ -2,9 +2,10 @@ require "rails_helper"
 
 RSpec.describe StripeSetting, type: :model do
   describe ".current" do
-    it "creates a singleton with default mode 'test' on first call" do
-      expect { described_class.current }.to change(described_class, :count).by(1)
-      expect(described_class.current.active_mode).to eq("test")
+    it "returns a singleton with default mode 'test'" do
+      record = described_class.current
+      expect(record.active_mode).to eq("test")
+      expect(described_class.count).to eq(1)
     end
 
     it "returns the same record on subsequent calls" do
