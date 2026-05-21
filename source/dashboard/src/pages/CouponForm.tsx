@@ -22,7 +22,27 @@ import { useQuery } from '@tanstack/react-query'
 
 interface ProductLite { id: number; name: string }
 
-function emptyForm(): Required<Omit<CouponWritePayload, 'product_ids'>> & { product_ids: number[] } {
+// Form-local shape. Diverges from CouponWritePayload in two places:
+//   - public_code and starts_at/expires_at are always strings ('' = unset)
+//     so the controlled <input> elements never receive null
+//   - product_ids is always an array (never undefined)
+// The payload-building step converts '' → null where the backend expects it.
+interface CouponFormState {
+  name: string
+  discount_percent: number
+  applies_to_sale_items: boolean
+  code_type: CouponWritePayload['code_type']
+  public_code: string
+  scope_type: CouponWritePayload['scope_type']
+  starts_at: string
+  expires_at: string
+  total_usage_limit: number | null
+  per_customer_limit: number | null
+  active: boolean
+  product_ids: number[]
+}
+
+function emptyForm(): CouponFormState {
   return {
     name:                  '',
     discount_percent:      10,
@@ -123,8 +143,8 @@ export default function CouponForm() {
       code_type:             form.code_type,
       public_code:           form.code_type === 'public' ? form.public_code.trim().toUpperCase() : null,
       scope_type:            form.scope_type,
-      starts_at:             toIsoOrNull(form.starts_at as unknown as string),
-      expires_at:            toIsoOrNull(form.expires_at as unknown as string),
+      starts_at:             toIsoOrNull(form.starts_at),
+      expires_at:            toIsoOrNull(form.expires_at),
       total_usage_limit:     form.total_usage_limit,
       per_customer_limit:    form.per_customer_limit,
       active:                form.active,
@@ -368,7 +388,7 @@ export default function CouponForm() {
               <Input
                 id="starts_at"
                 type="datetime-local"
-                value={toLocalInput(form.starts_at as unknown as string)}
+                value={toLocalInput(form.starts_at)}
                 onChange={(e) => setForm((p) => ({ ...p, starts_at: e.target.value }))}
               />
             </div>
@@ -377,7 +397,7 @@ export default function CouponForm() {
               <Input
                 id="expires_at"
                 type="datetime-local"
-                value={toLocalInput(form.expires_at as unknown as string)}
+                value={toLocalInput(form.expires_at)}
                 onChange={(e) => setForm((p) => ({ ...p, expires_at: e.target.value }))}
               />
             </div>
