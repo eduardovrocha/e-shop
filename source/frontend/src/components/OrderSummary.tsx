@@ -23,9 +23,17 @@ interface OrderSummaryProps {
   // that don't drive a payment yet (e.g. /cart) — the line is invisible
   // until the buyer picks a count in /checkout.
   installmentCount?: InstallmentCount
+  // Coupon snapshot. discount is in BRL (matches `subtotal` units, not
+  // cents). code drives the label; eligibleProductIds drives the per-item
+  // badge. Pass null/undefined when no coupon is applied.
+  discount?: number | null
+  couponCode?: string | null
+  eligibleProductIds?: number[]
+  // Optional slot rendered between item list and totals (e.g. CouponInput).
+  beforeTotals?: React.ReactNode
 }
 
-function ItemRow({ item }: { item: CartItem }) {
+function ItemRow({ item, discountBadge }: { item: CartItem; discountBadge?: string | null }) {
   return (
     <li className="flex items-start gap-3 py-3">
       <div className="w-14 h-14 flex-shrink-0 rounded-xl overflow-hidden bg-andrequice-sand">
@@ -41,9 +49,19 @@ function ItemRow({ item }: { item: CartItem }) {
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-serif font-semibold text-andrequice-navy text-sm leading-snug line-clamp-2">
-          {item.name}
-        </p>
+        <div className="flex items-start gap-1.5">
+          <p className="font-serif font-semibold text-andrequice-navy text-sm leading-snug line-clamp-2 flex-1">
+            {item.name}
+          </p>
+          {discountBadge && (
+            <span
+              className="flex-shrink-0 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800"
+              aria-label={`Desconto de ${discountBadge}`}
+            >
+              {discountBadge}
+            </span>
+          )}
+        </div>
         <p className="text-xs text-andrequice-border mt-0.5">
           {item.size && <>Tam. {item.size} · </>}Qtd. {item.quantity}
         </p>
@@ -92,26 +110,43 @@ function SealsRow() {
 function SummaryBody({
   items, subtotal, shippingFee, shippingFreeLabel,
   promisedCompletionDate, promisedLabel, cta, footer,
-  installmentCount,
+  installmentCount, discount, couponCode, eligibleProductIds, beforeTotals,
 }: Omit<OrderSummaryProps, 'collapsibleOnMobile'>) {
-  const total = subtotal + (shippingFee ?? 0)
+  const discountValue = discount ?? 0
+  const total = subtotal - discountValue + (shippingFee ?? 0)
   const totalCents = Math.round(total * 100)
+  const eligibleSet = new Set(eligibleProductIds ?? [])
+  const badgeLabel  = couponCode && discountValue > 0
+    ? `-${Math.round((discountValue / Math.max(subtotal, 0.01)) * 100)}%`
+    : null
 
   return (
     <div className="flex flex-col">
       <ul className="divide-y divide-andrequice-sand">
         {items.map((item) => (
-          <ItemRow key={item.variantId} item={item} />
+          <ItemRow
+            key={item.variantId}
+            item={item}
+            discountBadge={eligibleSet.has(item.id) ? badgeLabel : null}
+          />
         ))}
       </ul>
 
       <div className="h-px bg-andrequice-sand mt-2" />
+
+      {beforeTotals && <div className="mt-3">{beforeTotals}</div>}
 
       <dl className="flex flex-col gap-2 pt-3 text-sm">
         <div className="flex justify-between text-andrequice-brown">
           <dt>Subtotal</dt>
           <dd className="tabular-nums">{formatPrice(subtotal)}</dd>
         </div>
+        {couponCode && discountValue > 0 && (
+          <div className="flex justify-between text-emerald-700">
+            <dt>Desconto ({couponCode})</dt>
+            <dd className="tabular-nums">−{formatPrice(discountValue)}</dd>
+          </div>
+        )}
         <div className="flex justify-between text-andrequice-brown">
           <dt>Frete</dt>
           <dd className="tabular-nums">
@@ -160,7 +195,7 @@ function SummaryBody({
 export function OrderSummary(props: OrderSummaryProps) {
   const { collapsibleOnMobile = true, items } = props
   const itemCount = items.reduce((n, i) => n + i.quantity, 0)
-  const totalFmt = `${formatPrice(props.subtotal + (props.shippingFee ?? 0))}`
+  const totalFmt = `${formatPrice(props.subtotal - (props.discount ?? 0) + (props.shippingFee ?? 0))}`
 
   if (!collapsibleOnMobile) {
     return (

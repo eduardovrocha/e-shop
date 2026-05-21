@@ -9,6 +9,7 @@ import {
   Settings,
   Factory,
   CreditCard,
+  Tag,
   X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -22,8 +23,7 @@ const navItems = [
   { to: '/products', label: 'Produtos', icon: Package },
   { to: '/inventory', label: 'Estoque', icon: Warehouse },
   { to: '/customers', label: 'Clientes', icon: Users },
-  // Cupons: backend não implementado — ocultar do menu até a feature estar pronta
-  // { to: '/coupons', label: 'Cupons', icon: Tag },
+  { to: '/coupons', label: 'Cupons', icon: Tag },
   { to: '/shipping', label: 'Frete', icon: Truck },
   { to: '/stripe', label: 'Stripe', icon: CreditCard },
   { to: '/settings', label: 'Configurações', icon: Settings },

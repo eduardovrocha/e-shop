@@ -6,6 +6,7 @@ import { Button } from '@/components/Button'
 import { Input } from '@/components/Input'
 import { Badge } from '@/components/Badge'
 import { OrderSummary } from '@/components/OrderSummary'
+import { CouponInput } from '@/components/CouponInput'
 import { CheckoutAccordion, type AccordionStepDef } from '@/components/CheckoutAccordion'
 import { useCartStore } from '@/store/cartStore'
 import { useCheckoutStore } from '@/store/checkoutStore'
@@ -158,6 +159,7 @@ export default function Cart() {
   const navigate = useNavigate()
   const { store } = useStore()
   const { items, total, updateQuantity, removeItem } = useCartStore()
+  const appliedCoupon = useCartStore((s) => s.appliedCoupon)
   const {
     deliveryMethod, selectedShipping, shippingAddress,
     contact, addressExtra,
@@ -752,6 +754,10 @@ export default function Cart() {
               subtotal={subtotal}
               shippingFee={shippingFee}
               promisedCompletionDate={promisedLabel}
+              discount={appliedCoupon ? appliedCoupon.discountCents / 100 : null}
+              couponCode={appliedCoupon?.code ?? null}
+              eligibleProductIds={appliedCoupon?.eligibleProductIds ?? []}
+              beforeTotals={<CouponInput />}
             />
           </aside>
         </div>

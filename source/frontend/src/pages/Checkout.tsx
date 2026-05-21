@@ -16,6 +16,7 @@ import { Footer } from '@/components/Footer'
 import { Button } from '@/components/Button'
 import { CheckoutStepper } from '@/components/CheckoutStepper'
 import { OrderSummary } from '@/components/OrderSummary'
+import { CouponInput } from '@/components/CouponInput'
 import { useCartStore } from '@/store/cartStore'
 import { useCheckoutStore } from '@/store/checkoutStore'
 import { useStore } from '@/hooks/useStore'
@@ -220,6 +221,8 @@ function PaymentSection({
 export default function Checkout() {
   const navigate = useNavigate()
   const { items, clearCart } = useCartStore()
+  const appliedCoupon = useCartStore((s) => s.appliedCoupon)
+  const removeCoupon  = useCartStore((s) => s.removeCoupon)
   const {
     deliveryMethod, selectedShipping, shippingAddress, contact, addressExtra,
   } = useCheckoutStore()
@@ -320,11 +323,20 @@ export default function Checkout() {
             shipping_cep:        shippingAddress?.cep.replace(/\D/g, '') ?? '',
             shipping_service_id: selectedShipping?.serviceId,
           }),
+          // Coupon code (if any). Backend re-validates under lock and
+          // reserves the slot against the new PaymentIntent id. If the
+          // coupon went stale between the layer-2 validation and now,
+          // the backend returns 422 — we surface it and drop the coupon.
+          ...(appliedCoupon && { coupon_code: appliedCoupon.code }),
         })
         setIntent(newIntent)
       } catch (err: unknown) {
         const axiosError = err as { response?: { data?: { error?: string } } }
-        setServerError(axiosError?.response?.data?.error ?? 'Não foi possível iniciar o pagamento. Tente novamente.')
+        const errMsg = axiosError?.response?.data?.error ?? 'Não foi possível iniciar o pagamento. Tente novamente.'
+        // If the backend rejected the coupon at this final step, drop it
+        // so the buyer doesn't get stuck retrying with a dead coupon.
+        if (/cupom/i.test(errMsg)) removeCoupon()
+        setServerError(errMsg)
         // Allow a retry attempt (e.g. user refreshes or comes back)
         intentRequestedRef.current = false
       } finally {
@@ -593,6 +605,10 @@ export default function Checkout() {
               shippingFee={shippingFee}
               promisedCompletionDate={promisedLabel}
               installmentCount={intent ? installmentCount : undefined}
+              discount={appliedCoupon ? appliedCoupon.discountCents / 100 : null}
+              couponCode={appliedCoupon?.code ?? null}
+              eligibleProductIds={appliedCoupon?.eligibleProductIds ?? []}
+              beforeTotals={!intent ? <CouponInput /> : null}
             />
           </aside>
         </div>

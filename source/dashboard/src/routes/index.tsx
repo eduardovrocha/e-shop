@@ -15,9 +15,9 @@ const Inventory = lazy(() => import('@/pages/Inventory'))
 const Customers = lazy(() => import('@/pages/Customers'))
 const CustomerDetail = lazy(() => import('@/pages/CustomerDetail'))
 const Production = lazy(() => import('@/pages/Production'))
-// Cupons: feature não implementada — lazy imports suspensos até liberação
-// const Coupons = lazy(() => import('@/pages/Coupons'))
-// const CouponForm = lazy(() => import('@/pages/CouponForm'))
+const Coupons = lazy(() => import('@/pages/Coupons'))
+const CouponForm = lazy(() => import('@/pages/CouponForm'))
+const CouponUsages = lazy(() => import('@/pages/CouponUsages'))
 const Settings = lazy(() => import('@/pages/Settings'))
 const StripeAdmin = lazy(() => import('@/pages/StripeAdmin'))
 const Shipping = lazy(() => import('@/pages/Shipping'))
@@ -59,10 +59,10 @@ export default function AppRoutes() {
           <Route path="/inventory" element={<Inventory />} />
           <Route path="/customers" element={<Customers />} />
           <Route path="/customers/:id" element={<CustomerDetail />} />
-          {/* Cupons: feature não implementada no backend — redirecionar até liberação */}
-          <Route path="/coupons" element={<Navigate to="/" replace />} />
-          <Route path="/coupons/new" element={<Navigate to="/" replace />} />
-          <Route path="/coupons/:id/edit" element={<Navigate to="/" replace />} />
+          <Route path="/coupons" element={<Coupons />} />
+          <Route path="/coupons/new" element={<CouponForm />} />
+          <Route path="/coupons/:id/edit" element={<CouponForm />} />
+          <Route path="/coupons/:id/usages" element={<CouponUsages />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/stripe" element={<StripeAdmin />} />
           <Route path="/shipping" element={<Shipping />} />

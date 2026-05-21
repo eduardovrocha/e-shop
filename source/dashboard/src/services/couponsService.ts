@@ -1,22 +1,50 @@
 import api from './api'
-import type { Coupon, CouponsResponse } from '@/types/coupon'
+import type {
+  CodeType,
+  CouponDetail,
+  CouponStatus,
+  CouponSummary,
+  CouponUsagesResponse,
+  CouponWritePayload,
+  GenerateCodesResponse,
+} from '@/types/coupon'
 
-export interface CouponPayload {
-  code?: string
-  discount_type?: 'percentage' | 'fixed'
-  discount_value?: number
-  minimum_order_cents?: number
-  expires_at?: string
-  usage_limit?: number
-  active?: boolean
+interface ListFilters {
+  status?: CouponStatus
+  code_type?: CodeType
 }
 
 export const couponsService = {
-  list: () => api.get<CouponsResponse>('/admin/coupons').then((r) => r.data),
-  get: (id: number) => api.get<Coupon>(`/admin/coupons/${id}`).then((r) => r.data),
-  create: (data: CouponPayload) =>
-    api.post<Coupon>('/admin/coupons', { coupon: data }).then((r) => r.data),
-  update: (id: number, data: CouponPayload) =>
-    api.put<Coupon>(`/admin/coupons/${id}`, { coupon: data }).then((r) => r.data),
-  destroy: (id: number) => api.delete(`/admin/coupons/${id}`),
+  list: (filters: ListFilters = {}) =>
+    api
+      .get<{ coupons: CouponSummary[] }>('/admin/coupons', { params: filters })
+      .then((r) => r.data.coupons),
+
+  get: (id: number) =>
+    api.get<CouponDetail>(`/admin/coupons/${id}`).then((r) => r.data),
+
+  create: (payload: CouponWritePayload) =>
+    api.post<CouponDetail>('/admin/coupons', payload).then((r) => r.data),
+
+  update: (id: number, payload: CouponWritePayload) =>
+    api.patch<CouponDetail>(`/admin/coupons/${id}`, payload).then((r) => r.data),
+
+  destroy: (id: number) =>
+    api.delete<void>(`/admin/coupons/${id}`).then(() => undefined),
+
+  generateCodes: (id: number, quantity: number) =>
+    api
+      .post<GenerateCodesResponse>(`/admin/coupons/${id}/generate_codes`, { quantity })
+      .then((r) => r.data),
+
+  usages: (
+    id: number,
+    page = 1,
+    params: { email?: string; since?: string; until?: string } = {},
+  ) =>
+    api
+      .get<CouponUsagesResponse>(`/admin/coupons/${id}/usages`, {
+        params: { page, ...params },
+      })
+      .then((r) => r.data),
 }

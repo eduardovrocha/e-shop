@@ -23,6 +23,10 @@ export interface CreateIntentPayload {
   shipping_address: ShippingAddress | null
   shipping_cep?: string
   shipping_service_id?: number
+  // Buyer-entered coupon code (public_code or unique code). Backend
+  // re-validates and reserves a slot under lock — never trusts a
+  // client-computed discount.
+  coupon_code?: string
 }
 
 export interface PaymentIntentResponse {
@@ -30,6 +34,9 @@ export interface PaymentIntentResponse {
   total_cents: number
   items_total_cents: number
   shipping_fee_cents: number
+  // Authoritative discount the backend applied. Mirrored on the order
+  // confirmation page so the UI matches the actual charge.
+  discount_amount_cents?: number | null
   aggregated_promised_completion_date?: string | null
 }
 
