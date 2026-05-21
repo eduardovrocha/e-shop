@@ -11,6 +11,8 @@ Rails.application.routes.draw do
       post "stock/check",                to: "stock#check"
       post "payments/create_intent",    to: "payments#create_intent"
       post "payments/webhook",          to: "payments#webhook"
+      post "coupons/validate",            to: "coupons#validate"
+      post "coupons/validate_with_email", to: "coupons#validate_with_email"
       post "shipping/calculate",        to: "shipping#calculate"
       get  "orders/track/:token",       to: "tracking#show", as: :order_tracking
       patch "orders/track/:token/items/:id/cancel", to: "tracking_items#cancel"
@@ -54,7 +56,12 @@ Rails.application.routes.draw do
             member     { patch :primary }
           end
         end
-        resources :coupons
+        resources :coupons do
+          member do
+            post :generate_codes
+            get  :usages
+          end
+        end
 
         resources :categories, only: %i[index create update destroy] do
           collection { patch :reorder }

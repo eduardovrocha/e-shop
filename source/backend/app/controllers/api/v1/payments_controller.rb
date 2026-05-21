@@ -45,6 +45,27 @@ module Api
         # Atomic check-and-reserve with row-level locking — from_stock only.
         reserve_stock!(items)
 
+        # Coupon reservation. The slot is held against the upcoming
+        # PaymentIntent id (patched in after create). The reserve raises
+        # CouponNoLongerValid if the coupon is no longer redeemable; we
+        # surface that as 422 to the frontend. The reservation is released
+        # below if Stripe rejects the intent.
+        coupon_reservation = nil
+        if params[:coupon_code].present?
+          begin
+            coupon_reservation = CouponApplier.reserve!(
+              code:       params[:coupon_code],
+              cart_items: build_coupon_cart_items(items),
+              email:      params[:customer_email]
+            )
+            total -= coupon_reservation.discount_cents
+            total  = [ total, 0 ].max
+          rescue CouponApplier::CouponNoLongerValid => e
+            release_stock_for_items!(items)
+            return render json: { error: e.message }, status: :unprocessable_entity
+          end
+        end
+
         # Production lead-time snapshot. Per-item promised_completion_days is
         # captured here so the webhook can stamp each OrderItem with the date
         # we committed to at purchase time, regardless of queue movement
@@ -78,23 +99,41 @@ module Api
               shipping_service_id: params[:shipping_service_id],
               shipping_cep:        params[:shipping_cep],
               promised_completion_snapshot:        promised_completion_snapshot.to_json,
-              aggregated_promised_completion_date: aggregated_promised_completion_date.iso8601
-            }
+              aggregated_promised_completion_date: aggregated_promised_completion_date.iso8601,
+              coupon_code:                         coupon_reservation && (coupon_reservation.coupon.public_code || params[:coupon_code].to_s.upcase),
+              coupon_id:                           coupon_reservation&.coupon&.id,
+              discount_percent:                    coupon_reservation&.coupon&.discount_percent,
+              discount_amount_cents:               coupon_reservation&.discount_cents
+            }.compact
           },
           { api_key: StripeSetting.current.secret_key }
         )
+
+        # Attach the intent id to the coupon reservation so the webhook can
+        # find the reserved row when it materializes the Order.
+        CouponApplier.attach_intent!(coupon_reservation.usage, payment_intent.id) if coupon_reservation
 
         render json: {
           client_secret:                       payment_intent.client_secret,
           total_cents:                         total,
           items_total_cents:                   items_total,
           shipping_fee_cents:                  shipping_fee,
+          discount_amount_cents:               coupon_reservation&.discount_cents,
           aggregated_promised_completion_date: aggregated_promised_completion_date
         }
       rescue ProductVariant::InsufficientStockError => e
         render json: { error: e.message }, status: :unprocessable_entity
       rescue Stripe::StripeError => e
         Rails.logger.error "Stripe error on create_intent: #{e.message}"
+        # Stripe rejected the intent — undo the coupon reservation (committed
+        # by CouponApplier.reserve! in its own transaction) and release the
+        # stock we already reserved. The webhook never fires for an intent
+        # Stripe never accepted, so cleanup here is the only path.
+        if coupon_reservation
+          CouponApplier.release!(stripe_intent_id: coupon_reservation.usage.stripe_intent_id)
+          coupon_reservation.usage.destroy if coupon_reservation.usage.persisted? && coupon_reservation.usage.stripe_intent_id.nil?
+        end
+        release_stock_for_items!(items)
         render json: { error: e.message }, status: :unprocessable_entity
       end
 
@@ -321,6 +360,41 @@ module Api
         Rails.logger.error "[Stock] Failed to release reservation for intent #{intent.id}: #{e.message}"
       end
 
+      # Releases stock reservations given the raw cart payload (used when the
+      # surrounding flow fails between reserve_stock! and PaymentIntent.create
+      # — i.e. coupon invalidation or a Stripe API error).
+      def release_stock_for_items!(items)
+        items.each do |item|
+          variant_id = item[:variant_id].to_i
+          qty        = [ item[:quantity].to_i, 1 ].max
+          next if variant_id.zero?
+          variant = ProductVariant.find_by(id: variant_id)
+          next if variant.nil? || variant.product&.made_to_order?
+          variant.decrement!(:reserved_quantity, [ variant.reserved_quantity, qty ].min)
+        end
+      rescue => e
+        Rails.logger.error "[Stock] Failed to release reservation pre-intent: #{e.message}"
+      end
+
+      # Translates the create_intent items payload into the structure the
+      # CouponValidator expects. Variant prices come from the DB — never from
+      # the client — so a tampered cart cannot inflate the discount.
+      def build_coupon_cart_items(items)
+        variant_ids = items.map { |i| i[:variant_id].to_i }.uniq
+        variants    = ProductVariant.includes(:product).where(id: variant_ids).index_by(&:id)
+
+        items.filter_map do |item|
+          variant = variants[item[:variant_id].to_i]
+          next unless variant&.product
+
+          {
+            product:          variant.product,
+            unit_price_cents: variant.effective_price_cents,
+            quantity:         [ item[:quantity].to_i, 1 ].max
+          }
+        end
+      end
+
       def handle_event(event)
         case event.type
         when "payment_intent.succeeded"
@@ -385,6 +459,11 @@ module Api
         # still nil (e.g. order created before these fields existed, or
         # first webhook arrived before the charge was fully populated).
         backfill_payment_fields!(order, payment_details) unless newly_created
+
+        # Convert a coupon reservation (created at intent time) into a
+        # finalized usage by attaching the order. Snapshots discount_*
+        # columns onto the order. No-op when the order had no coupon.
+        CouponApplier.finalize!(stripe_intent_id: intent.id, order: order)
 
         # For duplicate webhook events the order already exists — just ensure paid
         unless newly_created
@@ -588,6 +667,17 @@ module Api
         order&.update!(status: "failed")
         Rails.logger.error "[Stripe] Payment failed/canceled: #{intent.id} — #{intent.last_payment_error&.message}"
         release_stock_reservation!(intent)
+
+        # Release coupon reservation so the slot returns to the pool. Also
+        # clears the snapshot on the (possibly already created) order, since
+        # the order is now in 'failed' state and shouldn't carry a discount.
+        CouponApplier.release!(stripe_intent_id: intent.id)
+        order&.update_columns(
+          coupon_id:                nil,
+          coupon_code_used:         nil,
+          discount_percent_applied: nil,
+          discount_amount_cents:    nil
+        )
       end
 
       def handle_dispute_created(dispute)

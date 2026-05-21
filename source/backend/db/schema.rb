@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_21_123929) do
+ActiveRecord::Schema[7.2].define(version: 2026_05_21_144918) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -51,18 +51,62 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_21_123929) do
     t.index ["position"], name: "index_categories_on_position"
   end
 
-  create_table "coupons", force: :cascade do |t|
+  create_table "coupon_codes", force: :cascade do |t|
+    t.bigint "coupon_id", null: false
     t.string "code", null: false
-    t.string "discount_type", null: false
-    t.decimal "discount_value", precision: 10, scale: 2, null: false
-    t.integer "minimum_order_cents"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["code"], name: "index_coupon_codes_on_code", unique: true
+    t.index ["coupon_id"], name: "index_coupon_codes_on_coupon_id"
+  end
+
+  create_table "coupon_products", force: :cascade do |t|
+    t.bigint "coupon_id", null: false
+    t.bigint "product_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["coupon_id", "product_id"], name: "index_coupon_products_on_coupon_id_and_product_id", unique: true
+    t.index ["coupon_id"], name: "index_coupon_products_on_coupon_id"
+    t.index ["product_id"], name: "index_coupon_products_on_product_id"
+  end
+
+  create_table "coupon_usages", force: :cascade do |t|
+    t.bigint "coupon_id", null: false
+    t.bigint "coupon_code_id"
+    t.string "email", null: false
+    t.bigint "order_id"
+    t.integer "discount_amount_cents", null: false
+    t.datetime "created_at", null: false
+    t.string "stripe_intent_id"
+    t.index ["coupon_code_id"], name: "index_coupon_usages_on_coupon_code_id"
+    t.index ["coupon_id", "email"], name: "index_coupon_usages_on_coupon_id_and_email"
+    t.index ["coupon_id"], name: "index_coupon_usages_on_coupon_id"
+    t.index ["order_id"], name: "idx_coupon_usages_one_per_order", unique: true
+    t.index ["order_id"], name: "index_coupon_usages_on_order_id"
+    t.index ["stripe_intent_id"], name: "index_coupon_usages_on_stripe_intent_id", unique: true, where: "(stripe_intent_id IS NOT NULL)"
+    t.check_constraint "discount_amount_cents > 0", name: "chk_coupon_usages_discount_amount_positive"
+    t.check_constraint "order_id IS NOT NULL OR stripe_intent_id IS NOT NULL", name: "chk_coupon_usages_order_or_intent"
+  end
+
+  create_table "coupons", force: :cascade do |t|
+    t.string "name", null: false
+    t.integer "discount_percent", null: false
+    t.boolean "applies_to_sale_items", default: false, null: false
+    t.string "code_type", null: false
+    t.string "public_code"
+    t.string "scope_type", null: false
+    t.datetime "starts_at"
     t.datetime "expires_at"
-    t.integer "usage_limit"
-    t.integer "used_count", default: 0, null: false
+    t.integer "total_usage_limit"
+    t.integer "per_customer_limit"
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["code"], name: "index_coupons_on_code", unique: true
+    t.index ["active"], name: "index_coupons_on_active"
+    t.index ["public_code"], name: "index_coupons_on_public_code", unique: true, where: "(public_code IS NOT NULL)"
+    t.check_constraint "code_type::text = ANY (ARRAY['public'::character varying, 'unique'::character varying]::text[])", name: "chk_coupons_code_type"
+    t.check_constraint "discount_percent >= 1 AND discount_percent <= 100", name: "chk_coupons_discount_percent_range"
+    t.check_constraint "scope_type::text = ANY (ARRAY['all_products'::character varying, 'specific_products'::character varying]::text[])", name: "chk_coupons_scope_type"
   end
 
   create_table "customer_addresses", force: :cascade do |t|
@@ -173,6 +217,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_21_123929) do
     t.integer "installment_count"
     t.string "payment_brand"
     t.string "payment_last4", limit: 4
+    t.bigint "coupon_id"
+    t.string "coupon_code_used"
+    t.integer "discount_percent_applied"
+    t.integer "discount_amount_cents"
+    t.index ["coupon_id"], name: "index_orders_on_coupon_id"
     t.index ["created_at"], name: "index_orders_on_created_at"
     t.index ["customer_email"], name: "index_orders_on_customer_email"
     t.index ["customer_id"], name: "index_orders_on_customer_id"
@@ -180,6 +229,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_21_123929) do
     t.index ["status"], name: "index_orders_on_status"
     t.index ["stripe_intent_id"], name: "index_orders_on_stripe_intent_id", unique: true
     t.index ["tracking_token"], name: "index_orders_on_tracking_token", unique: true
+    t.check_constraint "discount_amount_cents IS NULL OR discount_amount_cents >= 0", name: "chk_orders_discount_amount_cents_non_negative"
+    t.check_constraint "discount_percent_applied IS NULL OR discount_percent_applied >= 1 AND discount_percent_applied <= 100", name: "chk_orders_discount_percent_applied_range"
   end
 
   create_table "processed_webhook_events", force: :cascade do |t|
@@ -224,9 +275,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_21_123929) do
     t.integer "production_lead_time_days"
     t.integer "production_capacity"
     t.integer "cancellation_refund_percentage"
+    t.integer "compare_at_price_cents"
     t.index ["active"], name: "index_products_on_active"
     t.index ["fulfillment_mode"], name: "index_products_on_fulfillment_mode"
     t.index ["slug"], name: "index_products_on_slug", unique: true
+    t.check_constraint "compare_at_price_cents IS NULL OR compare_at_price_cents >= 0", name: "chk_products_compare_at_price_cents_non_negative"
     t.check_constraint "height_mm IS NULL OR height_mm > 0", name: "chk_products_height_mm_positive"
     t.check_constraint "length_mm IS NULL OR length_mm > 0", name: "chk_products_length_mm_positive"
     t.check_constraint "weight_g IS NULL OR weight_g > 0", name: "chk_products_weight_g_positive"
@@ -339,6 +392,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_21_123929) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "coupon_codes", "coupons"
+  add_foreign_key "coupon_products", "coupons"
+  add_foreign_key "coupon_products", "products"
+  add_foreign_key "coupon_usages", "coupon_codes"
+  add_foreign_key "coupon_usages", "coupons"
+  add_foreign_key "coupon_usages", "orders"
   add_foreign_key "customer_addresses", "customers"
   add_foreign_key "onboarding_progresses", "store_settings", on_delete: :cascade
   add_foreign_key "onboarding_progresses", "users", on_delete: :cascade
@@ -346,6 +405,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_21_123929) do
   add_foreign_key "order_items", "product_variants"
   add_foreign_key "order_items", "products"
   add_foreign_key "order_status_histories", "orders"
+  add_foreign_key "orders", "coupons"
   add_foreign_key "orders", "customers"
   add_foreign_key "product_variants", "products"
   add_foreign_key "release_executions", "users"

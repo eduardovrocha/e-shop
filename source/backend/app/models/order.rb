@@ -32,6 +32,13 @@ class Order < ApplicationRecord
                                dependent: :destroy, inverse_of: :order
   has_many :order_items, dependent: :destroy
 
+  # Coupon snapshot — the discount_* columns are the source of truth for the
+  # historical record. The FK to coupon is informational; the coupon may be
+  # edited or even deleted later (when its last usage row is removed) and
+  # this order's discount values remain frozen.
+  belongs_to :coupon, optional: true
+  has_one :coupon_usage, dependent: :destroy
+
   validates :stripe_intent_id,  presence: true, uniqueness: true
   validates :status,            inclusion: { in: STATUSES }
   validates :delivery_method,   inclusion: { in: DELIVERY_METHODS }
