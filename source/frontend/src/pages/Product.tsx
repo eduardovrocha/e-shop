@@ -37,6 +37,15 @@ export default function Product() {
     [selectedVariant, product?.minPrice]
   )
 
+  // Strike-through "de" price. When a variant is selected, prefer its own
+  // compare_at; otherwise fall back to the product-level value so the PDP
+  // still highlights an on-sale product before a size pick.
+  const displayCompareCents = useMemo(() => {
+    if (selectedVariant) return selectedVariant.compareAtPriceCents
+    if (product?.compareAtPrice != null) return Math.round(product.compareAtPrice * 100)
+    return null
+  }, [selectedVariant, product?.compareAtPrice])
+
   const inCart = useMemo(() => {
     if (!selectedVariant) return 0
     return cartItems.find((i) => i.variantId === selectedVariant.variantId)?.quantity ?? 0
@@ -195,7 +204,10 @@ export default function Product() {
             </div>
 
             {/* 4. Price */}
-            <ProductPriceTag priceCents={displayCents} />
+            <ProductPriceTag
+              priceCents={displayCents}
+              compareAtPriceCents={displayCompareCents}
+            />
 
             {/* 5. Description */}
             {description && (

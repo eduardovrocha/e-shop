@@ -20,6 +20,7 @@ module Admin
         height_mm:                      @product.height_mm,
         width_mm:                       @product.width_mm,
         length_mm:                      @product.length_mm,
+        compare_at_price_cents:         @product.compare_at_price_cents,
         total_stock:                    @product.total_stock,
         has_dimensions:                 @product.has_dimensions?,
         images:                         @images,
@@ -37,16 +38,21 @@ module Admin
     def serialize_variants
       @product.variants.map do |v|
         {
-          id:                     v.id,
-          size:                   v.size,
-          color:                  v.color,
-          sku:                    v.sku,
-          stock_quantity:         v.stock_quantity,
-          reserved_quantity:      v.reserved_quantity,
-          price_cents:            v.price_cents,
-          additional_price_cents: v.additional_price_cents,
-          available_quantity:     v.available_quantity,
-          effective_price_cents:  v.effective_price_cents
+          id:                              v.id,
+          size:                            v.size,
+          color:                           v.color,
+          sku:                             v.sku,
+          stock_quantity:                  v.stock_quantity,
+          reserved_quantity:               v.reserved_quantity,
+          price_cents:                     v.price_cents,
+          compare_at_price_cents:          v.compare_at_price_cents,
+          additional_price_cents:          v.additional_price_cents,
+          available_quantity:              v.available_quantity,
+          effective_price_cents:           v.effective_price_cents,
+          # Derived field: variant override OR product fallback. Frontend uses
+          # this to show the "de" price; UI lets admin set the override.
+          effective_compare_at_price_cents: v.effective_compare_at_price_cents,
+          on_sale:                         v.on_sale?
         }
       end
     end

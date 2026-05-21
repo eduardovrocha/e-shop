@@ -113,7 +113,11 @@ module Api
             :weight_g, :height_mm, :width_mm, :length_mm,
             :fulfillment_mode, :production_lead_time_days,
             :production_capacity, :cancellation_refund_percentage,
-            variants_attributes: [ :id, :size, :color, :sku, :stock_quantity, :price_cents, :additional_price_cents, :_destroy ]
+            variants_attributes: [
+              :id, :size, :color, :sku, :stock_quantity,
+              :price_cents, :compare_at_price_cents,
+              :additional_price_cents, :_destroy
+            ]
           )
         end
 

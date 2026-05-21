@@ -91,7 +91,15 @@ class CouponValidator
     item[:product]&.id || item["product"]&.id
   end
 
+  # A cart item counts as "on sale" if either the variant or the product
+  # has a compare_at_price set. Variant takes precedence — that's the
+  # source of truth used when rendering the price on the storefront.
   def on_sale?(item)
+    variant = item[:variant] || item["variant"]
+    if variant
+      return variant.effective_compare_at_price_cents.present? &&
+             variant.effective_compare_at_price_cents > variant.price_cents
+    end
     product = item[:product] || item["product"]
     product&.compare_at_price_cents.present?
   end

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo, type FormEvent } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { isAxiosError } from 'axios'
 import { ArrowLeft, Loader2, Plus, Trash2, Package, Settings2 } from 'lucide-react'
 import { PageTitle } from '@/components/PageTitle'
 import { LoadingState } from '@/components/LoadingState'
@@ -28,6 +29,10 @@ const SIZES = ['PP', 'P', 'M', 'G', 'GG', 'GGG', 'U']
 interface VariantRow extends VariantPayload {
   _key: string
   _priceInput: string
+  // Controlled-input string for the "Preço de" (compare_at_price) cell.
+  // '' represents "no override" → backend falls back to the product-level
+  // compare_at_price. Parsed to cents on blur, same as the regular price.
+  _compareInput: string
   _destroy?: boolean
 }
 
@@ -83,7 +88,9 @@ function VariantTable({ variants, productName, onChange }: VariantTableProps) {
       sku: generateSku(productName || 'PRODUTO', size),
       stock_quantity: 0,
       price_cents: null,
+      compare_at_price_cents: null,
       _priceInput: '',
+      _compareInput: '',
       additional_price_cents: 0,
     }
     onChange([...variants, newRow])
@@ -101,6 +108,23 @@ function VariantTable({ variants, productName, onChange }: VariantTableProps) {
       variants.map((v) =>
         v._key === key
           ? { ...v, _priceInput: cents != null ? formatPriceInput(cents) : '', price_cents: cents }
+          : v
+      )
+    )
+  }
+
+  function handleCompareBlur(key: string, raw: string) {
+    // Blank = no override; backend falls back to product-level compare_at_price.
+    // Any non-blank value is parsed to cents like the regular price.
+    const cents = parsePriceInput(raw)
+    onChange(
+      variants.map((v) =>
+        v._key === key
+          ? {
+              ...v,
+              _compareInput:          cents != null ? formatPriceInput(cents) : '',
+              compare_at_price_cents: cents,
+            }
           : v
       )
     )
@@ -166,7 +190,16 @@ function VariantTable({ variants, productName, onChange }: VariantTableProps) {
                 <th className="pb-2 pr-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">SKU</th>
                 <th className="pb-2 pr-3 font-medium text-muted-foreground text-xs uppercase tracking-wide w-28">Estoque</th>
                 <th className="pb-2 pr-3 font-medium text-muted-foreground text-xs uppercase tracking-wide w-32">
-                  Preço (R$) <span className="text-destructive">*</span>
+                  Preço atual (R$) <span className="text-destructive">*</span>
+                </th>
+                <th className="pb-2 pr-3 font-medium text-muted-foreground text-xs uppercase tracking-wide w-36">
+                  Preço anterior (R$){' '}
+                  <span
+                    className="font-normal normal-case text-[10px] text-muted-foreground/80"
+                    title="Aparece riscado no site. Deve ser MAIOR que o preço atual para indicar promoção. Valor menor ou igual é ignorado."
+                  >
+                    (de · riscado)
+                  </span>
                 </th>
                 <th className="pb-2 font-medium text-muted-foreground text-xs uppercase tracking-wide text-center">Status</th>
                 <th className="pb-2 w-8" />
@@ -213,6 +246,41 @@ function VariantTable({ variants, productName, onChange }: VariantTableProps) {
                       ].join(' ')}
                       inputMode="decimal"
                     />
+                  </td>
+                  <td className="py-2 pr-3">
+                    {(() => {
+                      // Warn inline when the admin typed a "Preço anterior"
+                      // that isn't strictly greater than "Preço atual" — the
+                      // backend would silently nullify and the storefront
+                      // wouldn't show any promo. Cheaper than a 422 round-trip.
+                      const compareCents = parsePriceInput(v._compareInput)
+                      const priceCents   = v.price_cents
+                      const invalidPromo =
+                        compareCents != null && priceCents != null && compareCents <= priceCents
+                      return (
+                        <div className="flex flex-col items-end gap-0.5">
+                          <Input
+                            value={v._compareInput}
+                            onChange={(e) => updateRow(v._key, '_compareInput', e.target.value)}
+                            onBlur={(e) => handleCompareBlur(v._key, e.target.value)}
+                            placeholder="—"
+                            className={[
+                              'h-8 w-28 text-right tabular-nums line-through decoration-1',
+                              invalidPromo
+                                ? 'border-destructive/60 text-destructive focus-visible:ring-destructive/30'
+                                : 'text-muted-foreground',
+                            ].join(' ')}
+                            inputMode="decimal"
+                            title="Preço anterior — aparece riscado no site. Deve ser maior que o preço atual. Em branco = herda do produto."
+                          />
+                          {invalidPromo && (
+                            <span className="text-[10px] leading-none text-destructive">
+                              precisa ser maior que o preço atual
+                            </span>
+                          )}
+                        </div>
+                      )
+                    })()}
                   </td>
                   <td className="py-2 text-center">
                     {stockBadge(v.stock_quantity)}
@@ -323,7 +391,8 @@ export default function ProductForm() {
         (existing.variants ?? []).map((v) => ({
           ...v,
           _key: String(v.id),
-          _priceInput: formatPriceInput(v.price_cents),
+          _priceInput:   formatPriceInput(v.price_cents),
+          _compareInput: formatPriceInput(v.compare_at_price_cents),
         }))
       )
       setWeightG(existing.weight_g != null ? String(existing.weight_g) : '')
@@ -386,7 +455,9 @@ export default function ProductForm() {
       return
     }
 
-    const variants_attributes = variants.map(({ _key: _k, _priceInput: _pi, ...rest }) => rest)
+    const variants_attributes = variants.map(
+      ({ _key: _k, _priceInput: _pi, _compareInput: _ci, ...rest }) => rest,
+    )
 
     // price_cents on the product is derived from the minimum variant price (backend compat)
     const price_cents = Math.min(...activeVariants.map((v) => v.price_cents ?? 0).filter(Boolean))
@@ -413,8 +484,17 @@ export default function ProductForm() {
         navigate(`/products/${created.id}/edit`)
         return
       }
-    } catch {
-      toast.error('Erro ao salvar produto')
+    } catch (err) {
+      // Surface backend validation messages — generic "Erro ao salvar"
+      // hid real errors (e.g. "compare_at must be > price") and made the
+      // admin click Save repeatedly with no clue what was wrong.
+      let msg = 'Erro ao salvar produto'
+      if (isAxiosError(err)) {
+        const data = err.response?.data as { errors?: string[]; error?: string } | undefined
+        if (data?.errors?.length) msg = data.errors.join(' · ')
+        else if (data?.error) msg = data.error
+      }
+      toast.error(msg)
     }
   }
 

@@ -9,6 +9,7 @@ class PublicProductSerializer
   def as_json(*)
     all_variants = @product.variants
     prices       = all_variants.map(&:price_cents)
+    compares     = all_variants.map(&:effective_compare_at_price_cents).compact
 
     {
       id:                          @product.id,
@@ -16,6 +17,11 @@ class PublicProductSerializer
       description:                 @product.description,
       category:                    @product.category,
       price_cents:                 @product.price_cents,
+      # Product-level "de" price. Min/max compare reflect any per-variant
+      # overrides — useful for cards in the catalog that just show a range.
+      compare_at_price_cents:      @product.compare_at_price_cents,
+      min_compare_at_price_cents:  compares.min,
+      max_compare_at_price_cents:  compares.max,
       min_price_cents:             prices.min || @product.price_cents,
       max_price_cents:             prices.max || @product.price_cents,
       slug:                        @product.slug,
@@ -40,12 +46,16 @@ class PublicProductSerializer
     variants.map do |v|
       qty = v.available_quantity
       {
-        variant_id:            v.id,
-        size:                  v.size,
-        stock:                 qty,
-        price_cents:           v.price_cents,
-        effective_price_cents: v.price_cents,
-        available:             qty > 0
+        variant_id:                       v.id,
+        size:                             v.size,
+        stock:                            qty,
+        price_cents:                      v.price_cents,
+        # Per-variant override OR product-level fallback (already computed
+        # in the model). nil when nothing is on sale for this variant.
+        compare_at_price_cents:           v.effective_compare_at_price_cents,
+        effective_price_cents:            v.price_cents,
+        on_sale:                          v.on_sale?,
+        available:                        qty > 0
       }
     end.sort_by { |v| SIZE_ORDER.index(v[:size]) || 99 }
   end

@@ -6,7 +6,9 @@ interface BackendVariantStock {
   size: string
   stock: number
   price_cents: number
+  compare_at_price_cents: number | null
   effective_price_cents: number
+  on_sale: boolean
   available: boolean
 }
 
@@ -16,6 +18,9 @@ interface BackendProduct {
   description: string
   category: string
   price_cents: number
+  compare_at_price_cents: number | null
+  min_compare_at_price_cents: number | null
+  max_compare_at_price_cents: number | null
   min_price_cents: number
   max_price_cents: number
   slug: string
@@ -30,12 +35,14 @@ interface BackendProduct {
 
 function toProduct(p: BackendProduct): Product {
   const variants: VariantStock[] = (p.variant_stock ?? []).map((v) => ({
-    variantId:     v.variant_id,
-    size:          v.size,
-    stock:         v.stock,
-    priceCents:    v.price_cents,
-    effectivePrice: v.price_cents / 100,
-    available:     v.available,
+    variantId:           v.variant_id,
+    size:                v.size,
+    stock:               v.stock,
+    priceCents:          v.price_cents,
+    effectivePrice:      v.price_cents / 100,
+    compareAtPriceCents: v.compare_at_price_cents,
+    onSale:              v.on_sale,
+    available:           v.available,
   }))
 
   const stock = p.total_stock
@@ -48,13 +55,16 @@ function toProduct(p: BackendProduct): Product {
   const maxPrice = (p.max_price_cents ?? p.price_cents) / 100
 
   return {
-    id:          p.id,
-    name:        p.name,
-    description: p.description,
-    category:    p.category ?? 'outros',
-    price:       p.price_cents / 100,
+    id:               p.id,
+    name:             p.name,
+    description:      p.description,
+    category:         p.category ?? 'outros',
+    price:            p.price_cents / 100,
     minPrice,
     maxPrice,
+    compareAtPrice:   p.compare_at_price_cents != null ? p.compare_at_price_cents / 100 : null,
+    minComparePrice:  p.min_compare_at_price_cents != null ? p.min_compare_at_price_cents / 100 : null,
+    maxComparePrice:  p.max_compare_at_price_cents != null ? p.max_compare_at_price_cents / 100 : null,
     slug:        p.slug,
     images:      p.images.length > 0 ? p.images : [`https://picsum.photos/seed/prod${p.id}/480/600`],
     sizes:       p.sizes,

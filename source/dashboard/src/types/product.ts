@@ -7,7 +7,13 @@ export interface ProductVariant {
   reserved_quantity: number
   available_quantity: number
   price_cents: number | null
+  // Promo "de" price for THIS variant. null means: fall back to the
+  // product-level compare_at_price_cents (or no promo at all).
+  compare_at_price_cents: number | null
   effective_price_cents: number
+  // variant-level override OR product fallback (computed server-side).
+  effective_compare_at_price_cents: number | null
+  on_sale: boolean
   additional_price_cents: number
 }
 
@@ -18,6 +24,7 @@ export interface VariantPayload {
   sku: string
   stock_quantity: number
   price_cents?: number | null
+  compare_at_price_cents?: number | null
   additional_price_cents?: number
   _destroy?: boolean
 }

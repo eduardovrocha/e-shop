@@ -77,4 +77,37 @@ RSpec.describe ProductVariant, type: :model do
       expect(variant.reload.stock_quantity).to eq(0)
     end
   end
+
+  describe "compare_at_price_cents normalization" do
+    let(:product) { create(:product, price_cents: 1000) }
+
+    it "nullifies compare_at when equal to price (not a promo)" do
+      v = build(:product_variant, product: product, price_cents: 1500, compare_at_price_cents: 1500)
+      expect(v).to be_valid
+      v.save!
+      expect(v.compare_at_price_cents).to be_nil
+      expect(v).not_to be_on_sale
+    end
+
+    it "nullifies compare_at when below price (not a promo)" do
+      v = build(:product_variant, product: product, price_cents: 2000, compare_at_price_cents: 1500)
+      expect(v).to be_valid
+      v.save!
+      expect(v.compare_at_price_cents).to be_nil
+    end
+
+    it "keeps compare_at when strictly higher than price" do
+      v = build(:product_variant, product: product, price_cents: 1500, compare_at_price_cents: 2000)
+      v.save!
+      expect(v.compare_at_price_cents).to eq(2000)
+      expect(v).to be_on_sale
+    end
+
+    it "falls back to product.compare_at_price_cents when variant override is nil" do
+      product.update!(compare_at_price_cents: 3000)
+      v = create(:product_variant, product: product, price_cents: 2000)
+      expect(v.effective_compare_at_price_cents).to eq(3000)
+      expect(v).to be_on_sale
+    end
+  end
 end

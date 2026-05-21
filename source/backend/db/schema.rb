@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_21_155442) do
+ActiveRecord::Schema[7.2].define(version: 2026_05_21_173450) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -251,9 +251,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_21_155442) do
     t.datetime "updated_at", null: false
     t.integer "reserved_quantity", default: 0, null: false
     t.integer "price_cents", null: false
+    t.integer "compare_at_price_cents"
     t.index ["product_id"], name: "index_product_variants_on_product_id"
     t.index ["sku"], name: "index_product_variants_on_sku", unique: true
     t.index ["stock_quantity"], name: "index_product_variants_on_stock_quantity"
+    t.check_constraint "compare_at_price_cents IS NULL OR compare_at_price_cents >= 0", name: "chk_product_variants_compare_at_price_cents_non_negative"
     t.check_constraint "price_cents >= 0", name: "chk_product_variants_price_cents_non_negative"
   end
 

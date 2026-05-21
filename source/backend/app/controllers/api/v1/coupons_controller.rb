@@ -57,6 +57,7 @@ module Api
 
           {
             product:           variant.product,
+            variant:           variant,
             unit_price_cents:  variant.effective_price_cents,
             quantity:          [ item[:quantity].to_i, 1 ].max
           }

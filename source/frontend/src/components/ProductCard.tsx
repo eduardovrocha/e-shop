@@ -39,6 +39,14 @@ export function ProductCard({ product }: ProductCardProps) {
             </Badge>
           </div>
         )}
+        {/* Promo badge — any variant on sale lights it up. Subordinate
+             to the catalog "Última edição / Restam X" badge so we don't
+             stack two pills in the same corner. */}
+        {!product.badge && product.variants.some((v) => v.onSale) && (
+          <div className="absolute top-3 left-3">
+            <Badge variant="gold">Promoção</Badge>
+          </div>
+        )}
         {/* "N restantes" só faz sentido em from_stock; em made_to_order
              stock_quantity é sempre 0 por design (não é estoque, é fila). */}
         {product.fulfillmentMode === 'from_stock' && product.stock > 0 && product.stock <= 10 && (
@@ -65,19 +73,37 @@ export function ProductCard({ product }: ProductCardProps) {
           <div className="flex flex-wrap gap-2">
             {product.variants
               .filter((v) => isVariantPurchasable(product, v))
-              .map((v) => (
-                <button
-                  key={v.variantId}
-                  onClick={() => navigate(`/product/${product.id}`)}
-                  className="rounded-xl border-2 border-andrequice-sand text-andrequice-border font-sans font-medium text-sm flex flex-row items-center justify-center gap-1 h-10 px-3 hover:border-andrequice-gold hover:text-andrequice-navy transition-all duration-150 active:scale-95"
-                  aria-label={`${product.name} tamanho ${v.size} — R$${v.effectivePrice.toFixed(2).replace('.', ',')}`}
-                >
-                  <span>{v.size}</span>
-                  <span className="text-xs leading-none font-normal tabular-nums text-andrequice-gold">
-                    R${v.effectivePrice.toFixed(2).replace('.', ',')}
-                  </span>
-                </button>
-              ))}
+              .map((v) => {
+                const comparePrice = v.compareAtPriceCents
+                  ? v.compareAtPriceCents / 100
+                  : null
+                const hasPromo = comparePrice != null && comparePrice > v.effectivePrice
+                return (
+                  <button
+                    key={v.variantId}
+                    onClick={() => navigate(`/product/${product.id}`)}
+                    className="rounded-xl border-2 border-andrequice-sand text-andrequice-border font-sans font-medium text-sm flex flex-row items-center justify-center gap-1.5 h-10 px-3 hover:border-andrequice-gold hover:text-andrequice-navy transition-all duration-150 active:scale-95"
+                    aria-label={
+                      hasPromo
+                        ? `${product.name} tamanho ${v.size} — de R$${(comparePrice as number).toFixed(2).replace('.', ',')} por R$${v.effectivePrice.toFixed(2).replace('.', ',')}`
+                        : `${product.name} tamanho ${v.size} — R$${v.effectivePrice.toFixed(2).replace('.', ',')}`
+                    }
+                  >
+                    <span>{v.size}</span>
+                    {hasPromo && (
+                      <span
+                        className="text-[10px] leading-none font-normal tabular-nums text-andrequice-border line-through decoration-1"
+                        aria-hidden="true"
+                      >
+                        R${(comparePrice as number).toFixed(2).replace('.', ',')}
+                      </span>
+                    )}
+                    <span className="text-xs leading-none font-normal tabular-nums text-andrequice-gold">
+                      R${v.effectivePrice.toFixed(2).replace('.', ',')}
+                    </span>
+                  </button>
+                )
+              })}
           </div>
         </div>
         <Button
