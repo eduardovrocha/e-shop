@@ -7,7 +7,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { useSettings, useUpdateSettings, useUpdateHeadline, useStripeInfo } from '@/hooks/useSettings'
+import { Link } from 'react-router-dom'
+import { useSettings, useUpdateSettings, useUpdateHeadline } from '@/hooks/useSettings'
+import { useStripeAdminSettings } from '@/hooks/useStripeAdminSettings'
 import { useToast } from '@/hooks/useToast'
 import { cn } from '@/lib/utils'
 import type { StoreSettings, HeadlineSettings } from '@/services/settingsService'
@@ -36,7 +38,7 @@ export default function Settings() {
   const { data: settings, isLoading } = useSettings()
   const updateMutation = useUpdateSettings()
   const updateHeadlineMutation = useUpdateHeadline()
-  const { data: stripeInfo } = useStripeInfo()
+  const { data: stripeSettings } = useStripeAdminSettings()
 
   const [headlinePrimary, setHeadlinePrimary] = useState('')
   const [headlineSecondary, setHeadlineSecondary] = useState('')
@@ -468,35 +470,23 @@ export default function Settings() {
                   <CardDescription>Integração de pagamentos.</CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
-                  {stripeInfo?.mode === 'test' && <Badge variant="warning">Modo Teste</Badge>}
-                  {stripeInfo?.mode === 'live' && <Badge variant="success">Modo Produção</Badge>}
-                  <Badge variant={stripeInfo ? 'success' : 'secondary'}>
-                    <CheckCircle2 className="mr-1 h-3 w-3" />
-                    Ativo
-                  </Badge>
+                  {stripeSettings?.active_mode === 'test' && (
+                    <Badge variant="warning">Modo Teste</Badge>
+                  )}
+                  {stripeSettings?.active_mode === 'live' && (
+                    <Badge variant="success">Modo Produção</Badge>
+                  )}
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-1.5">
-                <Label>Chave Pública</Label>
-                <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted/40 px-3 py-1">
-                  <span className="font-mono text-xs text-muted-foreground truncate">
-                    {stripeInfo?.publishable_key_hint ?? '—'}
-                  </span>
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Chave Secreta</Label>
-                <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted/40 px-3 py-1">
-                  <span className="font-mono text-xs text-muted-foreground truncate">
-                    {stripeInfo?.secret_key_hint ?? '—'}
-                  </span>
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Chaves gerenciadas via variáveis de ambiente no servidor.
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                As credenciais Stripe (test e produção) e a alternância de modo
+                ficam em uma tela dedicada.
               </p>
+              <Button asChild variant="outline" size="sm">
+                <Link to="/stripe">Gerenciar credenciais Stripe</Link>
+              </Button>
             </CardContent>
           </Card>
         </div>

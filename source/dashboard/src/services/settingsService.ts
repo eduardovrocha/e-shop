@@ -27,17 +27,10 @@ export interface HeadlineSettings {
   footer_description?: string
 }
 
-export interface StripeInfo {
-  mode: 'test' | 'live' | 'unknown'
-  publishable_key_hint: string
-  secret_key_hint: string
-}
-
 export const settingsService = {
   get: () => api.get<StoreSettings>('/admin/settings').then((r) => r.data),
   update: (data: Partial<StoreSettings>) =>
     api.patch<StoreSettings>('/admin/settings', { store_setting: data }).then((r) => r.data),
-  stripeInfo: () => api.get<StripeInfo>('/admin/settings/stripe_info').then((r) => r.data),
   updateHeadline: (data: HeadlineSettings) =>
     api.put<HeadlineSettings>('/store_settings', data).then((r) => r.data),
 }

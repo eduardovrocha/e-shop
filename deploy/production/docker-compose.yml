@@ -28,9 +28,8 @@ x-rails-env: &rails-env
   STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY}
   STORAGE_BUCKET: ${STORAGE_BUCKET}
   STORAGE_ENDPOINT: ${STORAGE_ENDPOINT:-https://storage.andrequice.store}
-  # Stripe
-  STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
-  STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+  # Stripe credentials live encrypted in stripe_settings table — managed
+  # via /admin/stripe in the dashboard. No env vars required.
   # Melhor Envio
   ME_CLIENT_ID: ${ME_CLIENT_ID}
   ME_CLIENT_SECRET: ${ME_CLIENT_SECRET}
@@ -164,7 +163,6 @@ services:
       dockerfile: deploy/production/frontend.Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL}
-        VITE_STRIPE_PUBLISHABLE_KEY: ${VITE_STRIPE_PUBLISHABLE_KEY}
         VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
     restart: unless-stopped
     networks:

@@ -19,6 +19,7 @@ const Production = lazy(() => import('@/pages/Production'))
 // const Coupons = lazy(() => import('@/pages/Coupons'))
 // const CouponForm = lazy(() => import('@/pages/CouponForm'))
 const Settings = lazy(() => import('@/pages/Settings'))
+const StripeAdmin = lazy(() => import('@/pages/StripeAdmin'))
 const Shipping = lazy(() => import('@/pages/Shipping'))
 const OnboardingPlayground = lazy(() => import('@/pages/OnboardingPlayground'))
 
@@ -63,6 +64,7 @@ export default function AppRoutes() {
           <Route path="/coupons/new" element={<Navigate to="/" replace />} />
           <Route path="/coupons/:id/edit" element={<Navigate to="/" replace />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/stripe" element={<StripeAdmin />} />
           <Route path="/shipping" element={<Shipping />} />
         </Route>
         </Route>

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_19_100708) do
+ActiveRecord::Schema[7.2].define(version: 2026_05_21_111927) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -293,6 +293,28 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_19_100708) do
     t.text "footer_description", default: "Camisetas artesanais da Festa de Andrequicé — fé, tradição e arte do interior de Minas Gerais.", null: false
   end
 
+  create_table "stripe_mode_changes", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "previous_mode", null: false
+    t.string "new_mode", null: false
+    t.string "ip_address"
+    t.datetime "created_at", null: false
+    t.index ["created_at"], name: "index_stripe_mode_changes_on_created_at", order: :desc
+    t.index ["user_id"], name: "index_stripe_mode_changes_on_user_id"
+  end
+
+  create_table "stripe_settings", force: :cascade do |t|
+    t.string "active_mode", default: "test", null: false
+    t.text "test_publishable_key"
+    t.text "test_secret_key"
+    t.text "test_webhook_secret"
+    t.text "live_publishable_key"
+    t.text "live_secret_key"
+    t.text "live_webhook_secret"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
   create_table "users", force: :cascade do |t|
     t.string "name", null: false
     t.string "email", null: false
@@ -315,4 +337,5 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_19_100708) do
   add_foreign_key "order_status_histories", "orders"
   add_foreign_key "orders", "customers"
   add_foreign_key "product_variants", "products"
+  add_foreign_key "stripe_mode_changes", "users"
 end

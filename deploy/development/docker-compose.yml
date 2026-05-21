@@ -41,9 +41,7 @@ services:
       REDIS_DB: ${REDIS_DB:-0}
       JWT_SECRET: ${JWT_SECRET:-dev_jwt_secret_change_me}
       SUPPORT_EMAIL: ${SUPPORT_EMAIL:-suporte@andrequice.store}
-      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
-      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
-      VITE_STRIPE_PUBLISHABLE_KEY: ${VITE_STRIPE_PUBLISHABLE_KEY:-}
+      # Stripe credentials live encrypted in stripe_settings — set via /admin/stripe.
       ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY: ${ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY:-}
       ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY: ${ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY:-}
       ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT: ${ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT:-}
@@ -114,7 +112,6 @@ services:
       NODE_ENV: development
       # start.sh exporta LOCAL_IP e sobrescreve este valor automaticamente
       VITE_API_URL: ${VITE_API_URL:-/api/v1}
-      VITE_STRIPE_PUBLISHABLE_KEY: ${VITE_STRIPE_PUBLISHABLE_KEY:-}
       VITE_APP_VERSION: ${VITE_APP_VERSION:-0.1.0-dev}
       VITE_BUILD_DATE: ${VITE_BUILD_DATE:-local}
     stdin_open: true

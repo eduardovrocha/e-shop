@@ -24,14 +24,14 @@ RUN \
 COPY source/frontend/ .
 
 # Injetadas em build-time via --build-arg; gravadas no bundle pelo Vite
+# Stripe publishable key NÃO entra em build: é obtida em runtime via
+# GET /api/v1/stripe/config (configurada em /admin/stripe no dashboard).
 ARG VITE_API_URL
-ARG VITE_STRIPE_PUBLISHABLE_KEY
 ARG VITE_SENTRY_DSN
 ARG VITE_APP_VERSION=0.1.0
 ARG VITE_BUILD_DATE=""
 
 ENV VITE_API_URL=$VITE_API_URL \
-    VITE_STRIPE_PUBLISHABLE_KEY=$VITE_STRIPE_PUBLISHABLE_KEY \
     VITE_SENTRY_DSN=$VITE_SENTRY_DSN \
     VITE_APP_VERSION=$VITE_APP_VERSION \
     VITE_BUILD_DATE=$VITE_BUILD_DATE

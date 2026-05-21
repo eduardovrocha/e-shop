@@ -7,7 +7,8 @@ import {
   useElements,
 } from '@stripe/react-stripe-js'
 import type { Appearance } from '@stripe/stripe-js'
-import { stripePromise } from '@/lib/stripe'
+import { getStripe } from '@/lib/stripe'
+import { TestModeBanner } from '@/components/TestModeBanner'
 import { createPaymentIntent, type PaymentIntentResponse } from '@/services/payments'
 import { checkStock } from '@/services/stockService'
 import { Header } from '@/components/Header'
@@ -397,6 +398,7 @@ export default function Checkout() {
 
   return (
     <div className="min-h-screen bg-andrequice-cream/40 flex flex-col">
+      <TestModeBanner />
       <Header showBack />
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 sm:pt-10 pb-12 w-full flex flex-col gap-6">
@@ -563,10 +565,10 @@ export default function Checkout() {
               </div>
             )}
 
-            {intent && stripePromise && (
+            {intent && (
               <div ref={paymentRef}>
                 <Elements
-                  stripe={stripePromise}
+                  stripe={getStripe()}
                   options={{ clientSecret: intent.client_secret, appearance, locale: 'pt-BR' }}
                 >
                   <PaymentSection

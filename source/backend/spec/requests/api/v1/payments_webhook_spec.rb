@@ -48,6 +48,10 @@ RSpec.describe "Payments Webhook", type: :request do
     allow(ProcessedWebhookEvent).to receive(:mark_processed!)
     # Prevent actual stock deduction in webhook tests
     allow_any_instance_of(ProductVariant).to receive(:decrement_stock!)
+    # Webhook secret used to be ENV-driven; now lives in StripeSetting.
+    # Ensure the active mode has a secret so verify_webhook_event reaches
+    # the stubbed Stripe::Webhook.construct_event instead of short-circuiting.
+    StripeSetting.current.update!(test_webhook_secret: "whsec_test_secret_for_specs")
   end
 
   describe "payment_intent.succeeded" do
@@ -139,10 +143,50 @@ RSpec.describe "Payments Webhook", type: :request do
       allow(Stripe::Webhook).to receive(:construct_event)
         .and_raise(Stripe::SignatureVerificationError.new("bad sig", "raw"))
 
-      post webhook_url, params: raw_payload, headers: webhook_headers
+      # No-new-order assertion via :change scoped to this request — the
+      # global test DB has pre-existing seeded orders so an absolute
+      # `Order.count == 0` is misleading.
+      expect {
+        post webhook_url, params: raw_payload, headers: webhook_headers
+      }.not_to change(Order, :count)
 
       expect(response).to have_http_status(:bad_request)
-      expect(Order.count).to eq(0)
+    end
+  end
+
+  describe "signature fallback to opposite-mode secret" do
+    before do
+      # Active mode = test, but the event is signed with the live secret
+      # (e.g. webhook arrives after admin alternou de live → test).
+      StripeSetting.current.update!(
+        active_mode:         "test",
+        test_webhook_secret: "whsec_test_secret",
+        live_webhook_secret: "whsec_live_secret"
+      )
+    end
+
+    it "validates with the opposite-mode secret when the primary fails" do
+      call_count = 0
+      allow(Stripe::Webhook).to receive(:construct_event) do |_payload, _sig, secret|
+        call_count += 1
+        if secret == "whsec_test_secret"
+          raise Stripe::SignatureVerificationError.new("bad sig", "raw")
+        end
+        succeeded_event
+      end
+
+      post webhook_url, params: raw_payload, headers: webhook_headers
+
+      expect(call_count).to eq(2)
+      expect(response).to have_http_status(:ok)
+    end
+
+    it "returns 400 when both secrets fail" do
+      allow(Stripe::Webhook).to receive(:construct_event)
+        .and_raise(Stripe::SignatureVerificationError.new("bad sig", "raw"))
+
+      post webhook_url, params: raw_payload, headers: webhook_headers
+      expect(response).to have_http_status(:bad_request)
     end
   end
 end

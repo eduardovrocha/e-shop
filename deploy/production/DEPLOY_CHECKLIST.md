@@ -72,9 +72,13 @@ Variáveis obrigatórias para o deploy:
 - `RAILS_MASTER_KEY` — descriptografa `credentials.yml.enc` (SMTP + mail vivem lá)
 - `POSTGRES_PASSWORD`
 - `HOSTINGER_OBJ_ACCESS_KEY` + `HOSTINGER_OBJ_SECRET_KEY` + `HOSTINGER_OBJ_ENDPOINT`
-- `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET`
 - `ADMIN_SEED_PASSWORD`
 - `CORS_ORIGINS`
+
+> Credenciais Stripe (publishable / secret / webhook, modos test e live) ficam
+> encriptadas em `stripe_settings` e são gerenciadas pelo admin via
+> `/admin/stripe` no dashboard. Nenhuma variável de ambiente Stripe é
+> necessária no servidor.
 
 > SMTP (`smtp.address`, `smtp.user_name`, `smtp.password`) e e-mail de
 > suporte (`mail.support`, `mail.from`) vivem em `config/credentials.yml.enc`
@@ -110,9 +114,11 @@ docker compose -f deploy/production/docker-compose.yml run --rm api \
 
 ## Passo 6 — Configurar webhook no Stripe Dashboard
 
-- URL: `https://api.andrequice.com.br/webhooks/stripe`
+- URL: `https://api.andrequice.com.br/api/v1/payments/webhook`
 - Eventos: `payment_intent.succeeded`, `payment_intent.payment_failed`, `payment_intent.canceled`, `charge.dispute.created`
-- Copiar o `Signing secret` para `STRIPE_WEBHOOK_SECRET` no `.env`
+- Copiar o `Signing secret` e colar em `/admin/stripe` no dashboard
+  (campo `Webhook secret` do modo correspondente). Repetir para o modo
+  oposto se quiser permitir alternância entre test e live.
 
 ---
 

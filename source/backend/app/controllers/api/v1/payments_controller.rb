@@ -56,29 +56,32 @@ module Api
           aggregated_completion_days.days.from_now.to_date
 
         payment_intent = Stripe::PaymentIntent.create(
-          amount: total,
-          currency: "brl",
-          automatic_payment_methods: { enabled: true },
-          payment_method_options: {
-            card: {
-              installments: { enabled: true }
+          {
+            amount: total,
+            currency: "brl",
+            automatic_payment_methods: { enabled: true },
+            payment_method_options: {
+              card: {
+                installments: { enabled: true }
+              }
+            },
+            metadata: {
+              source:             "andrequice-web",
+              delivery_method:    delivery_method,
+              items_total_cents:  items_total,
+              shipping_fee_cents: shipping_fee,
+              items_snapshot:     items_metadata_snapshot.to_json,
+              customer_name:      params[:customer_name],
+              customer_email:     params[:customer_email],
+              customer_phone:     params[:customer_phone],
+              shipping_address:    params[:shipping_address]&.to_json,
+              shipping_service_id: params[:shipping_service_id],
+              shipping_cep:        params[:shipping_cep],
+              promised_completion_snapshot:        promised_completion_snapshot.to_json,
+              aggregated_promised_completion_date: aggregated_promised_completion_date.iso8601
             }
           },
-          metadata: {
-            source:             "andrequice-web",
-            delivery_method:    delivery_method,
-            items_total_cents:  items_total,
-            shipping_fee_cents: shipping_fee,
-            items_snapshot:     items_metadata_snapshot.to_json,
-            customer_name:      params[:customer_name],
-            customer_email:     params[:customer_email],
-            customer_phone:     params[:customer_phone],
-            shipping_address:    params[:shipping_address]&.to_json,
-            shipping_service_id: params[:shipping_service_id],
-            shipping_cep:        params[:shipping_cep],
-            promised_completion_snapshot:        promised_completion_snapshot.to_json,
-            aggregated_promised_completion_date: aggregated_promised_completion_date.iso8601
-          }
+          { api_key: StripeSetting.current.secret_key }
         )
 
         render json: {
@@ -100,9 +103,8 @@ module Api
         payload    = request.env["RAW_POST_DATA"] || request.body.read
         sig_header = request.headers["HTTP_STRIPE_SIGNATURE"] || request.headers["Stripe-Signature"]
 
-        event = Stripe::Webhook.construct_event(
-          payload, sig_header, ENV.fetch("STRIPE_WEBHOOK_SECRET")
-        )
+        event = verify_webhook_event(payload, sig_header)
+        return head(:bad_request) unless event
 
         if ProcessedWebhookEvent.already_processed?(event.id)
           Rails.logger.info "[Stripe] Duplicate event ignored: #{event.id}"
@@ -116,15 +118,50 @@ module Api
       rescue JSON::ParserError
         Rails.logger.warn "[Stripe] Invalid webhook payload"
         head :ok
-      rescue Stripe::SignatureVerificationError => e
-        Rails.logger.error "[Stripe][SECURITY] Webhook signature failed: #{e.message}"
-        head :bad_request
       rescue Stripe::StripeError => e
         Rails.logger.error "Webhook Stripe error: #{e.message}"
         render json: { error: e.message }, status: :unprocessable_entity
       end
 
       private
+
+      # Tries the active-mode webhook secret first, then falls back to the
+      # opposite-mode secret so events signed before a mode switch (e.g. a
+      # PaymentIntent created in test that confirms after admin switched to
+      # live) still validate. Returns Stripe::Event or nil on double failure.
+      def verify_webhook_event(payload, sig_header)
+        setting = StripeSetting.current
+        primary = setting.webhook_secret
+
+        if primary.present?
+          begin
+            return Stripe::Webhook.construct_event(payload, sig_header, primary)
+          rescue Stripe::SignatureVerificationError
+            # fall through to opposite secret
+          end
+        end
+
+        opposite = setting.opposite_webhook_secret
+        if opposite.present?
+          begin
+            event = Stripe::Webhook.construct_event(payload, sig_header, opposite)
+            Rails.logger.info(
+              "[Stripe][webhook] validated with OPPOSITE mode secret " \
+              "(active=#{setting.active_mode})"
+            )
+            return event
+          rescue Stripe::SignatureVerificationError
+            # fall through
+          end
+        end
+
+        Rails.logger.error(
+          "[Stripe][SECURITY] Webhook signature failed for both modes " \
+          "(active=#{setting.active_mode})"
+        )
+        nil
+      end
+
 
       # Validate available stock for every item before creating payment intent.
       # made_to_order items are produced on demand and skip stock validation.
@@ -419,7 +456,7 @@ module Api
         charge_id = intent.respond_to?(:latest_charge) ? intent.latest_charge : nil
         return empty if charge_id.blank?
 
-        charge = Stripe::Charge.retrieve(charge_id)
+        charge = Stripe::Charge.retrieve(charge_id, { api_key: StripeSetting.current.secret_key })
         card   = charge.payment_method_details&.card
         {
           installment_count: card&.installments&.plan&.count,

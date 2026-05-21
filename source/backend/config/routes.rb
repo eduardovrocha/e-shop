@@ -6,6 +6,7 @@ Rails.application.routes.draw do
     namespace :v1 do
       get  "health",                    to: "health#show"
       get  "store",                     to: "store#show"
+      get  "stripe/config",             to: "stripe_config#show"
       resources :products, only: %i[index show]
       post "stock/check",                to: "stock#check"
       post "payments/create_intent",    to: "payments#create_intent"
@@ -21,8 +22,10 @@ Rails.application.routes.draw do
 
         get "dashboard/stats", to: "dashboard#stats"
 
-        resource :settings,  only: %i[show update] do
-          get :stripe_info, on: :collection
+        resource :settings, only: %i[show update]
+
+        resource :stripe_setting, only: %i[show update] do
+          post :switch_mode, on: :collection
         end
 
         resources :orders, only: %i[index show update] do

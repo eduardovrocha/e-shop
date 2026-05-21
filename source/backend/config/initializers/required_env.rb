@@ -3,8 +3,6 @@
 
 REQUIRED_IN_PRODUCTION = %w[
   JWT_SECRET
-  STRIPE_SECRET_KEY
-  STRIPE_WEBHOOK_SECRET
   ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
   ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
   ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
@@ -12,6 +10,9 @@ REQUIRED_IN_PRODUCTION = %w[
   FRONTEND_URL
   CORS_ORIGINS
 ].freeze
+# Stripe credentials (test/live publishable, secret, webhook secrets) are
+# no longer required at boot — they live encrypted in stripe_settings and
+# are managed via the admin dashboard at /stripe.
 
 REQUIRED_ALWAYS = %w[
   POSTGRES_HOST

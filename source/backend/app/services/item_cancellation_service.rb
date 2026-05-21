@@ -91,15 +91,18 @@ class ItemCancellationService
 
   def create_stripe_refund!(amount_cents)
     Stripe::Refund.create(
-      payment_intent: @order_item.order.stripe_intent_id,
-      amount:         amount_cents,
-      metadata:       {
-        order_item_id:           @order_item.id,
-        order_id:                @order_item.order.id,
-        reason:                  @reason.to_s,
-        actor:                   actor_label,
-        cancellation_percentage: @order_item.product_variant.product.cancellation_refund_percentage
-      }
+      {
+        payment_intent: @order_item.order.stripe_intent_id,
+        amount:         amount_cents,
+        metadata:       {
+          order_item_id:           @order_item.id,
+          order_id:                @order_item.order.id,
+          reason:                  @reason.to_s,
+          actor:                   actor_label,
+          cancellation_percentage: @order_item.product_variant.product.cancellation_refund_percentage
+        }
+      },
+      { api_key: StripeSetting.current.secret_key }
     )
   end
 
