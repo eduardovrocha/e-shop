@@ -184,6 +184,12 @@ export default function Cart() {
   const [shippingOptions, setShippingOptions] = useState<ShippingOption[] | null>(null)
   const [shippingLoading, setShippingLoading] = useState(false)
   const [shippingError, setShippingError] = useState<string | null>(null)
+  // CEPs de cidade única (ex.: 38750-000) retornam logradouro/bairro vazios
+  // no ViaCEP — liberamos os respectivos inputs para edição manual e
+  // mostramos um hint discreto. Estado derivado da última consulta de CEP
+  // bem-sucedida; resetado a cada nova consulta.
+  const [isStreetEmptyFromCep, setIsStreetEmptyFromCep] = useState(false)
+  const [isNeighborhoodEmptyFromCep, setIsNeighborhoodEmptyFromCep] = useState(false)
 
   // ── Stock validation on mount ───────────────────────────────────────────
   const [stockMap, setStockMap] = useState<Record<number, number>>({})
@@ -252,6 +258,8 @@ export default function Cart() {
 
   const handleCepChange = useCallback((value: string) => {
     setCep(formatCep(value))
+    setIsStreetEmptyFromCep(false)
+    setIsNeighborhoodEmptyFromCep(false)
     if (shippingOptions !== null) {
       setShippingOptions(null)
       setSelectedShipping(null)
@@ -289,12 +297,27 @@ export default function Cart() {
         })
       }
       if (viaCep && !viaCep.erro) {
+        const logradouro = (viaCep.logradouro ?? '').toString()
+        const bairro     = (viaCep.bairro ?? '').toString()
         setShippingAddress({
-          cep, street: viaCep.logradouro ?? '', city: viaCep.localidade ?? '', state: viaCep.uf ?? '',
+          cep,
+          street:       logradouro,
+          neighborhood: bairro,
+          city:         viaCep.localidade ?? '',
+          state:        viaCep.uf ?? '',
         })
+        setIsStreetEmptyFromCep(logradouro.trim().length === 0)
+        setIsNeighborhoodEmptyFromCep(bairro.trim().length === 0)
+      } else {
+        // CEP inválido / não encontrado / falha de rede: mantém comportamento
+        // anterior (sem auto-população) e sem liberar campos.
+        setIsStreetEmptyFromCep(false)
+        setIsNeighborhoodEmptyFromCep(false)
       }
     } catch {
       setShippingError('Não foi possível calcular o frete. Tente novamente.')
+      setIsStreetEmptyFromCep(false)
+      setIsNeighborhoodEmptyFromCep(false)
     } finally {
       setShippingLoading(false)
     }
@@ -335,7 +358,8 @@ export default function Cart() {
     EMAIL_RE.test(contact.email)
   const isAddressValid  = deliveryMethod === 'pickup' || (
     addressExtra.number.trim().length >= 1 &&
-    !!shippingAddress?.cep
+    !!shippingAddress?.cep &&
+    (shippingAddress?.street?.trim().length ?? 0) >= 1
   )
 
   // ── Confirmed tracker (mirror of accordion internal set) ────────────────
@@ -355,9 +379,10 @@ export default function Cart() {
     : shippingAddress
       ? [
           `${shippingAddress.street}${addressExtra.number ? `, ${addressExtra.number}` : ''}`,
+          shippingAddress.neighborhood?.trim() ? shippingAddress.neighborhood : null,
           `${shippingAddress.city} - ${shippingAddress.state}`,
           `CEP ${formatCep(shippingAddress.cep)}`,
-        ].join(' · ')
+        ].filter(Boolean).join(' · ')
       : '—'
 
   // ── Step definitions for the accordion ──────────────────────────────────
@@ -694,33 +719,6 @@ export default function Cart() {
                   className="flex-1"
                 />
               </div>
-              <Input
-                label="Endereço"
-                value={shippingAddress?.street ?? ''}
-                onChange={() => {}}
-                placeholder="Rua, Avenida..."
-                required
-                disabled
-              />
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <Input
-                    label="Número"
-                    value={addressExtra.number}
-                    onChange={(v) => setAddressExtra({ ...addressExtra, number: v })}
-                    placeholder="123"
-                    required
-                  />
-                </div>
-                <div className="col-span-2">
-                  <Input
-                    label="Complemento"
-                    value={addressExtra.complement}
-                    onChange={(v) => setAddressExtra({ ...addressExtra, complement: v })}
-                    placeholder="Apto, Bloco..."
-                  />
-                </div>
-              </div>
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2">
                   <Input
@@ -743,6 +741,50 @@ export default function Cart() {
                   />
                 </div>
               </div>
+              <Input
+                label="Bairro"
+                value={shippingAddress?.neighborhood ?? ''}
+                onChange={(v) =>
+                  shippingAddress && setShippingAddress({ ...shippingAddress, neighborhood: v })
+                }
+                placeholder="Centro"
+                disabled={!isNeighborhoodEmptyFromCep}
+                hint={isNeighborhoodEmptyFromCep
+                  ? 'Este CEP atende a cidade toda. Informe o bairro, se houver.'
+                  : undefined}
+              />
+              <Input
+                label="Endereço"
+                value={shippingAddress?.street ?? ''}
+                onChange={(v) =>
+                  shippingAddress && setShippingAddress({ ...shippingAddress, street: v })
+                }
+                placeholder="Rua, Avenida..."
+                required
+                disabled={!isStreetEmptyFromCep}
+                hint={isStreetEmptyFromCep
+                  ? 'Este CEP atende a cidade toda. Informe o nome da rua.'
+                  : undefined}
+              />
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Input
+                    label="Número"
+                    value={addressExtra.number}
+                    onChange={(v) => setAddressExtra({ ...addressExtra, number: v })}
+                    placeholder="123"
+                    required
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Input
+                    label="Complemento"
+                    value={addressExtra.complement}
+                    onChange={(v) => setAddressExtra({ ...addressExtra, complement: v })}
+                    placeholder="Apto, Bloco..."
+                  />
+                </div>
+              </div>
               <div className="flex items-center justify-between text-xs text-andrequice-border pt-1">
                 <span>País: Brasil</span>
                 <span>CEP, cidade e logradouro vêm do cálculo de frete (etapa 2).</span>
@@ -762,6 +804,7 @@ export default function Cart() {
     handleMethodChange, handleCepChange, handleCalculate, handleSelectOption, store,
     isContactValid, contactSummary, contact, setContact, handlePhoneChange,
     isAddressValid, addressSummary, shippingAddress, addressExtra, setAddressExtra,
+    setShippingAddress, isStreetEmptyFromCep, isNeighborhoodEmptyFromCep,
   ])
 
   // ── Final CTA: only enabled with all 4 confirmed ───────────────────────

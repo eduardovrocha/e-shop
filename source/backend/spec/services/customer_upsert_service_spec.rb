@@ -88,6 +88,11 @@ RSpec.describe CustomerUpsertService, type: :service do
         expect(addr.city).to eq("São Paulo")
       end
 
+      it "persiste neighborhood do shipping_address na coluna neighborhood do CustomerAddress" do
+        described_class.call(delivery_order)
+        expect(CustomerAddress.last.neighborhood).to eq("Bela Vista")
+      end
+
       it "não duplica endereço com mesmo CEP e rua" do
         described_class.call(delivery_order)
         expect { described_class.call(delivery_order) }.not_to change(CustomerAddress, :count)

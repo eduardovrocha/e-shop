@@ -311,12 +311,13 @@ export default function Checkout() {
           customer_phone:  contact.phone,
           shipping_address: deliveryMethod === 'delivery' && shippingAddress
             ? {
-                cep:        shippingAddress.cep,
-                city:       shippingAddress.city,
-                state:      shippingAddress.state,
-                address:    shippingAddress.street,
-                number:     addressExtra.number,
-                complement: addressExtra.complement,
+                cep:          shippingAddress.cep,
+                city:         shippingAddress.city,
+                state:        shippingAddress.state,
+                address:      shippingAddress.street,
+                neighborhood: shippingAddress.neighborhood ?? '',
+                number:       addressExtra.number,
+                complement:   addressExtra.complement,
               }
             : null,
           ...(deliveryMethod === 'delivery' && {

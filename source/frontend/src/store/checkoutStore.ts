@@ -4,6 +4,7 @@ import { persist } from 'zustand/middleware'
 interface ShippingAddress {
   cep: string
   street: string
+  neighborhood?: string
   city: string
   state: string
 }
