@@ -15,7 +15,7 @@ export function Footer() {
           {/* Brand */}
           <div className="flex flex-col gap-2">
             <span className="font-serif text-xl font-semibold text-white">Andrequicé</span>
-            <p className="text-sm leading-relaxed max-w-xs">
+            <p className="text-sm leading-relaxed w-full md:whitespace-nowrap">
               {settings.footer_description}
             </p>
           </div>
