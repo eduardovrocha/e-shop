@@ -29,17 +29,21 @@ RSpec.describe "Payments Webhook", type: :request do
 
   let(:succeeded_event) do
     double("StripeEvent",
-      id:   "evt_succeeded_001",
-      type: "payment_intent.succeeded",
-      data: double("Data", object: payment_intent),
+      id:       "evt_succeeded_001",
+      type:     "payment_intent.succeeded",
+      # livemode must match Rails.env so the cross-mode guard lets it through.
+      # In test environment we treat events as "not production" (livemode=false).
+      livemode: false,
+      data:     double("Data", object: payment_intent),
     )
   end
 
   let(:failed_event) do
     double("StripeEvent",
-      id:   "evt_failed_001",
-      type: "payment_intent.payment_failed",
-      data: double("Data", object: payment_intent),
+      id:       "evt_failed_001",
+      type:     "payment_intent.payment_failed",
+      livemode: false,
+      data:     double("Data", object: payment_intent),
     )
   end
 
@@ -187,6 +191,48 @@ RSpec.describe "Payments Webhook", type: :request do
 
       post webhook_url, params: raw_payload, headers: webhook_headers
       expect(response).to have_http_status(:bad_request)
+    end
+  end
+
+  # Defense-in-depth guard added after the test→live webhook leak that
+  # produced AND-000002…AND-000011 in production from dev intents. Even
+  # with a valid signature, an event whose livemode doesn't match the
+  # current env must be dropped without side effects.
+  describe "cross-mode event guard" do
+    let(:cross_mode_event) do
+      double("StripeEvent",
+        id:       "evt_cross_mode_001",
+        type:     "payment_intent.succeeded",
+        livemode: true, # would happen if a LIVE Stripe event reached a non-prod backend
+        data:     double("Data", object: payment_intent),
+      )
+    end
+
+    before do
+      allow(Stripe::Webhook).to receive(:construct_event).and_return(cross_mode_event)
+    end
+
+    it "does NOT create an order when livemode mismatches Rails.env" do
+      expect {
+        post webhook_url, params: raw_payload, headers: webhook_headers
+      }.not_to change(Order, :count)
+    end
+
+    it "does NOT mark the event as processed (so a re-delivery to the right env still works)" do
+      expect(ProcessedWebhookEvent).not_to receive(:mark_processed!)
+      post webhook_url, params: raw_payload, headers: webhook_headers
+    end
+
+    it "returns 200 with an explicit ignored flag so Stripe stops retrying" do
+      post webhook_url, params: raw_payload, headers: webhook_headers
+      expect(response).to have_http_status(:ok)
+      body = JSON.parse(response.body)
+      expect(body).to include("received" => true, "ignored" => "cross-mode")
+    end
+
+    it "logs the rejection for forensic trail" do
+      expect(Rails.logger).to receive(:warn).with(/Ignored cross-mode event/)
+      post webhook_url, params: raw_payload, headers: webhook_headers
     end
   end
 end

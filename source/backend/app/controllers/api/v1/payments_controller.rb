@@ -156,6 +156,21 @@ module Api
         event = verify_webhook_event(payload, sig_header)
         return head(:bad_request) unless event
 
+        # Defense in depth: drop events whose livemode doesn't match the
+        # current Rails environment. Prevents the historic leak where a
+        # Stripe webhook URL configured in TEST mode pointed at production
+        # and prod created orders from dev intents. We continue to accept
+        # both webhook secrets in verify_webhook_event for resilience
+        # during mode switches, but here we hard-stop cross-mode delivery.
+        # 200 (not 400) so Stripe doesn't keep retrying.
+        if event.livemode != Rails.env.production?
+          Rails.logger.warn(
+            "[Stripe] Ignored cross-mode event #{event.id} " \
+            "(type=#{event.type} livemode=#{event.livemode} env=#{Rails.env})"
+          )
+          return render json: { received: true, ignored: "cross-mode" }
+        end
+
         if ProcessedWebhookEvent.already_processed?(event.id)
           Rails.logger.info "[Stripe] Duplicate event ignored: #{event.id}"
           return render json: { received: true }
