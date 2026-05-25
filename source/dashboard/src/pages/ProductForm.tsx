@@ -185,45 +185,63 @@ function VariantTable({ variants, productName, onChange }: VariantTableProps) {
           Clique nos tamanhos acima para adicionar variantes
         </p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th className="pb-2 pr-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">Tamanho</th>
-                <th className="pb-2 pr-3 font-medium text-muted-foreground text-xs uppercase tracking-wide w-32">Gênero</th>
-                <th className="pb-2 pr-3 font-medium text-muted-foreground text-xs uppercase tracking-wide w-32">Corte</th>
-                <th className="pb-2 pr-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">SKU</th>
-                <th className="pb-2 pr-3 font-medium text-muted-foreground text-xs uppercase tracking-wide w-28">Estoque</th>
-                <th className="pb-2 pr-3 font-medium text-muted-foreground text-xs uppercase tracking-wide w-32">
-                  Preço atual (R$) <span className="text-destructive">*</span>
-                </th>
-                <th className="pb-2 pr-3 font-medium text-muted-foreground text-xs uppercase tracking-wide w-36">
-                  Preço anterior (R$){' '}
-                  <span
-                    className="font-normal normal-case text-[10px] text-muted-foreground/80"
-                    title="Aparece riscado no site. Deve ser MAIOR que o preço atual para indicar promoção. Valor menor ou igual é ignorado."
-                  >
-                    (de · riscado)
+        // Card-per-variant layout: each variant is a self-contained block
+        // that wraps gracefully on narrow viewports instead of forcing a
+        // wide table with horizontal scroll. Mirrors the responsive
+        // pattern used by /admin/orders/:id and other dashboard pages.
+        <div className="flex flex-col gap-3">
+          {active.map((v) => {
+            // Warn inline when "Preço anterior" isn't strictly greater
+            // than "Preço atual" — the backend nullifies silently and
+            // the storefront wouldn't show any promo. Cheaper than a
+            // 422 round-trip.
+            const compareCents = parsePriceInput(v._compareInput)
+            const priceCents   = v.price_cents
+            const invalidPromo =
+              compareCents != null && priceCents != null && compareCents <= priceCents
+
+            return (
+              <div
+                key={v._key}
+                className="rounded-lg border border-border bg-card/50 p-3 sm:p-4 space-y-3"
+              >
+                {/* Row 1 — identity + status + remove */}
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                  <span className="inline-flex h-7 min-w-[2.25rem] items-center justify-center rounded border border-border px-2 text-xs font-semibold shrink-0">
+                    {v.size}
                   </span>
-                </th>
-                <th className="pb-2 font-medium text-muted-foreground text-xs uppercase tracking-wide text-center">Status</th>
-                <th className="pb-2 w-8" />
-              </tr>
-            </thead>
-            <tbody>
-              {active.map((v) => (
-                <tr key={v._key} className="border-b border-border/50 last:border-0">
-                  <td className="py-2 pr-3">
-                    <span className="inline-flex h-7 w-9 items-center justify-center rounded border border-border text-xs font-semibold">
-                      {v.size}
-                    </span>
-                  </td>
-                  <td className="py-2 pr-3">
+                  <Input
+                    value={v.sku}
+                    onChange={(e) => updateRow(v._key, 'sku', e.target.value)}
+                    className="h-8 font-mono text-xs flex-1 min-w-[10rem]"
+                    placeholder="SKU"
+                    required
+                  />
+                  <div className="shrink-0">{stockBadge(v.stock_quantity)}</div>
+                  <button
+                    type="button"
+                    onClick={() => setPendingRemoveKey(v._key)}
+                    className="shrink-0 text-muted-foreground hover:text-destructive transition-colors"
+                    aria-label={`Remover variante ${v.size}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+
+                {/* Row 2 — editable fields in a responsive grid:
+                    2 cols on mobile, 3 on sm, 5 on lg. Each field is
+                    full-width inside its cell so nothing overflows. */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                  {/* Gênero */}
+                  <div className="space-y-1">
+                    <Label className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                      Gênero
+                    </Label>
                     <Select
                       value={v.gender}
                       onValueChange={(value) => updateRow(v._key, 'gender', value as VariantGender)}
                     >
-                      <SelectTrigger className="h-8 w-32 text-xs">
+                      <SelectTrigger className="h-8 w-full text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -234,13 +252,18 @@ function VariantTable({ variants, productName, onChange }: VariantTableProps) {
                         ))}
                       </SelectContent>
                     </Select>
-                  </td>
-                  <td className="py-2 pr-3">
+                  </div>
+
+                  {/* Corte */}
+                  <div className="space-y-1">
+                    <Label className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                      Corte
+                    </Label>
                     <Select
                       value={v.cut}
                       onValueChange={(value) => updateRow(v._key, 'cut', value as VariantCut)}
                     >
-                      <SelectTrigger className="h-8 w-32 text-xs">
+                      <SelectTrigger className="h-8 w-full text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -251,17 +274,13 @@ function VariantTable({ variants, productName, onChange }: VariantTableProps) {
                         ))}
                       </SelectContent>
                     </Select>
-                  </td>
-                  <td className="py-2 pr-3">
-                    <Input
-                      value={v.sku}
-                      onChange={(e) => updateRow(v._key, 'sku', e.target.value)}
-                      className="h-8 font-mono text-xs w-40"
-                      placeholder="SKU"
-                      required
-                    />
-                  </td>
-                  <td className="py-2 pr-3">
+                  </div>
+
+                  {/* Estoque */}
+                  <div className="space-y-1">
+                    <Label className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                      Estoque
+                    </Label>
                     <Input
                       type="number"
                       min={0}
@@ -269,10 +288,15 @@ function VariantTable({ variants, productName, onChange }: VariantTableProps) {
                       onChange={(e) =>
                         updateRow(v._key, 'stock_quantity', Math.max(0, parseInt(e.target.value) || 0))
                       }
-                      className="h-8 w-24"
+                      className="h-8 w-full"
                     />
-                  </td>
-                  <td className="py-2 pr-3">
+                  </div>
+
+                  {/* Preço atual */}
+                  <div className="space-y-1">
+                    <Label className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                      Preço atual (R$) <span className="text-destructive">*</span>
+                    </Label>
                     <Input
                       value={v._priceInput}
                       onChange={(e) => updateRow(v._key, '_priceInput', e.target.value)}
@@ -280,64 +304,45 @@ function VariantTable({ variants, productName, onChange }: VariantTableProps) {
                       placeholder="0,00"
                       required
                       className={[
-                        'h-8 w-28 text-right tabular-nums font-medium',
+                        'h-8 w-full text-right tabular-nums font-medium',
                         !v._priceInput ? 'border-destructive/60 focus-visible:ring-destructive/30' : '',
                       ].join(' ')}
                       inputMode="decimal"
                     />
-                  </td>
-                  <td className="py-2 pr-3">
-                    {(() => {
-                      // Warn inline when the admin typed a "Preço anterior"
-                      // that isn't strictly greater than "Preço atual" — the
-                      // backend would silently nullify and the storefront
-                      // wouldn't show any promo. Cheaper than a 422 round-trip.
-                      const compareCents = parsePriceInput(v._compareInput)
-                      const priceCents   = v.price_cents
-                      const invalidPromo =
-                        compareCents != null && priceCents != null && compareCents <= priceCents
-                      return (
-                        <div className="flex flex-col items-end gap-0.5">
-                          <Input
-                            value={v._compareInput}
-                            onChange={(e) => updateRow(v._key, '_compareInput', e.target.value)}
-                            onBlur={(e) => handleCompareBlur(v._key, e.target.value)}
-                            placeholder="—"
-                            className={[
-                              'h-8 w-28 text-right tabular-nums line-through decoration-1',
-                              invalidPromo
-                                ? 'border-destructive/60 text-destructive focus-visible:ring-destructive/30'
-                                : 'text-muted-foreground',
-                            ].join(' ')}
-                            inputMode="decimal"
-                            title="Preço anterior — aparece riscado no site. Deve ser maior que o preço atual. Em branco = herda do produto."
-                          />
-                          {invalidPromo && (
-                            <span className="text-[10px] leading-none text-destructive">
-                              precisa ser maior que o preço atual
-                            </span>
-                          )}
-                        </div>
-                      )
-                    })()}
-                  </td>
-                  <td className="py-2 text-center">
-                    {stockBadge(v.stock_quantity)}
-                  </td>
-                  <td className="py-2 pl-2">
-                    <button
-                      type="button"
-                      onClick={() => setPendingRemoveKey(v._key)}
-                      className="text-muted-foreground hover:text-destructive transition-colors"
-                      aria-label={`Remover tamanho ${v.size}`}
+                  </div>
+
+                  {/* Preço anterior (de · riscado) */}
+                  <div className="space-y-1">
+                    <Label
+                      className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+                      title="Aparece riscado no site. Deve ser MAIOR que o preço atual para indicar promoção. Valor menor ou igual é ignorado."
                     >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                      Preço anterior <span className="normal-case text-[9px] text-muted-foreground/80">(de · riscado)</span>
+                    </Label>
+                    <Input
+                      value={v._compareInput}
+                      onChange={(e) => updateRow(v._key, '_compareInput', e.target.value)}
+                      onBlur={(e) => handleCompareBlur(v._key, e.target.value)}
+                      placeholder="—"
+                      className={[
+                        'h-8 w-full text-right tabular-nums line-through decoration-1',
+                        invalidPromo
+                          ? 'border-destructive/60 text-destructive focus-visible:ring-destructive/30'
+                          : 'text-muted-foreground',
+                      ].join(' ')}
+                      inputMode="decimal"
+                      title="Preço anterior — aparece riscado no site. Deve ser maior que o preço atual. Em branco = herda do produto."
+                    />
+                    {invalidPromo && (
+                      <span className="block text-[10px] leading-tight text-destructive">
+                        precisa ser maior que o preço atual
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
 
