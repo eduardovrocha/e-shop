@@ -167,6 +167,8 @@ module Api
             product_variant_id:       item.product_variant_id,
             size:                     item.size,
             color:                    item.product_variant&.color,
+            gender:                   item.product_variant&.gender,
+            cut:                      item.product_variant&.cut,
             fulfillment_mode:         product&.fulfillment_mode,
             production_capacity:      product&.production_capacity,
             production_lead_time_days: product&.production_lead_time_days,

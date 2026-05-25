@@ -1,4 +1,5 @@
 import api from './api'
+import type { VariantGender, VariantCut } from '@/types/product'
 
 export type TrackingProductionStatus =
   | 'pending'
@@ -21,6 +22,8 @@ export interface TrackingOrderItem {
   id: number
   name: string
   size: string | null
+  gender: VariantGender | null
+  cut: VariantCut | null
   quantity: number
   subtotal_cents: number
   production_status: TrackingProductionStatus

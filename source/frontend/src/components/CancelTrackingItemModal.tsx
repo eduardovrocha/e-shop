@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/Button'
 import { trackingService, type TrackingOrderItem } from '@/services/trackingService'
 import { formatPrice } from '@/lib/utils'
+import { formatVariantLine } from '@/utils/variant'
 
 interface CancelTrackingItemModalProps {
   open: boolean
@@ -90,7 +91,16 @@ export function CancelTrackingItemModal({
 
         <div className="space-y-1">
           <p className="font-medium text-andrequice-navy">
-            {item.name}{item.size ? ` — Tamanho ${item.size}` : ''}
+            {item.name}
+            {(() => {
+              const descriptors = formatVariantLine({
+                gender:    item.gender,
+                cut:       item.cut,
+                size:      item.size,
+                sizeLabel: 'Tamanho',
+              })
+              return descriptors ? ` — ${descriptors}` : ''
+            })()}
           </p>
           <p className="text-xs text-andrequice-border">Quantidade: {item.quantity}</p>
           <p className="text-xs text-andrequice-border">

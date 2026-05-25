@@ -48,6 +48,8 @@ class PublicProductSerializer
       {
         variant_id:                       v.id,
         size:                             v.size,
+        gender:                           v.gender,
+        cut:                              v.cut,
         stock:                            qty,
         price_cents:                      v.price_cents,
         # Per-variant override OR product-level fallback (already computed

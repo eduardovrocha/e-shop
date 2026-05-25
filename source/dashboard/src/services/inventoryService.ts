@@ -1,4 +1,5 @@
 import api from './api'
+import type { VariantGender, VariantCut } from '@/types/product'
 
 export interface VariantRow {
   id: number
@@ -7,6 +8,8 @@ export interface VariantRow {
   sku: string
   size: string
   color: string
+  gender: VariantGender | null
+  cut: VariantCut | null
   stock: number
   reserved: number
   available: number

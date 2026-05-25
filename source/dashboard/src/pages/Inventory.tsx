@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { useInventory, useUpdateInventoryStock } from '@/hooks/useInventory'
 import { useToast } from '@/hooks/useToast'
 import type { VariantRow } from '@/services/inventoryService'
+import { formatVariantDescriptors } from '@/utils/variant'
 
 function StockBadge({ stock: _stock, available }: { stock: number; available: number }) {
   if (available === 0) return <Badge variant="destructive">Zerado</Badge>
@@ -143,8 +144,10 @@ export default function Inventory() {
         <div>
           <p className="font-medium text-foreground">{v.product}</p>
           <p className="text-[11px] capitalize text-muted-foreground">
-            {v.size}
-            {v.color ? ` · ${v.color}` : ''}
+            {[
+              formatVariantDescriptors({ gender: v.gender, cut: v.cut, size: v.size }),
+              v.color || null,
+            ].filter(Boolean).join(' · ')}
           </p>
         </div>
       ),

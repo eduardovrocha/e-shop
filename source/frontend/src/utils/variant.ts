@@ -1,4 +1,5 @@
-import type { Product, VariantStock } from '@/types/product'
+import type { Product, VariantStock, VariantGender, VariantCut } from '@/types/product'
+import { VARIANT_GENDER_LABEL, VARIANT_CUT_LABEL } from '@/types/product'
 
 // Single source of truth for "can the customer pick / add this variant?"
 // Centralizing here keeps the made_to_order rule from leaking into every
@@ -17,6 +18,23 @@ export function isVariantPurchasable(
 ): boolean {
   if (product.fulfillmentMode === 'made_to_order') return true
   return variant.stock > 0
+}
+
+// Builds the descriptor prefix shown on every cart/checkout/confirmation
+// line — "Masculino · Babylook · Tam. M · ". Hides default gender (unissex)
+// and default cut (normal) so unissex-normal items collapse to just the
+// size, preserving the original look for the vast majority of products.
+export function formatVariantLine(opts: {
+  gender?: VariantGender | null
+  cut?:    VariantCut    | null
+  size?:   string | null
+  sizeLabel?: string   // "Tamanho" (cart) or "Tam." (summary) — caller picks
+}): string {
+  const parts: string[] = []
+  if (opts.gender && opts.gender !== 'unissex') parts.push(VARIANT_GENDER_LABEL[opts.gender])
+  if (opts.cut    && opts.cut    !== 'normal')  parts.push(VARIANT_CUT_LABEL[opts.cut])
+  if (opts.size) parts.push(`${opts.sizeLabel ?? 'Tam.'} ${opts.size}`)
+  return parts.join(' · ')
 }
 
 // Upper bound for the quantity stepper.

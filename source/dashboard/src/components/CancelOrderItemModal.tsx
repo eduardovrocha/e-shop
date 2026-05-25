@@ -12,6 +12,8 @@ import { Label } from './ui/label'
 import { useCancelOrderItem } from '@/hooks/useOrderItems'
 import { useToast } from '@/hooks/useToast'
 import { formatCurrency } from '@/lib/utils'
+import type { VariantGender, VariantCut } from '@/types/product'
+import { formatVariantDescriptors } from '@/utils/variant'
 
 interface CancelOrderItemModalProps {
   open: boolean
@@ -20,6 +22,8 @@ interface CancelOrderItemModalProps {
   itemId: number
   itemName: string
   size: string | null
+  gender?: VariantGender | null
+  cut?:    VariantCut    | null
   quantity: number
   subtotalCents: number
   refundPercentage: number
@@ -44,6 +48,8 @@ export function CancelOrderItemModal({
   itemId,
   itemName,
   size,
+  gender,
+  cut,
   quantity,
   subtotalCents,
   refundPercentage,
@@ -93,7 +99,15 @@ export function CancelOrderItemModal({
 
         <div className="space-y-3 text-sm">
           <div className="space-y-1">
-            <p className="font-medium">{itemName}{size ? ` — Tamanho ${size}` : ''}</p>
+            <p className="font-medium">
+              {itemName}
+              {(() => {
+                const descriptors = formatVariantDescriptors({
+                  gender, cut, size, sizeFirst: false,
+                })
+                return descriptors ? ` — ${descriptors}` : ''
+              })()}
+            </p>
             <p className="text-xs text-muted-foreground">Quantidade: {quantity}</p>
             <p className="text-xs text-muted-foreground">
               Status atual: {STATUS_LABELS[productionStatus] ?? productionStatus}

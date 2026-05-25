@@ -7,7 +7,7 @@ Olá <%= @order.customer_name.to_s.split.first.presence || "cliente" %>,
 Todas as peças do seu pedido estão prontas e serão enviadas em breve.
 Você receberá o código de rastreamento assim que o pedido for despachado.
 <% else %>
-Sua peça <%= @product&.name %><%= @order_item.size ? " — Tamanho #{@order_item.size}" : "" %> ficou pronta. Outras peças do seu pedido ainda estão em produção; você receberá outro e-mail assim que todas estiverem prontas para envio.
+Sua peça <%= @product&.name %><%= @order_item.descriptor_suffix %> ficou pronta. Outras peças do seu pedido ainda estão em produção; você receberá outro e-mail assim que todas estiverem prontas para envio.
 <% end %>
 
 Acompanhe seu pedido em:

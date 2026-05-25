@@ -22,12 +22,18 @@ export type ProductionStatus =
   | 'delivered'
   | 'canceled'
 
+import type { VariantGender, VariantCut } from '@/types/product'
+
 export interface OrderItemRow {
   id: number
   product_variant_id: number | null
   product_id: number | null
   name: string
   size: string | null
+  // Derived from the linked product_variant. Null when the variant has
+  // since been deleted, or for orders predating gender/cut support.
+  gender: VariantGender | null
+  cut: VariantCut | null
   quantity: number
   unit_price_cents: number
   subtotal_cents: number

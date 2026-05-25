@@ -1,4 +1,5 @@
 import api from './api'
+import type { VariantGender, VariantCut } from '@/types/product'
 
 export type ProductionStatus =
   | 'pending'
@@ -21,6 +22,8 @@ export interface AdminOrderItem {
   product_variant_id: number | null
   size: string | null
   color: string | null
+  gender: VariantGender | null
+  cut: VariantCut | null
   fulfillment_mode: 'from_stock' | 'made_to_order' | null
   production_capacity: number | null
   production_lead_time_days: number | null

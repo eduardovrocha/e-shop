@@ -10,6 +10,7 @@ import {
   type TrackingProductionStatus,
 } from '@/services/trackingService'
 import { formatPrice } from '@/lib/utils'
+import { formatVariantLine } from '@/utils/variant'
 
 const ITEM_STATUS_LABELS: Record<TrackingProductionStatus, string> = {
   pending:       'Pendente',
@@ -310,7 +311,14 @@ export default function TrackOrder() {
                         <div className="min-w-0">
                           <p className="text-sm text-andrequice-navy font-medium">{row.name}</p>
                           <p className="text-xs text-andrequice-border mt-0.5">
-                            {row.size && <>Tam. {row.size} · </>}Qtd {row.quantity}
+                            {(() => {
+                              const descriptors = formatVariantLine({
+                                gender: row.gender,
+                                cut:    row.cut,
+                                size:   row.size,
+                              })
+                              return descriptors ? `${descriptors} · Qtd ${row.quantity}` : `Qtd ${row.quantity}`
+                            })()}
                           </p>
                           <p className="text-xs text-andrequice-brown mt-1">
                             <span className="font-medium">{itemStatusLabel(row)}</span>

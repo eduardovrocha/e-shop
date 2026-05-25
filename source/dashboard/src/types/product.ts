@@ -1,7 +1,31 @@
+// Enum-style options mirroring backend constants in ProductVariant.
+// Keep these in sync if the Ruby model gains a new value.
+export const VARIANT_GENDERS = ['unissex', 'masculino', 'feminino'] as const
+export type VariantGender = (typeof VARIANT_GENDERS)[number]
+
+export const VARIANT_CUTS = ['normal', 'babylook', 'polo', 'regata', 'oversized'] as const
+export type VariantCut = (typeof VARIANT_CUTS)[number]
+
+export const VARIANT_GENDER_LABEL: Record<VariantGender, string> = {
+  unissex:   'Unissex',
+  masculino: 'Masculino',
+  feminino:  'Feminino',
+}
+
+export const VARIANT_CUT_LABEL: Record<VariantCut, string> = {
+  normal:    'Normal',
+  babylook:  'Babylook',
+  polo:      'Polo',
+  regata:    'Regata',
+  oversized: 'Oversized',
+}
+
 export interface ProductVariant {
   id: number
   size: string
   color?: string
+  gender: VariantGender
+  cut: VariantCut
   sku: string
   stock_quantity: number
   reserved_quantity: number
@@ -21,6 +45,8 @@ export interface VariantPayload {
   id?: number
   size: string
   color?: string
+  gender: VariantGender
+  cut: VariantCut
   sku: string
   stock_quantity: number
   price_cents?: number | null

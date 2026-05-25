@@ -19,6 +19,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { LoadingState } from '@/components/LoadingState'
 import { EmptyState } from '@/components/EmptyState'
 import { useToast } from '@/hooks/useToast'
+import { formatVariantDescriptors } from '@/utils/variant'
 import { useProducts } from '@/hooks/useProducts'
 import {
   useOrderItems,
@@ -118,7 +119,14 @@ function ItemCard({
         <p className="text-xs text-muted-foreground">{item.customer_name}</p>
         <p className="text-sm">
           {item.product_name}
-          {item.size && <span className="text-muted-foreground"> · {item.size}</span>}
+          {(() => {
+            const descriptors = formatVariantDescriptors({
+              gender: item.gender,
+              cut:    item.cut,
+              size:   item.size,
+            })
+            return descriptors ? <span className="text-muted-foreground"> · {descriptors}</span> : null
+          })()}
         </p>
         {column === 'queue' && (
           <p className="text-xs text-muted-foreground">

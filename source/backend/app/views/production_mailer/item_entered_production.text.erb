@@ -3,7 +3,7 @@
 
 Olá <%= @order.customer_name.to_s.split.first.presence || "cliente" %>,
 
-Boa notícia: a produção da sua peça <%= @product&.name %><%= @order_item.size ? " — Tamanho #{@order_item.size}" : "" %> começou hoje.
+Boa notícia: a produção da sua peça <%= @product&.name %><%= @order_item.descriptor_suffix %> começou hoje.
 
 <% if @promised %>
 Estimativa de conclusão: <%= @promised.strftime("%d/%m/%Y") %>

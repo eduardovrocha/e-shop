@@ -11,7 +11,7 @@ import { StockIndicator } from '@/components/product/StockIndicator'
 import { ProductPriceTag } from '@/components/product/ProductPriceTag'
 import { useCartStore } from '@/store/cartStore'
 import { useProduct } from '@/hooks/useProducts'
-import type { VariantStock } from '@/types/product'
+import type { VariantStock, VariantGender, VariantCut } from '@/types/product'
 import { isVariantPurchasable, maxPurchasableQuantity } from '@/utils/variant'
 
 const DESCRIPTION_TRUNCATE_LENGTH = 240
@@ -25,6 +25,10 @@ export default function Product() {
   const { product, isLoading } = useProduct(Number(id))
 
   const [selectedVariant, setSelectedVariant] = useState<VariantStock | null>(null)
+  // Picker dimensions are lifted here so they reset when the user navigates
+  // to another product and so handleAddToCart can introspect them.
+  const [selectedGender, setSelectedGender] = useState<VariantGender | null>(null)
+  const [selectedCut,    setSelectedCut]    = useState<VariantCut    | null>(null)
   const [quantity, setQuantity] = useState(1)
   const [added, setAdded] = useState(false)
   const [sizeError, setSizeError] = useState(false)
@@ -71,7 +75,7 @@ export default function Product() {
     (product.fulfillmentMode === 'made_to_order' || inCart < selectedVariant.stock)
 
   // ── Handlers ─────────────────────────────────────────────────────────────
-  const handleSelectVariant = useCallback((v: VariantStock) => {
+  const handleSelectVariant = useCallback((v: VariantStock | null) => {
     setSelectedVariant(v)
     setSizeError(false)
     setStockError(null)
@@ -109,6 +113,8 @@ export default function Product() {
       variantId: selectedVariant.variantId,
       name:      product.name,
       size:      selectedVariant.size,
+      gender:    selectedVariant.gender,
+      cut:       selectedVariant.cut,
       price:     selectedVariant.effectivePrice,
       quantity,
       imageUrl:  product.images[0],
@@ -230,7 +236,7 @@ export default function Product() {
             {/* Divider */}
             <div className="h-px bg-andrequice-sand" />
 
-            {/* 7. Size picker */}
+            {/* 7. Variant picker — gender + cut + size */}
             {product.variants.length > 0 && (
               <VariantPicker
                 variants={product.variants}
@@ -238,6 +244,10 @@ export default function Product() {
                 onSelect={handleSelectVariant}
                 fulfillmentMode={product.fulfillmentMode}
                 errorState={sizeError}
+                selectedGender={selectedGender}
+                selectedCut={selectedCut}
+                onChangeGender={setSelectedGender}
+                onChangeCut={setSelectedCut}
               />
             )}
             {sizeError && (

@@ -2,6 +2,8 @@ import { useCartStore } from '@/store/cartStore'
 import { PriceTag } from '@/components/PriceTag'
 import { Badge } from '@/components/Badge'
 import { formatPrice } from '@/lib/utils'
+import { formatVariantLine } from '@/utils/variant'
+import type { VariantGender, VariantCut } from '@/types/product'
 
 interface CartItemProps {
   variantId: number
@@ -10,13 +12,15 @@ interface CartItemProps {
   quantity: number
   imageUrl?: string
   size?: string
+  gender?: VariantGender
+  cut?:    VariantCut
   maxStock?: number
   fulfillmentMode?: 'from_stock' | 'made_to_order'
   productionLeadTimeDays?: number | null
 }
 
 export function CartItem({
-  variantId, name, price, quantity, imageUrl, size, maxStock,
+  variantId, name, price, quantity, imageUrl, size, gender, cut, maxStock,
   fulfillmentMode, productionLeadTimeDays,
 }: CartItemProps) {
   const { updateQuantity, removeItem } = useCartStore()
@@ -50,8 +54,10 @@ export function CartItem({
             <h4 className="font-serif font-semibold text-andrequice-navy text-sm leading-snug line-clamp-2">
               {name}
             </h4>
-            {size && (
-              <p className="text-xs text-andrequice-border mt-0.5">Tamanho: {size}</p>
+            {(size || gender || cut) && (
+              <p className="text-xs text-andrequice-border mt-0.5">
+                {formatVariantLine({ gender, cut, size, sizeLabel: 'Tamanho' })}
+              </p>
             )}
             <div className="mt-1 flex flex-wrap items-center gap-2">
               <Badge variant={fulfillmentMode === 'made_to_order' ? 'copper' : 'sand'}>

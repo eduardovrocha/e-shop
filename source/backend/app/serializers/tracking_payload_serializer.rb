@@ -45,10 +45,13 @@ class TrackingPayloadSerializer
   def serialize_order_items
     @order.order_items.includes(product_variant: :product).order(:id).map do |item|
       product = item.product_variant&.product
+      variant = item.product_variant
       {
         id:                              item.id,
         name:                            item.name,
         size:                            item.size,
+        gender:                          variant&.gender,
+        cut:                             variant&.cut,
         quantity:                        item.quantity,
         subtotal_cents:                  item.subtotal_cents,
         production_status:               item.production_status,

@@ -32,7 +32,7 @@
               </p>
               <% else %>
               <p style="margin:12px 0 0;font-family:Arial,sans-serif;font-size:14px;color:#5a4a3a;line-height:1.6;">
-                Sua peça <strong><%= @product&.name %><%= @order_item.size ? " — Tamanho #{@order_item.size}" : "" %></strong>
+                Sua peça <strong><%= @product&.name %><%= @order_item.descriptor_suffix %></strong>
                 ficou pronta. Outras peças do seu pedido ainda estão em produção; você receberá
                 outro e-mail assim que todas estiverem prontas para envio.
               </p>

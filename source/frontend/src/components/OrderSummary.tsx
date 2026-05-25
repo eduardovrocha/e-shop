@@ -2,6 +2,7 @@ import type { CartItem } from '@/store/cartStore'
 import { Badge } from '@/components/Badge'
 import { PriceTag } from '@/components/PriceTag'
 import { formatPrice } from '@/lib/utils'
+import { formatVariantLine } from '@/utils/variant'
 import { formatInstallmentLabel, type InstallmentCount } from '@/utils/installments'
 
 // Reused by /cart and /checkout. Pure presentation — receives derived
@@ -63,7 +64,14 @@ function ItemRow({ item, discountBadge }: { item: CartItem; discountBadge?: stri
           )}
         </div>
         <p className="text-xs text-andrequice-border mt-0.5">
-          {item.size && <>Tam. {item.size} · </>}Qtd. {item.quantity}
+          {(() => {
+            const descriptors = formatVariantLine({
+              gender: item.gender,
+              cut:    item.cut,
+              size:   item.size,
+            })
+            return descriptors ? `${descriptors} · Qtd. ${item.quantity}` : `Qtd. ${item.quantity}`
+          })()}
         </p>
         <div className="mt-1.5">
           <Badge

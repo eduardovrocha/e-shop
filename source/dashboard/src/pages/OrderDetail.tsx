@@ -24,6 +24,7 @@ import { formatCurrency, formatDateTime, formatDate } from '@/lib/utils'
 import { useOrder, useUpdateOrder, useResendOrderEmail } from '@/hooks/useOrders'
 import { useToast } from '@/hooks/useToast'
 import type { OrderStatus, OrderItemRow } from '@/types/order'
+import { formatVariantDescriptors } from '@/utils/variant'
 import { CancelOrderItemModal } from '@/components/CancelOrderItemModal'
 
 const STATUS_OPTIONS: { label: string; value: OrderStatus }[] = [
@@ -38,6 +39,18 @@ const STATUS_OPTIONS: { label: string; value: OrderStatus }[] = [
   { label: 'Cancelado',         value: 'cancelled' },
   { label: 'Reembolsado',       value: 'refunded' },
 ]
+
+// Suffix used on each order-item line: " · " separator inserted when the
+// descriptors (size/gender/cut) are present, empty string otherwise so the
+// rendered text reads "Qtd 1" cleanly when no variant detail exists.
+function formatItemDescriptorPrefix(row: OrderItemRow): string {
+  const descriptors = formatVariantDescriptors({
+    gender: row.gender,
+    cut:    row.cut,
+    size:   row.size,
+  })
+  return descriptors ? `${descriptors} · ` : ''
+}
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false)
@@ -158,7 +171,7 @@ export default function OrderDetail() {
                       <div className="min-w-0">
                         <p className="text-sm font-medium">{row.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {row.size && <>Tamanho {row.size} · </>}Qtd {row.quantity}
+                          {formatItemDescriptorPrefix(row)}Qtd {row.quantity}
                           {row.fulfillment_mode === 'made_to_order' && (
                             <span className="ml-2 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800">
                               Sob encomenda
@@ -508,6 +521,8 @@ export default function OrderDetail() {
           itemId={cancelTarget.id}
           itemName={cancelTarget.name}
           size={cancelTarget.size}
+          gender={cancelTarget.gender}
+          cut={cancelTarget.cut}
           quantity={cancelTarget.quantity}
           subtotalCents={cancelTarget.subtotal_cents}
           refundPercentage={cancelTarget.cancellation_refund_percentage ?? 0}

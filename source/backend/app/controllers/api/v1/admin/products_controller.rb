@@ -96,6 +96,8 @@ module Api
                 sku:                v.sku,
                 size:               v.size,
                 color:              v.color,
+                gender:             v.gender,
+                cut:                v.cut,
                 stock:              v.stock_quantity,
                 reserved:           v.reserved_quantity,
                 available:          v.available_quantity
@@ -116,7 +118,7 @@ module Api
             variants_attributes: [
               :id, :size, :color, :sku, :stock_quantity,
               :price_cents, :compare_at_price_cents,
-              :additional_price_cents, :_destroy
+              :additional_price_cents, :gender, :cut, :_destroy
             ]
           )
         end

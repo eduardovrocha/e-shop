@@ -1,7 +1,11 @@
 class ProductVariant < ApplicationRecord
   belongs_to :product
 
-  SIZES = %w[PP P M G GG GGG U].freeze
+  SIZES   = %w[PP P M G GG GGG U].freeze
+  GENDERS = %w[unissex masculino feminino].freeze
+  # Cut/fit dimension complements size — same product can have, e.g.,
+  # masculino-normal-M and feminino-babylook-M as distinct SKUs.
+  CUTS    = %w[normal babylook polo regata oversized].freeze
 
   validates :sku,               presence: true, uniqueness: true
   validates :stock_quantity,    numericality: { greater_than_or_equal_to: 0 }
@@ -10,6 +14,8 @@ class ProductVariant < ApplicationRecord
   validates :compare_at_price_cents,
             numericality: { only_integer: true, greater_than_or_equal_to: 0 },
             allow_nil: true
+  validates :gender, inclusion: { in: GENDERS }
+  validates :cut,    inclusion: { in: CUTS    }
 
   # Treats compare_at == price (or compare_at < price) as "no promo" by
   # nullifying the column. Rejecting it with a validation error rolled

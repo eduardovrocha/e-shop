@@ -41,6 +41,8 @@ module Admin
           id:                              v.id,
           size:                            v.size,
           color:                           v.color,
+          gender:                          v.gender,
+          cut:                             v.cut,
           sku:                             v.sku,
           stock_quantity:                  v.stock_quantity,
           reserved_quantity:               v.reserved_quantity,

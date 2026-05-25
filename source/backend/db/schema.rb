@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_21_173450) do
+ActiveRecord::Schema[7.2].define(version: 2026_05_25_184636) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -104,9 +104,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_21_173450) do
     t.datetime "updated_at", null: false
     t.index ["active"], name: "index_coupons_on_active"
     t.index ["public_code"], name: "index_coupons_on_public_code", unique: true, where: "(public_code IS NOT NULL)"
-    t.check_constraint "code_type::text = ANY (ARRAY['public'::character varying, 'unique'::character varying]::text[])", name: "chk_coupons_code_type"
+    t.check_constraint "code_type::text = ANY (ARRAY['public'::character varying::text, 'unique'::character varying::text])", name: "chk_coupons_code_type"
     t.check_constraint "discount_percent >= 1 AND discount_percent <= 100", name: "chk_coupons_discount_percent_range"
-    t.check_constraint "scope_type::text = ANY (ARRAY['all_products'::character varying, 'specific_products'::character varying]::text[])", name: "chk_coupons_scope_type"
+    t.check_constraint "scope_type::text = ANY (ARRAY['all_products'::character varying::text, 'specific_products'::character varying::text])", name: "chk_coupons_scope_type"
   end
 
   create_table "customer_addresses", force: :cascade do |t|
@@ -152,7 +152,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_21_173450) do
     t.index ["user_id", "store_setting_id"], name: "index_onboarding_progresses_on_user_and_store", unique: true
     t.index ["user_id"], name: "index_onboarding_progresses_on_user_id"
     t.check_constraint "current_phase = ANY (ARRAY[1, 2])", name: "onboarding_progresses_phase_check"
-    t.check_constraint "status::text = ANY (ARRAY['not_started'::character varying, 'in_progress'::character varying, 'completed'::character varying, 'skipped'::character varying, 'phase_2_ready'::character varying]::text[])", name: "onboarding_progresses_status_check"
+    t.check_constraint "status::text = ANY (ARRAY['not_started'::character varying::text, 'in_progress'::character varying::text, 'completed'::character varying::text, 'skipped'::character varying::text, 'phase_2_ready'::character varying::text])", name: "onboarding_progresses_status_check"
   end
 
   create_table "order_items", force: :cascade do |t|
@@ -252,6 +252,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_21_173450) do
     t.integer "reserved_quantity", default: 0, null: false
     t.integer "price_cents", null: false
     t.integer "compare_at_price_cents"
+    t.string "gender", default: "unissex", null: false
+    t.string "cut", default: "normal", null: false
+    t.index ["product_id", "cut"], name: "index_product_variants_on_product_id_and_cut"
+    t.index ["product_id", "gender"], name: "index_product_variants_on_product_id_and_gender"
     t.index ["product_id"], name: "index_product_variants_on_product_id"
     t.index ["sku"], name: "index_product_variants_on_sku", unique: true
     t.index ["stock_quantity"], name: "index_product_variants_on_stock_quantity"

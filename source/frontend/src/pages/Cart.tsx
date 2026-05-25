@@ -13,8 +13,10 @@ import { useCheckoutStore } from '@/store/checkoutStore'
 import { useStore } from '@/hooks/useStore'
 import { formatCep, formatPrice } from '@/lib/utils'
 import { formatShippingLine } from '@/utils/shipping'
+import { formatVariantLine } from '@/utils/variant'
 import api from '@/services/api'
 import { checkStock } from '@/services/stockService'
+import type { VariantGender, VariantCut } from '@/types/product'
 
 interface ShippingOption {
   provider: string
@@ -32,12 +34,14 @@ interface ShippingOption {
 // adapted to the wider, white-card layout used inside the accordion.
 
 function LineItem({
-  variantId, name, size, price, quantity, imageUrl, maxStock,
+  variantId, name, size, gender, cut, price, quantity, imageUrl, maxStock,
   fulfillmentMode, productionLeadTimeDays,
 }: {
   variantId: number
   name: string
   size: string
+  gender?: VariantGender
+  cut?:    VariantCut
   price: number
   quantity: number
   imageUrl?: string
@@ -69,7 +73,11 @@ function LineItem({
             <h4 className="font-serif font-semibold text-andrequice-navy text-base leading-snug line-clamp-2">
               {name}
             </h4>
-            {size && <p className="text-xs text-andrequice-border mt-0.5">Tamanho: {size}</p>}
+            {(size || gender || cut) && (
+              <p className="text-xs text-andrequice-border mt-0.5">
+                {formatVariantLine({ gender, cut, size, sizeLabel: 'Tamanho' })}
+              </p>
+            )}
           </div>
           <button
             type="button"
@@ -418,6 +426,8 @@ export default function Cart() {
                 variantId={item.variantId}
                 name={item.name}
                 size={item.size}
+                gender={item.gender}
+                cut={item.cut}
                 price={item.price}
                 quantity={item.quantity}
                 imageUrl={item.imageUrl}

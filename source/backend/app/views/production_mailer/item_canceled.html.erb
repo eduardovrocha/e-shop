@@ -26,7 +26,7 @@
                 Olá <%= @order.customer_name.to_s.split.first.presence || "cliente" %>,
               </p>
               <p style="margin:12px 0 0;font-family:Arial,sans-serif;font-size:14px;color:#5a4a3a;line-height:1.6;">
-                O item <strong><%= @product&.name %><%= @order_item.size ? " — Tamanho #{@order_item.size}" : "" %></strong>
+                O item <strong><%= @product&.name %><%= @order_item.descriptor_suffix %></strong>
                 do seu pedido foi cancelado
                 <% if @actor_type == "admin" %>pelo nosso time<% else %>a seu pedido<% end %>.
               </p>

@@ -1,11 +1,16 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import type { VariantGender, VariantCut } from '@/types/product'
 
 export interface CartItem {
   id: number
   variantId: number
   name: string
   size: string
+  // Optional so persisted carts saved before this feature shipped still
+  // hydrate cleanly. New items always set both.
+  gender?: VariantGender
+  cut?:    VariantCut
   price: number
   quantity: number
   imageUrl?: string

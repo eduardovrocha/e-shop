@@ -23,7 +23,13 @@ import { CategoryManagerModal } from '@/components/CategoryManagerModal'
 import { useProduct, useCreateProduct, useUpdateProduct } from '@/hooks/useProducts'
 import { useCategories } from '@/hooks/useCategories'
 import { useToast } from '@/hooks/useToast'
-import type { VariantPayload, FulfillmentMode } from '@/types/product'
+import type { VariantPayload, FulfillmentMode, VariantGender, VariantCut } from '@/types/product'
+import {
+  VARIANT_GENDERS,
+  VARIANT_CUTS,
+  VARIANT_GENDER_LABEL,
+  VARIANT_CUT_LABEL,
+} from '@/types/product'
 const SIZES = ['PP', 'P', 'M', 'G', 'GG', 'GGG', 'U']
 
 interface VariantRow extends VariantPayload {
@@ -81,9 +87,11 @@ function VariantTable({ variants, productName, onChange }: VariantTableProps) {
   const pendingVariant = pendingRemoveKey ? active.find((v) => v._key === pendingRemoveKey) : null
 
   function addSize(size: string) {
-    if (active.some((v) => v.size === size)) return
+    // Same size can be added multiple times when combined with different
+    // gender/cut (e.g. masculino-normal-M + feminino-babylook-M). Uniqueness
+    // is enforced by SKU on the backend, not by size in the form.
     const newRow: VariantRow = {
-      _key: `new-${Date.now()}`,
+      _key: `new-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       size,
       sku: generateSku(productName || 'PRODUTO', size),
       stock_quantity: 0,
@@ -92,6 +100,8 @@ function VariantTable({ variants, productName, onChange }: VariantTableProps) {
       _priceInput: '',
       _compareInput: '',
       additional_price_cents: 0,
+      gender: 'unissex',
+      cut: 'normal',
     }
     onChange([...variants, newRow])
   }
@@ -142,24 +152,17 @@ function VariantTable({ variants, productName, onChange }: VariantTableProps) {
     )
   }
 
-  const usedSizes = new Set(active.map((v) => v.size))
-
   return (
     <div className="space-y-4">
-      {/* Quick-add buttons */}
+      {/* Quick-add buttons — clicking a size always adds a new row.
+          Multiple variants can share the same size when gender/cut differ. */}
       <div className="flex flex-wrap gap-2">
         {SIZES.map((size) => (
           <button
             key={size}
             type="button"
             onClick={() => addSize(size)}
-            disabled={usedSizes.has(size)}
-            className={[
-              'h-8 w-10 rounded border text-xs font-semibold transition-colors',
-              usedSizes.has(size)
-                ? 'border-border bg-muted text-muted-foreground cursor-not-allowed'
-                : 'border-border hover:border-primary hover:text-primary',
-            ].join(' ')}
+            className="h-8 w-10 rounded border border-border hover:border-primary hover:text-primary text-xs font-semibold transition-colors"
           >
             {size}
           </button>
@@ -187,6 +190,8 @@ function VariantTable({ variants, productName, onChange }: VariantTableProps) {
             <thead>
               <tr className="border-b border-border text-left">
                 <th className="pb-2 pr-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">Tamanho</th>
+                <th className="pb-2 pr-3 font-medium text-muted-foreground text-xs uppercase tracking-wide w-32">Gênero</th>
+                <th className="pb-2 pr-3 font-medium text-muted-foreground text-xs uppercase tracking-wide w-32">Corte</th>
                 <th className="pb-2 pr-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">SKU</th>
                 <th className="pb-2 pr-3 font-medium text-muted-foreground text-xs uppercase tracking-wide w-28">Estoque</th>
                 <th className="pb-2 pr-3 font-medium text-muted-foreground text-xs uppercase tracking-wide w-32">
@@ -212,6 +217,40 @@ function VariantTable({ variants, productName, onChange }: VariantTableProps) {
                     <span className="inline-flex h-7 w-9 items-center justify-center rounded border border-border text-xs font-semibold">
                       {v.size}
                     </span>
+                  </td>
+                  <td className="py-2 pr-3">
+                    <Select
+                      value={v.gender}
+                      onValueChange={(value) => updateRow(v._key, 'gender', value as VariantGender)}
+                    >
+                      <SelectTrigger className="h-8 w-32 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {VARIANT_GENDERS.map((g) => (
+                          <SelectItem key={g} value={g} className="text-xs">
+                            {VARIANT_GENDER_LABEL[g]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </td>
+                  <td className="py-2 pr-3">
+                    <Select
+                      value={v.cut}
+                      onValueChange={(value) => updateRow(v._key, 'cut', value as VariantCut)}
+                    >
+                      <SelectTrigger className="h-8 w-32 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {VARIANT_CUTS.map((c) => (
+                          <SelectItem key={c} value={c} className="text-xs">
+                            {VARIANT_CUT_LABEL[c]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </td>
                   <td className="py-2 pr-3">
                     <Input

@@ -1,9 +1,11 @@
 import api from '@/services/api'
-import type { Product, VariantStock, FulfillmentMode } from '@/types/product'
+import type { Product, VariantStock, VariantGender, VariantCut, FulfillmentMode } from '@/types/product'
 
 interface BackendVariantStock {
   variant_id: number
   size: string
+  gender: VariantGender
+  cut: VariantCut
   stock: number
   price_cents: number
   compare_at_price_cents: number | null
@@ -37,6 +39,10 @@ function toProduct(p: BackendProduct): Product {
   const variants: VariantStock[] = (p.variant_stock ?? []).map((v) => ({
     variantId:           v.variant_id,
     size:                v.size,
+    // Default to unissex/normal so old backend builds that haven't yet
+    // serialized these fields don't break the picker.
+    gender:              v.gender ?? 'unissex',
+    cut:                 v.cut    ?? 'normal',
     stock:               v.stock,
     priceCents:          v.price_cents,
     effectivePrice:      v.price_cents / 100,

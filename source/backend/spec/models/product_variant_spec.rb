@@ -6,6 +6,49 @@ RSpec.describe ProductVariant, type: :model do
     it { is_expected.to validate_presence_of(:sku) }
     it { is_expected.to validate_numericality_of(:stock_quantity).is_greater_than_or_equal_to(0) }
     it { is_expected.to validate_numericality_of(:price_cents).is_greater_than_or_equal_to(0) }
+    it { is_expected.to validate_inclusion_of(:gender).in_array(ProductVariant::GENDERS) }
+    it { is_expected.to validate_inclusion_of(:cut).in_array(ProductVariant::CUTS) }
+  end
+
+  describe "gender + cut" do
+    it "defaults gender to 'unissex' and cut to 'normal'" do
+      v = create(:product_variant)
+      expect(v.gender).to eq("unissex")
+      expect(v.cut).to    eq("normal")
+    end
+
+    it "accepts every value in the GENDERS allowlist" do
+      ProductVariant::GENDERS.each do |g|
+        v = build(:product_variant, gender: g)
+        expect(v).to be_valid, "expected gender=#{g.inspect} to be valid"
+      end
+    end
+
+    it "accepts every value in the CUTS allowlist" do
+      ProductVariant::CUTS.each do |c|
+        v = build(:product_variant, cut: c)
+        expect(v).to be_valid, "expected cut=#{c.inspect} to be valid"
+      end
+    end
+
+    it "rejects an unknown gender" do
+      v = build(:product_variant, gender: "alien")
+      expect(v).not_to be_valid
+      expect(v.errors[:gender]).to be_present
+    end
+
+    it "rejects an unknown cut" do
+      v = build(:product_variant, cut: "kimono")
+      expect(v).not_to be_valid
+      expect(v.errors[:cut]).to be_present
+    end
+
+    it "allows same size to coexist on the same product when gender or cut differs" do
+      product = create(:product)
+      create(:product_variant, product: product, size: "M", gender: "masculino", cut: "normal")
+      sibling = build(:product_variant, product: product, size: "M", gender: "feminino", cut: "babylook")
+      expect(sibling).to be_valid
+    end
   end
 
   describe "#available_quantity" do

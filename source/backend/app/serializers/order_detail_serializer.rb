@@ -37,12 +37,17 @@ class OrderDetailSerializer
   def serialize_order_items
     @order.order_items.includes(product_variant: :product).order(:id).map do |item|
       product = item.product_variant&.product
+      variant = item.product_variant
       {
         id:                              item.id,
         product_variant_id:              item.product_variant_id,
         product_id:                      item.product_id,
         name:                            item.name,
         size:                            item.size,
+        # gender/cut are derived from the linked variant. nil if the variant
+        # was deleted post-purchase. Frontend renders them next to size.
+        gender:                          variant&.gender,
+        cut:                             variant&.cut,
         quantity:                        item.quantity,
         unit_price_cents:                item.unit_price_cents,
         subtotal_cents:                  item.subtotal_cents,

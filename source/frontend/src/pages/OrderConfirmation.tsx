@@ -8,6 +8,7 @@ import { useCartStore, type CartItem } from '@/store/cartStore'
 import { useCheckoutStore } from '@/store/checkoutStore'
 import { formatPrice } from '@/lib/utils'
 import { formatShippingLine } from '@/utils/shipping'
+import { formatVariantLine } from '@/utils/variant'
 import { formatInstallmentLabel, type InstallmentCount } from '@/utils/installments'
 
 // Snapshot shape passed in via location.state.order from Checkout.tsx
@@ -242,7 +243,16 @@ export default function OrderConfirmation() {
                     {item.name}
                   </p>
                   <p className="text-xs text-andrequice-border mt-0.5">
-                    {item.size && <>Tam. {item.size} · </>}{item.quantity} un.
+                    {(() => {
+                      const descriptors = formatVariantLine({
+                        gender: item.gender,
+                        cut:    item.cut,
+                        size:   item.size,
+                      })
+                      return descriptors
+                        ? `${descriptors} · ${item.quantity} un.`
+                        : `${item.quantity} un.`
+                    })()}
                   </p>
                   <div className="mt-1.5">
                     <Badge variant={item.fulfillmentMode === 'made_to_order' ? 'copper' : 'sand'} className="text-[10px]">
