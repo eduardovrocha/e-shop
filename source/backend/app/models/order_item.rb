@@ -33,17 +33,17 @@ class OrderItem < ApplicationRecord
   scope :active_for_production, -> { where.not(production_status: :canceled) }
 
   # Human-readable descriptor for emails and templates.
-  # Returns something like "Tamanho M", "Tamanho M · Babylook",
-  # or "Tamanho M · Feminino · Babylook". Omits the default values
-  # (unissex/normal) so the historical "Tamanho X" reading is preserved
-  # for products that never used the gender/cut dimension.
+  # Returns "Tamanho M · Unissex · Normal" — full disclosure, including
+  # default values, so the admin sees exactly what was sold and the
+  # customer's receipt is unambiguous. Pieces are dropped only when the
+  # underlying data is genuinely missing (no size, or no linked variant).
   def variant_descriptors
     parts = []
     parts << "Tamanho #{size}" if size.present?
-    if product_variant&.gender.present? && product_variant.gender != "unissex"
+    if product_variant&.gender.present?
       parts << product_variant.gender.capitalize
     end
-    if product_variant&.cut.present? && product_variant.cut != "normal"
+    if product_variant&.cut.present?
       parts << product_variant.cut.capitalize
     end
     parts.join(" · ")

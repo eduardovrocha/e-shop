@@ -1,33 +1,36 @@
 import { describe, it, expect } from 'vitest'
 import { formatVariantLine } from '@/utils/variant'
 
-// Single source of truth for "what does the gender/cut/size line look like"
-// in every cart / checkout / confirmation / tracking surface. If the rules
-// for hiding defaults change, the test below MUST be updated alongside.
+// formatVariantLine always exposes every dimension supplied by the backend
+// (including the defaults Unissex / Normal). The customer-facing receipts
+// and admin surfaces both demand full visibility — there's no "hide the
+// default" mode.
 describe('formatVariantLine', () => {
-  it('returns just the size with default sizeLabel "Tam." when gender and cut are at defaults', () => {
-    expect(formatVariantLine({ gender: 'unissex', cut: 'normal', size: 'M' })).toBe('Tam. M')
+  it('shows defaults explicitly when gender and cut are unissex/normal', () => {
+    expect(formatVariantLine({ gender: 'unissex', cut: 'normal', size: 'M' })).toBe(
+      'Unissex · Normal · Tam. M',
+    )
   })
 
   it('uses the custom sizeLabel when provided', () => {
     expect(
       formatVariantLine({ gender: 'unissex', cut: 'normal', size: 'M', sizeLabel: 'Tamanho' }),
-    ).toBe('Tamanho M')
+    ).toBe('Unissex · Normal · Tamanho M')
   })
 
-  it('includes non-default gender before the size', () => {
+  it('shows non-default gender before the size', () => {
     expect(formatVariantLine({ gender: 'masculino', cut: 'normal', size: 'G' })).toBe(
-      'Masculino · Tam. G',
+      'Masculino · Normal · Tam. G',
     )
   })
 
-  it('includes non-default cut before the size', () => {
+  it('shows non-default cut next to the others', () => {
     expect(formatVariantLine({ gender: 'unissex', cut: 'babylook', size: 'P' })).toBe(
-      'Babylook · Tam. P',
+      'Unissex · Babylook · Tam. P',
     )
   })
 
-  it('includes both non-default gender and cut, in gender → cut → size order', () => {
+  it('shows everything in gender → cut → size order', () => {
     expect(formatVariantLine({ gender: 'feminino', cut: 'babylook', size: 'M' })).toBe(
       'Feminino · Babylook · Tam. M',
     )
@@ -37,17 +40,11 @@ describe('formatVariantLine', () => {
     expect(formatVariantLine({ gender: 'masculino', cut: 'polo' })).toBe('Masculino · Polo')
   })
 
-  it('returns an empty string when nothing is provided', () => {
+  it('returns an empty string when absolutely nothing is provided', () => {
     expect(formatVariantLine({})).toBe('')
   })
 
-  it('returns an empty string when only defaults are provided without a size', () => {
-    // Avoids the absurd "everything default and no size" line — the caller
-    // can branch on the returned empty string to drop the whole element.
-    expect(formatVariantLine({ gender: 'unissex', cut: 'normal' })).toBe('')
-  })
-
-  it('tolerates null gender and cut (e.g. legacy data from old orders)', () => {
+  it('falls back gracefully when gender and cut are null (legacy data)', () => {
     expect(formatVariantLine({ gender: null, cut: null, size: 'M' })).toBe('Tam. M')
   })
 })

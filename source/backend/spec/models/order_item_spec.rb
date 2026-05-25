@@ -10,48 +10,46 @@ RSpec.describe OrderItem, type: :model do
   end
 
   describe "#variant_descriptors" do
-    it "returns just the size when gender and cut are at defaults" do
+    it "shows defaults explicitly (Unissex / Normal) for full disclosure" do
       item = build_item(size: "M", gender: "unissex", cut: "normal")
-      expect(item.variant_descriptors).to eq("Tamanho M")
+      expect(item.variant_descriptors).to eq("Tamanho M · Unissex · Normal")
     end
 
-    it "includes non-default gender" do
+    it "shows a feminino+normal combo" do
       item = build_item(size: "G", gender: "feminino", cut: "normal")
-      expect(item.variant_descriptors).to eq("Tamanho G · Feminino")
+      expect(item.variant_descriptors).to eq("Tamanho G · Feminino · Normal")
     end
 
-    it "includes non-default cut" do
+    it "shows an unissex+babylook combo" do
       item = build_item(size: "P", gender: "unissex", cut: "babylook")
-      expect(item.variant_descriptors).to eq("Tamanho P · Babylook")
+      expect(item.variant_descriptors).to eq("Tamanho P · Unissex · Babylook")
     end
 
-    it "includes both non-default gender and cut" do
+    it "shows masculino+polo combo with size first" do
       item = build_item(size: "M", gender: "masculino", cut: "polo")
       expect(item.variant_descriptors).to eq("Tamanho M · Masculino · Polo")
     end
 
-    it "omits size when blank" do
+    it "omits size when blank but keeps gender/cut" do
       variant = create(:product_variant, gender: "feminino", cut: "babylook")
       item    = build(:order_item, product_variant: variant, product: variant.product, size: nil)
       expect(item.variant_descriptors).to eq("Feminino · Babylook")
     end
 
-    it "returns empty string when size is absent and variant uses defaults" do
-      variant = create(:product_variant)
-      item    = build(:order_item, product_variant: variant, product: variant.product, size: nil)
+    it "returns empty string when size AND variant are absent" do
+      item = build(:order_item, product_variant: nil, product: nil, size: nil)
       expect(item.variant_descriptors).to eq("")
     end
   end
 
   describe "#descriptor_suffix" do
     it "prepends ' — ' when descriptors are present" do
-      item = build_item(size: "M", gender: "feminino")
-      expect(item.descriptor_suffix).to eq(" — Tamanho M · Feminino")
+      item = build_item(size: "M", gender: "feminino", cut: "babylook")
+      expect(item.descriptor_suffix).to eq(" — Tamanho M · Feminino · Babylook")
     end
 
     it "returns empty string when there are no descriptors" do
-      variant = create(:product_variant)
-      item    = build(:order_item, product_variant: variant, product: variant.product, size: nil)
+      item = build(:order_item, product_variant: nil, product: nil, size: nil)
       expect(item.descriptor_suffix).to eq("")
     end
 

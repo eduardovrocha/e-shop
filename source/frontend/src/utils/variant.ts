@@ -21,9 +21,9 @@ export function isVariantPurchasable(
 }
 
 // Builds the descriptor prefix shown on every cart/checkout/confirmation
-// line — "Masculino · Babylook · Tam. M · ". Hides default gender (unissex)
-// and default cut (normal) so unissex-normal items collapse to just the
-// size, preserving the original look for the vast majority of products.
+// line — "Masculino · Babylook · Tam. M". Shows every dimension that the
+// backend exposed, including the defaults (Unissex / Normal), so the buyer
+// sees exactly what they bought and there's no ambiguity in the receipt.
 export function formatVariantLine(opts: {
   gender?: VariantGender | null
   cut?:    VariantCut    | null
@@ -31,9 +31,9 @@ export function formatVariantLine(opts: {
   sizeLabel?: string   // "Tamanho" (cart) or "Tam." (summary) — caller picks
 }): string {
   const parts: string[] = []
-  if (opts.gender && opts.gender !== 'unissex') parts.push(VARIANT_GENDER_LABEL[opts.gender])
-  if (opts.cut    && opts.cut    !== 'normal')  parts.push(VARIANT_CUT_LABEL[opts.cut])
-  if (opts.size) parts.push(`${opts.sizeLabel ?? 'Tam.'} ${opts.size}`)
+  if (opts.gender) parts.push(VARIANT_GENDER_LABEL[opts.gender])
+  if (opts.cut)    parts.push(VARIANT_CUT_LABEL[opts.cut])
+  if (opts.size)   parts.push(`${opts.sizeLabel ?? 'Tam.'} ${opts.size}`)
   return parts.join(' · ')
 }
 
