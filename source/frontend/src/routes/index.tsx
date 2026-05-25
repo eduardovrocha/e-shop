@@ -1,12 +1,12 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import MainLayout from '@/layouts/MainLayout'
-import Home from '@/pages/Home'
 import Catalog from '@/pages/Catalog'
 import Product from '@/pages/Product'
 import Cart from '@/pages/Cart'
 import Checkout from '@/pages/Checkout'
 import OrderConfirmation from '@/pages/OrderConfirmation'
 import TrackOrder from '@/pages/TrackOrder'
+import Romaria from '@/pages/Romaria'
 
 // URL do painel administrativo (dashboard separado)
 const DASHBOARD_URL = import.meta.env.VITE_DASHBOARD_URL ?? 'http://localhost:3092'
@@ -20,9 +20,10 @@ export default function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Pages with shared Header via MainLayout */}
+        {/* Pages with shared Header + Footer via MainLayout */}
         <Route element={<MainLayout />}>
-          <Route path="/" element={<Home />} />
+          {/* Landing da Romaria é a nova home — usa Header + Footer padrão do app */}
+          <Route path="/" element={<Romaria />} />
           <Route path="/catalog" element={<Catalog />} />
           <Route path="/admin" element={<AdminRedirect />} />
         </Route>

@@ -42,7 +42,28 @@ export function Header({ showBack = false, title, transparent = false }: HeaderP
                 <path d="M19 12H5M12 5l-7 7 7 7" />
               </svg>
             </button>
-          ) : null}
+          ) : (
+            <Link
+              to="/"
+              aria-label="Ir para início"
+              className="w-11 h-11 flex items-center justify-center rounded-full hover:bg-andrequice-sand transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-andrequice-gold focus-visible:ring-offset-1"
+            >
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-andrequice-navy"
+              >
+                <path d="M3 11l9-8 9 8" />
+                <path d="M5 10v10a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1V10" />
+              </svg>
+            </Link>
+          )}
         </div>
 
         {/* Center */}
@@ -54,11 +75,33 @@ export function Header({ showBack = false, title, transparent = false }: HeaderP
           {title ?? 'Andrequicé Store'}
         </Link>
 
-        {/* Right — Cart */}
+        {/* Right — Catalog + Cart */}
+        <Link
+          to="/catalog"
+          aria-label="Ver catálogo"
+          className="relative w-11 h-11 flex items-center justify-center rounded-full hover:bg-andrequice-sand transition-colors ml-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-andrequice-gold focus-visible:ring-offset-1"
+        >
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-andrequice-navy"
+          >
+            <path d="M3 9l1.5-5h15L21 9" />
+            <path d="M3 9v11a1 1 0 001 1h16a1 1 0 001-1V9" />
+            <path d="M3 9h18" />
+            <path d="M9 13h6" />
+          </svg>
+        </Link>
         <Link
           to="/cart"
           aria-label={`Carrinho com ${itemCount} ${itemCount === 1 ? 'item' : 'itens'}`}
-          className="relative w-11 h-11 flex items-center justify-center rounded-full hover:bg-andrequice-sand transition-colors ml-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-andrequice-gold focus-visible:ring-offset-1"
+          className="relative w-11 h-11 flex items-center justify-center rounded-full hover:bg-andrequice-sand transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-andrequice-gold focus-visible:ring-offset-1"
         >
           <svg
             width="22"
