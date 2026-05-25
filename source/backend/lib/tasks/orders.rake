@@ -98,4 +98,32 @@ namespace :orders do
     puts "Orders touched: #{fixed_orders}"
     puts "OrderItem rows skipped (variant/product missing): #{skipped_items}"
   end
+
+  # Purges orders entirely — useful when bad data leaked into prod (e.g.
+  # the Stripe test→live webhook leak that produced orders AND-000002,
+  # AND-000003, AND-000005, AND-000010, AND-000011). Restores stock and
+  # cascades through order_items / status_histories / coupon_usage.
+  #
+  # DEFAULT IS DRY-RUN. Re-run with CONFIRM=yes to actually delete.
+  #
+  # Usage:
+  #   # Dry run (safe — prints what would happen):
+  #   bundle exec rails 'orders:purge[AND-000011,AND-000010,AND-000005]'
+  #
+  #   # Real run (destructive):
+  #   CONFIRM=yes bundle exec rails 'orders:purge[AND-000011,AND-000010]'
+  #
+  #   # Single order by numeric id also works:
+  #   bundle exec rails 'orders:purge[42]'
+  desc "Purge orders by number/id (dry-run by default; set CONFIRM=yes to commit)"
+  task :purge, [ :identifiers ] => :environment do |_t, args|
+    # Rake passes anything between commas as separate positional args
+    # when written as orders:purge[a,b,c]. Combine them back into one list.
+    raw = ([ args[:identifiers] ] + args.extras).compact.flat_map { |s| s.split(/[\s,]+/) }
+    abort "Usage: bundle exec rails 'orders:purge[NUMBER1,NUMBER2,...]' (defaults to dry-run; set CONFIRM=yes to commit)" if raw.empty?
+
+    dry_run = ENV["CONFIRM"].to_s.downcase != "yes"
+
+    OrderPurgeService.run(identifiers: raw, dry_run: dry_run)
+  end
 end

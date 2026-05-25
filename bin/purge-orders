@@ -1,0 +1,172 @@
+#!/usr/bin/env bash
+# bin/purge-orders — Reconciliation tool for accidental order writes
+# ──────────────────────────────────────────────────────────────────────────
+# Usage:
+#   bin/purge-orders [--env dev|prod] [--confirm] ORDER1 ORDER2 ...
+#
+# Defaults to --env dev and dry-run mode. The tool wraps the Rails task
+# `orders:purge`, choosing where to execute it:
+#
+#   --env dev  : runs `docker exec` against the local dev backend container
+#                (./deploy/development/docker-compose.yml).
+#   --env prod : SSHes to the production VPS as `deploy@31.97.31.85` and
+#                runs `docker compose exec api` there.
+#
+# Pass --confirm to commit the deletion. Without it the task only prints
+# what WOULD be removed (DRY RUN) — exactly what you want before touching
+# production data.
+#
+# Examples:
+#   # See what would happen, in dev:
+#   bin/purge-orders AND-000099
+#
+#   # Same, but in prod (still safe — dry-run):
+#   bin/purge-orders --env prod AND-000011 AND-000010 AND-000005
+#
+#   # Commit for real, in prod (after reviewing the dry-run output):
+#   bin/purge-orders --env prod --confirm AND-000011 AND-000010
+#
+# SSH authentication:
+#   Always key-based — password prompts are explicitly refused. The script
+#   auto-detects ~/.ssh/andrequice (the canonical key for this project) and
+#   uses it as PROD_SSH_KEY when no explicit key is provided.
+#
+# Environment overrides:
+#   PROD_SSH_HOST      ssh target (default: root@31.97.31.85)
+#   PROD_SSH_KEY       private key path (default: ~/.ssh/andrequice if present)
+#   PROD_APP_DIR       remote app dir (default: /home/deploy/andrequice)
+# ──────────────────────────────────────────────────────────────────────────
+set -euo pipefail
+
+# ── defaults ────────────────────────────────────────────────────────────────
+ENV_TARGET="dev"
+CONFIRM=""
+PROD_SSH_HOST="${PROD_SSH_HOST:-root@31.97.31.85}"
+PROD_APP_DIR="${PROD_APP_DIR:-/home/deploy/andrequice}"
+ORDERS=()
+
+# Auto-detect the project-specific key when the caller didn't pin one.
+# Avoids burdening the user with `PROD_SSH_KEY=…` every invocation.
+if [[ -z "${PROD_SSH_KEY:-}" && -f "${HOME}/.ssh/andrequice" ]]; then
+  PROD_SSH_KEY="${HOME}/.ssh/andrequice"
+fi
+PROD_SSH_KEY="${PROD_SSH_KEY:-}"
+
+# ── parse argv ──────────────────────────────────────────────────────────────
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --env)
+      ENV_TARGET="${2:-}"; shift 2 ;;
+    --env=*)
+      ENV_TARGET="${1#*=}"; shift ;;
+    --confirm)
+      CONFIRM="yes"; shift ;;
+    -h|--help)
+      sed -n '2,33p' "$0"; exit 0 ;;
+    --*)
+      echo "Unknown option: $1" >&2; exit 2 ;;
+    *)
+      ORDERS+=("$1"); shift ;;
+  esac
+done
+
+if [[ ${#ORDERS[@]} -eq 0 ]]; then
+  echo "Error: provide at least one order number/id." >&2
+  echo "Run with --help for usage." >&2
+  exit 2
+fi
+
+if [[ "$ENV_TARGET" != "dev" && "$ENV_TARGET" != "prod" ]]; then
+  echo "Error: --env must be 'dev' or 'prod' (got: $ENV_TARGET)" >&2
+  exit 2
+fi
+
+# Comma-separate the orders for the rake task's [args] syntax.
+IFS=','; ORDER_LIST="${ORDERS[*]}"; unset IFS
+
+# Rake task arg with [list] syntax must be quoted.
+RAKE_CMD="bundle exec rails 'orders:purge[${ORDER_LIST}]'"
+
+# Apply CONFIRM=yes only if requested (otherwise rake task defaults to dry-run).
+if [[ "$CONFIRM" == "yes" ]]; then
+  RAKE_CMD="CONFIRM=yes ${RAKE_CMD}"
+fi
+
+# ── confirmation gate for live commits ──────────────────────────────────────
+if [[ "$CONFIRM" == "yes" ]]; then
+  echo "════════════════════════════════════════════════════════════════════"
+  echo "  ⚠  DESTRUCTIVE OPERATION — about to delete orders permanently"
+  echo "════════════════════════════════════════════════════════════════════"
+  echo "  Env:    $ENV_TARGET"
+  echo "  Orders: ${ORDERS[*]}"
+  echo "════════════════════════════════════════════════════════════════════"
+  read -r -p "Type 'DELETE' to proceed: " ACK
+  if [[ "$ACK" != "DELETE" ]]; then
+    echo "Aborted (no changes made)."
+    exit 1
+  fi
+fi
+
+# ── execute ─────────────────────────────────────────────────────────────────
+if [[ "$ENV_TARGET" == "dev" ]]; then
+  CONTAINER="andrequice-backend-1"
+  if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER}$"; then
+    echo "Error: container ${CONTAINER} is not running. Start dev with deploy/development/docker-compose.yml first." >&2
+    exit 1
+  fi
+  echo "→ Running in dev container ${CONTAINER}"
+  docker exec -i "$CONTAINER" bash -lc "$RAKE_CMD"
+else
+  echo "→ SSHing to ${PROD_SSH_HOST} (cwd: ${PROD_APP_DIR})"
+
+  # Build ssh options:
+  # -T                            no TTY (clean output, no prompts)
+  # -o BatchMode=yes              fail instead of prompting (no password fallback)
+  # -o PasswordAuthentication=no  belt-and-suspenders: explicitly refuse passwords
+  # -o PubkeyAuthentication=yes   require key-based auth
+  # -o StrictHostKeyChecking=accept-new   trust on first use, but warn on key change
+  # -o ConnectTimeout=10          fail fast if host unreachable
+  SSH_OPTS=(
+    -T
+    -o BatchMode=yes
+    -o PasswordAuthentication=no
+    -o PubkeyAuthentication=yes
+    -o StrictHostKeyChecking=accept-new
+    -o ConnectTimeout=10
+  )
+  if [[ -n "$PROD_SSH_KEY" ]]; then
+    if [[ ! -f "$PROD_SSH_KEY" ]]; then
+      echo "Error: PROD_SSH_KEY=$PROD_SSH_KEY not found on disk." >&2
+      exit 1
+    fi
+    SSH_OPTS+=( -i "$PROD_SSH_KEY" -o IdentitiesOnly=yes )
+  fi
+
+  # Pre-flight: verify auth works before sending the actual command.
+  # Avoids the case where a 30-line dry-run output is dumped only to
+  # discover at the end that the auth failed silently.
+  if ! ssh "${SSH_OPTS[@]}" -o LogLevel=ERROR "$PROD_SSH_HOST" true 2>/dev/null; then
+    cat >&2 <<EOF
+Error: SSH key-based authentication to ${PROD_SSH_HOST} failed.
+
+Probable causes:
+  1. Your public key is not authorized on the prod server.
+     Fix: ssh-copy-id ${PROD_SSH_HOST}  (uses ~/.ssh/id_*.pub)
+          or copy your pubkey manually into deploy's ~/.ssh/authorized_keys.
+
+  2. Your private key is not loaded into ssh-agent.
+     Fix: ssh-add ~/.ssh/your_private_key
+          and check: ssh-add -l
+
+  3. You're using a non-default key file.
+     Fix: pass it via PROD_SSH_KEY=~/.ssh/my_key bin/purge-orders ...
+
+This script refuses password authentication on purpose. Operator-machine
+auth should be key-based only.
+EOF
+    exit 1
+  fi
+
+  ssh "${SSH_OPTS[@]}" "$PROD_SSH_HOST" "cd ${PROD_APP_DIR} && \
+    docker compose -f deploy/production/docker-compose.yml --env-file .env exec -T api bash -lc \"${RAKE_CMD}\""
+fi
