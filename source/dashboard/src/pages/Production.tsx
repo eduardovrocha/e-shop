@@ -339,8 +339,34 @@ export default function Production() {
         </CardContent>
       </Card>
 
+      {/* Resumo das colunas — sempre visível, independente de viewport.
+          Crítico em telas < lg onde as 3 colunas empilham verticalmente
+          e a primeira (Fila) frequentemente está vazia, escondendo o
+          fato de que há itens nas colunas seguintes. */}
+      <QueueSummary
+        queue={{
+          count:   queueQuery.data?.order_items.length ?? 0,
+          loading: queueQuery.isFetching,
+          anchor:  'col-queue',
+          label:   'Fila',
+        }}
+        producing={{
+          count:   producingQuery.data?.order_items.length ?? 0,
+          loading: producingQuery.isFetching,
+          anchor:  'col-producing',
+          label:   'Em produção',
+        }}
+        done={{
+          count:   doneQuery.data?.order_items.length ?? 0,
+          loading: doneQuery.isFetching,
+          anchor:  'col-done',
+          label:   'Pronto para envio',
+        }}
+      />
+
       {/* Colunas */}
       <div className="grid gap-4 lg:grid-cols-3" data-tour="production-list">
+        <div id="col-queue" className="scroll-mt-4">
         <Column
           title="Fila"
           ariaLabel="Itens na fila aguardando início de produção"
@@ -396,6 +422,8 @@ export default function Production() {
             />
           )}
         />
+        </div>
+        <div id="col-producing" className="scroll-mt-4">
         <Column
           title="Em produção"
           ariaLabel="Itens atualmente em produção"
@@ -414,6 +442,8 @@ export default function Production() {
             />
           )}
         />
+        </div>
+        <div id="col-done" className="scroll-mt-4">
         <Column
           title="Prontos"
           ariaLabel="Itens prontos para envio"
@@ -424,6 +454,7 @@ export default function Production() {
           empty="Nenhum item pronto."
           renderItem={(item) => <ItemCard key={item.id} item={item} column="done" />}
         />
+        </div>
       </div>
 
       <ConfirmDialog
@@ -564,5 +595,55 @@ function Column({
         <div className="space-y-3">{items.map(renderItem)}</div>
       )}
     </section>
+  )
+}
+
+// Compact summary strip that exposes every column's count above the fold
+// regardless of viewport. On <lg screens the 3 columns stack vertically
+// and the empty "Fila" column at the top used to hide the fact that the
+// next column had 17 items — operators reasonably concluded "there are
+// no items in production". Now each pill is clickable: it scrolls the
+// target column into view, replacing the implicit "rolar pra baixo"
+// instruction with an explicit affordance.
+interface QueueSummaryEntry {
+  count:   number
+  loading: boolean
+  anchor:  string
+  label:   string
+}
+
+function QueueSummary({
+  queue, producing, done,
+}: { queue: QueueSummaryEntry; producing: QueueSummaryEntry; done: QueueSummaryEntry }) {
+  const entries = [ queue, producing, done ]
+  return (
+    <div className="grid grid-cols-3 gap-2 sm:gap-3">
+      {entries.map((e) => (
+        <a
+          key={e.anchor}
+          href={`#${e.anchor}`}
+          aria-label={`Ver coluna ${e.label} (${e.count} ${e.count === 1 ? 'item' : 'itens'})`}
+          className={[
+            'rounded-lg border px-3 py-2 sm:px-4 sm:py-3 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            e.count > 0 ? 'border-primary/30 bg-primary/[0.04]' : 'border-border',
+          ].join(' ')}
+        >
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
+            {e.label}
+          </div>
+          <div className="mt-0.5 flex items-baseline gap-1">
+            <span className={[
+              'text-2xl font-semibold tabular-nums',
+              e.count > 0 ? 'text-foreground' : 'text-muted-foreground/60',
+            ].join(' ')}>
+              {e.loading ? <Loader2 className="h-5 w-5 inline animate-spin" /> : e.count}
+            </span>
+            <span className="text-[11px] text-muted-foreground">
+              {e.count === 1 ? 'item' : 'itens'}
+            </span>
+          </div>
+        </a>
+      ))}
+    </div>
   )
 }
