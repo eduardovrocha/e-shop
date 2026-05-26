@@ -37,6 +37,23 @@ class Product < ApplicationRecord
   validates :height_mm, numericality: { greater_than: 0, allow_nil: true }
   validates :width_mm,  numericality: { greater_than: 0, allow_nil: true }
   validates :length_mm, numericality: { greater_than: 0, allow_nil: true }
+  # Production cost in cents — admin-only, used as the fallback for any
+  # variant without its own unit_cost_cents. Nullable so the UI can flag
+  # "cost not yet defined" instead of silently treating it as zero.
+  validates :unit_cost_cents,
+            numericality: { only_integer: true, greater_than_or_equal_to: 0 },
+            allow_nil: true
+
+  # When the admin sets/changes the product cost, retroactively fill any
+  # order_items that have NEVER had a cost snapshot (unit_cost_cents IS
+  # NULL). Items with a snapshot are left alone — snapshot is the source
+  # of truth post-purchase. Solves the bootstrap gap when admin enters
+  # costs after items are already in the DB.
+  after_save :backfill_null_order_item_costs, if: :saved_change_to_unit_cost_cents?
+
+  def backfill_null_order_item_costs
+    OrderItemCostBackfiller.from_product(self)
+  end
 
   def has_dimensions?
     weight_g.present? && height_mm.present? && width_mm.present? && length_mm.present?

@@ -16,6 +16,7 @@ module Admin
         active:                         @product.active,
         created_at:                     @product.created_at,
         updated_at:                     @product.updated_at,
+        unit_cost_cents:                @product.unit_cost_cents,
         weight_g:                       @product.weight_g,
         height_mm:                      @product.height_mm,
         width_mm:                       @product.width_mm,
@@ -43,6 +44,11 @@ module Admin
           color:                           v.color,
           gender:                          v.gender,
           cut:                             v.cut,
+          unit_cost_cents:                 v.unit_cost_cents,
+          # Computed: variant override OR product fallback. Lets the
+          # dashboard show the effective cost without re-implementing
+          # the fallback rule client-side.
+          effective_unit_cost_cents:       v.effective_unit_cost_cents,
           sku:                             v.sku,
           stock_quantity:                  v.stock_quantity,
           reserved_quantity:               v.reserved_quantity,

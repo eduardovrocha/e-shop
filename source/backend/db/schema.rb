@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_25_184636) do
+ActiveRecord::Schema[7.2].define(version: 2026_05_25_234130) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -170,6 +170,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_25_184636) do
     t.date "promised_completion_date"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "unit_cost_cents"
     t.index ["order_id"], name: "index_order_items_on_order_id"
     t.index ["product_id", "production_status"], name: "index_order_items_on_product_id_and_production_status"
     t.index ["product_id"], name: "index_order_items_on_product_id"
@@ -254,6 +255,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_25_184636) do
     t.integer "compare_at_price_cents"
     t.string "gender", default: "unissex", null: false
     t.string "cut", default: "normal", null: false
+    t.integer "unit_cost_cents"
     t.index ["product_id", "cut"], name: "index_product_variants_on_product_id_and_cut"
     t.index ["product_id", "gender"], name: "index_product_variants_on_product_id_and_gender"
     t.index ["product_id"], name: "index_product_variants_on_product_id"
@@ -282,6 +284,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_25_184636) do
     t.integer "production_capacity"
     t.integer "cancellation_refund_percentage"
     t.integer "compare_at_price_cents"
+    t.integer "unit_cost_cents"
     t.index ["active"], name: "index_products_on_active"
     t.index ["fulfillment_mode"], name: "index_products_on_fulfillment_mode"
     t.index ["slug"], name: "index_products_on_slug", unique: true

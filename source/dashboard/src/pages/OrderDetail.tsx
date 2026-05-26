@@ -178,6 +178,33 @@ export default function OrderDetail() {
                             </span>
                           )}
                         </p>
+                        {/* Profit line — admin-only. When unit_cost_cents
+                            is null (legacy data or admin hasn't configured
+                            the product cost yet) we render an explicit
+                            "Custo não definido" instead of pretending
+                            margin = 100%. */}
+                        <p className="text-[11px] mt-0.5">
+                          {row.unit_cost_cents == null ? (
+                            <span className="text-muted-foreground/70 italic">
+                              Custo não definido — defina em /admin/products
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">
+                              Custo: <span className="tabular-nums">{formatCurrency(row.cost_subtotal_cents ?? 0)}</span>
+                              {' · '}
+                              Margem:{' '}
+                              <span
+                                className={[
+                                  'tabular-nums font-medium',
+                                  (row.gross_profit_cents ?? 0) < 0 ? 'text-destructive' : 'text-emerald-700',
+                                ].join(' ')}
+                              >
+                                {formatCurrency(row.gross_profit_cents ?? 0)}
+                                {row.margin_percentage != null && ` (${row.margin_percentage.toFixed(1).replace('.', ',')}%)`}
+                              </span>
+                            </span>
+                          )}
+                        </p>
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="text-sm font-semibold">

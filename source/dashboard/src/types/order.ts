@@ -37,6 +37,14 @@ export interface OrderItemRow {
   quantity: number
   unit_price_cents: number
   subtotal_cents: number
+  // Profit fields (admin-only). All nullable when cost was not captured
+  // at purchase time (legacy data or admin hadn't set unit_cost_cents).
+  // UI must render "—" / "Custo não definido" rather than treating null
+  // as zero, otherwise margin would falsely show as 100%.
+  unit_cost_cents: number | null
+  cost_subtotal_cents: number | null
+  gross_profit_cents: number | null
+  margin_percentage: number | null
   production_status: ProductionStatus
   promised_completion_date: string | null
   production_started_at: string | null

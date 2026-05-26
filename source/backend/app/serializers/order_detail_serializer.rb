@@ -51,6 +51,13 @@ class OrderDetailSerializer
         quantity:                        item.quantity,
         unit_price_cents:                item.unit_price_cents,
         subtotal_cents:                  item.subtotal_cents,
+        # Profit fields — admin-only. Snapshotted at purchase time; nil
+        # when cost wasn't recorded (legacy / not-yet-configured). UI
+        # must render "—" rather than treating null as zero.
+        unit_cost_cents:                 item.unit_cost_cents,
+        cost_subtotal_cents:             item.cost_subtotal_cents,
+        gross_profit_cents:              item.gross_profit_cents,
+        margin_percentage:               item.margin_percentage,
         production_status:               item.production_status,
         promised_completion_date:        item.promised_completion_date,
         production_started_at:           item.production_started_at,

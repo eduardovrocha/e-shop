@@ -39,6 +39,10 @@ export interface ProductVariant {
   effective_compare_at_price_cents: number | null
   on_sale: boolean
   additional_price_cents: number
+  // Production cost (admin-only). nullable on both sides; the effective
+  // value falls back from variant override to product-level cost.
+  unit_cost_cents: number | null
+  effective_unit_cost_cents: number | null
 }
 
 export interface VariantPayload {
@@ -52,6 +56,7 @@ export interface VariantPayload {
   price_cents?: number | null
   compare_at_price_cents?: number | null
   additional_price_cents?: number
+  unit_cost_cents?: number | null
   _destroy?: boolean
 }
 
@@ -78,6 +83,9 @@ export interface Product {
   variants: ProductVariant[]
   total_stock: number
   has_dimensions: boolean
+  // Product-level production cost (admin-only). Acts as fallback when a
+  // variant doesn't override it. nullable when admin hasn't filled it in.
+  unit_cost_cents: number | null
   weight_g: number | null
   height_mm: number | null
   width_mm: number | null

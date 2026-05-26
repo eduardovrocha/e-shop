@@ -39,6 +39,10 @@ interface VariantRow extends VariantPayload {
   // '' represents "no override" → backend falls back to the product-level
   // compare_at_price. Parsed to cents on blur, same as the regular price.
   _compareInput: string
+  // Controlled-input string for the variant production cost. Same
+  // contract: '' means "use product fallback", non-empty is parsed to
+  // cents on blur. Drives the unit_cost_cents payload field.
+  _unitCostInput: string
   _destroy?: boolean
 }
 
@@ -97,8 +101,10 @@ function VariantTable({ variants, productName, onChange }: VariantTableProps) {
       stock_quantity: 0,
       price_cents: null,
       compare_at_price_cents: null,
+      unit_cost_cents: null,
       _priceInput: '',
       _compareInput: '',
+      _unitCostInput: '',
       additional_price_cents: 0,
       gender: 'unissex',
       cut: 'normal',
@@ -134,6 +140,22 @@ function VariantTable({ variants, productName, onChange }: VariantTableProps) {
               ...v,
               _compareInput:          cents != null ? formatPriceInput(cents) : '',
               compare_at_price_cents: cents,
+            }
+          : v
+      )
+    )
+  }
+
+  function handleUnitCostBlur(key: string, raw: string) {
+    // Empty = use product fallback; otherwise parse to cents.
+    const cents = parsePriceInput(raw)
+    onChange(
+      variants.map((v) =>
+        v._key === key
+          ? {
+              ...v,
+              _unitCostInput:  cents != null ? formatPriceInput(cents) : '',
+              unit_cost_cents: cents,
             }
           : v
       )
@@ -229,9 +251,9 @@ function VariantTable({ variants, productName, onChange }: VariantTableProps) {
                 </div>
 
                 {/* Row 2 — editable fields in a responsive grid:
-                    2 cols on mobile, 3 on sm, 5 on lg. Each field is
+                    2 cols on mobile, 3 on sm, 6 on lg. Each field is
                     full-width inside its cell so nothing overflows. */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                   {/* Gênero */}
                   <div className="space-y-1">
                     <Label className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
@@ -339,6 +361,28 @@ function VariantTable({ variants, productName, onChange }: VariantTableProps) {
                       </span>
                     )}
                   </div>
+
+                  {/* Custo de produção (variant-level override) */}
+                  <div className="space-y-1">
+                    <Label
+                      className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+                      title="Custo unitário desta variante. Em branco = usa o custo do produto. Usado apenas internamente para cálculo de margem."
+                    >
+                      Custo (R$){' '}
+                      <span className="normal-case text-[9px] text-muted-foreground/80">
+                        (interno)
+                      </span>
+                    </Label>
+                    <Input
+                      value={v._unitCostInput}
+                      onChange={(e) => updateRow(v._key, '_unitCostInput', e.target.value)}
+                      onBlur={(e) => handleUnitCostBlur(v._key, e.target.value)}
+                      placeholder="—"
+                      className="h-8 w-full text-right tabular-nums text-muted-foreground"
+                      inputMode="decimal"
+                      title="Custo unitário. Em branco herda do produto."
+                    />
+                  </div>
                 </div>
               </div>
             )
@@ -405,6 +449,11 @@ export default function ProductForm() {
   const [active, setActive] = useState(true)
   const [variants, setVariants] = useState<VariantRow[]>([])
 
+  // Production cost (BRL string in the input; parsed to cents on submit).
+  // Empty string means "no cost defined" — submitted as null so the
+  // backend correctly distinguishes "not set" from "zero cost".
+  const [unitCostInput, setUnitCostInput] = useState('')
+
   // Dimensões logísticas
   const [weightG, setWeightG] = useState('')
   const [heightMm, setHeightMm] = useState('')
@@ -437,8 +486,10 @@ export default function ProductForm() {
           _key: String(v.id),
           _priceInput:   formatPriceInput(v.price_cents),
           _compareInput: formatPriceInput(v.compare_at_price_cents),
+          _unitCostInput: formatPriceInput(v.unit_cost_cents),
         }))
       )
+      setUnitCostInput(formatPriceInput(existing.unit_cost_cents))
       setWeightG(existing.weight_g != null ? String(existing.weight_g) : '')
       setHeightMm(existing.height_mm != null ? String(existing.height_mm) : '')
       setWidthMm(existing.width_mm != null ? String(existing.width_mm) : '')
@@ -500,14 +551,19 @@ export default function ProductForm() {
     }
 
     const variants_attributes = variants.map(
-      ({ _key: _k, _priceInput: _pi, _compareInput: _ci, ...rest }) => rest,
+      ({ _key: _k, _priceInput: _pi, _compareInput: _ci, _unitCostInput: _uc, ...rest }) => rest,
     )
 
     // price_cents on the product is derived from the minimum variant price (backend compat)
     const price_cents = Math.min(...activeVariants.map((v) => v.price_cents ?? 0).filter(Boolean))
 
+    // Product-level cost: '' means "not defined" → null. Backend uses this
+    // as fallback when a variant doesn't set its own unit_cost_cents.
+    const unit_cost_cents = parsePriceInput(unitCostInput)
+
     const payload = {
       name, description, price_cents, category, active, variants_attributes,
+      unit_cost_cents,
       weight_g:  weightG  ? parseInt(weightG)  : null,
       height_mm: heightMm ? parseInt(heightMm) : null,
       width_mm:  widthMm  ? parseInt(widthMm)  : null,
@@ -636,6 +692,34 @@ export default function ProductForm() {
                   <SelectItem value="inactive">Inativo</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Custo de produção (admin-only) — fallback para as variantes que
+                não preencherem o próprio custo. Usado para cálculo de margem
+                em /admin/orders/:id. Não é exposto publicamente. */}
+            <div className="space-y-1.5">
+              <Label htmlFor="unit_cost">
+                Custo de produção (R$){' '}
+                <span className="font-normal text-xs text-muted-foreground">
+                  · interno, para cálculo de margem
+                </span>
+              </Label>
+              <Input
+                id="unit_cost"
+                value={unitCostInput}
+                onChange={(e) => setUnitCostInput(e.target.value)}
+                onBlur={(e) => {
+                  const cents = parsePriceInput(e.target.value)
+                  setUnitCostInput(cents != null ? formatPriceInput(cents) : '')
+                }}
+                placeholder="0,00 — deixe em branco se ainda não souber"
+                className="tabular-nums"
+                inputMode="decimal"
+              />
+              <p className="text-xs text-muted-foreground">
+                Cada variante pode sobrescrever esse valor. Em branco aqui significa
+                "custo não definido" e a margem aparece como "—" na view do pedido.
+              </p>
             </div>
           </CardContent>
         </Card>

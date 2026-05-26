@@ -32,6 +32,34 @@ class OrderItem < ApplicationRecord
 
   scope :active_for_production, -> { where.not(production_status: :canceled) }
 
+  # ── Profitability ────────────────────────────────────────────────────────
+  # unit_cost_cents is snapshotted at purchase time (in
+  # payments_controller#create_order_items_for!) so that subsequent admin
+  # edits to the product cost don't rewrite history. nil here means cost
+  # was never captured (legacy data or admin hadn't set it) — callers
+  # must branch on that to avoid pretending profit = revenue.
+
+  def cost_subtotal_cents
+    return nil if unit_cost_cents.nil?
+    unit_cost_cents * quantity
+  end
+
+  # Gross profit for this line: revenue (subtotal) minus production cost.
+  # Returns nil when cost is unknown — UI shows "—" rather than treating
+  # missing data as 100% profit. Doesn't account for shipping, coupons or
+  # Stripe fees; that's by design (Fase 1 scope).
+  def gross_profit_cents
+    return nil if cost_subtotal_cents.nil?
+    subtotal_cents - cost_subtotal_cents
+  end
+
+  # Margin as a percentage of revenue (0-100). nil when cost missing or
+  # subtotal is zero (free items shouldn't compute margin).
+  def margin_percentage
+    return nil if gross_profit_cents.nil? || subtotal_cents.to_i.zero?
+    (gross_profit_cents.to_f / subtotal_cents * 100).round(2)
+  end
+
   # Human-readable descriptor for emails and templates.
   # Returns "Tamanho M · Unissex · Normal" — full disclosure, including
   # default values, so the admin sees exactly what was sold and the

@@ -75,6 +75,22 @@ RSpec.describe "Payments Webhook", type: :request do
       expect(order.stripe_intent_id).to eq("pi_test_123")
     end
 
+    it "snapshots unit_cost_cents from the variant at purchase time" do
+      product = create(:product, unit_cost_cents: 1500)
+      variant = create(:product_variant, product: product, unit_cost_cents: nil, price_cents: 5000)
+      intent_metadata["items_snapshot"] = [
+        { "id" => nil, "variant_id" => variant.id, "name" => product.name,
+          "size" => variant.size, "quantity" => 1,
+          "unit_price_cents" => 5000, "subtotal_cents" => 5000 },
+      ].to_json
+
+      post webhook_url, params: raw_payload, headers: webhook_headers
+
+      item = Order.last.order_items.first
+      # Variant's unit_cost_cents was nil, so fallback to product.unit_cost_cents.
+      expect(item.unit_cost_cents).to eq(1500)
+    end
+
     it "ignores duplicate events (idempotency)" do
       allow(ProcessedWebhookEvent).to receive(:already_processed?).and_return(true)
 

@@ -42,6 +42,63 @@ RSpec.describe OrderItem, type: :model do
     end
   end
 
+  describe "profitability helpers" do
+    let(:variant) { create(:product_variant) }
+    let(:order)   { create(:order) }
+
+    def build(qty:, price:, cost:)
+      create(:order_item,
+             order:            order,
+             product_variant:  variant,
+             product:          variant.product,
+             quantity:         qty,
+             unit_price_cents: price,
+             subtotal_cents:   price * qty,
+             unit_cost_cents:  cost)
+    end
+
+    it "computes cost_subtotal_cents from unit cost × quantity" do
+      item = build(qty: 3, price: 5000, cost: 2000)
+      expect(item.cost_subtotal_cents).to eq(6000)
+    end
+
+    it "returns nil cost_subtotal_cents when unit_cost_cents is missing" do
+      item = build(qty: 3, price: 5000, cost: nil)
+      expect(item.cost_subtotal_cents).to be_nil
+    end
+
+    it "computes gross_profit_cents as revenue minus cost" do
+      item = build(qty: 2, price: 5000, cost: 1500)
+      # revenue 10000 - cost 3000 = 7000
+      expect(item.gross_profit_cents).to eq(7000)
+    end
+
+    it "returns nil gross_profit_cents when cost is missing" do
+      item = build(qty: 2, price: 5000, cost: nil)
+      expect(item.gross_profit_cents).to be_nil
+    end
+
+    it "supports a negative profit when cost exceeds price" do
+      item = build(qty: 1, price: 2000, cost: 2500)
+      expect(item.gross_profit_cents).to eq(-500)
+    end
+
+    it "computes margin_percentage rounded to 2 decimals" do
+      item = build(qty: 1, price: 10000, cost: 3000)
+      expect(item.margin_percentage).to eq(70.0)
+    end
+
+    it "returns nil margin_percentage when subtotal is zero (free item)" do
+      item = build(qty: 1, price: 0, cost: 0)
+      expect(item.margin_percentage).to be_nil
+    end
+
+    it "returns nil margin_percentage when cost is missing" do
+      item = build(qty: 1, price: 10000, cost: nil)
+      expect(item.margin_percentage).to be_nil
+    end
+  end
+
   describe "#descriptor_suffix" do
     it "prepends ' — ' when descriptors are present" do
       item = build_item(size: "M", gender: "feminino", cut: "babylook")

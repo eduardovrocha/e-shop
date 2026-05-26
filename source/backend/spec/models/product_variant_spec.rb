@@ -121,6 +121,33 @@ RSpec.describe ProductVariant, type: :model do
     end
   end
 
+  describe "#effective_unit_cost_cents" do
+    let(:product) { create(:product) }
+
+    it "returns the variant override when present" do
+      product.update!(unit_cost_cents: 1000)
+      v = create(:product_variant, product: product, unit_cost_cents: 2500)
+      expect(v.effective_unit_cost_cents).to eq(2500)
+    end
+
+    it "falls back to the product cost when variant override is nil" do
+      product.update!(unit_cost_cents: 1000)
+      v = create(:product_variant, product: product, unit_cost_cents: nil)
+      expect(v.effective_unit_cost_cents).to eq(1000)
+    end
+
+    it "returns nil when both variant and product have no cost" do
+      v = create(:product_variant, product: product, unit_cost_cents: nil)
+      expect(v.effective_unit_cost_cents).to be_nil
+    end
+
+    it "rejects negative unit_cost_cents" do
+      v = build(:product_variant, unit_cost_cents: -100)
+      expect(v).not_to be_valid
+      expect(v.errors[:unit_cost_cents]).to be_present
+    end
+  end
+
   describe "compare_at_price_cents normalization" do
     let(:product) { create(:product, price_cents: 1000) }
 

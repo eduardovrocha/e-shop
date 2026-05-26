@@ -16,6 +16,18 @@ class ProductVariant < ApplicationRecord
             allow_nil: true
   validates :gender, inclusion: { in: GENDERS }
   validates :cut,    inclusion: { in: CUTS    }
+  validates :unit_cost_cents,
+            numericality: { only_integer: true, greater_than_or_equal_to: 0 },
+            allow_nil: true
+
+  # When admin sets/changes variant-level cost, fill linked order_items
+  # whose snapshot is null. Variant override has priority over the
+  # product-level fallback.
+  after_save :backfill_null_order_item_costs, if: :saved_change_to_unit_cost_cents?
+
+  def backfill_null_order_item_costs
+    OrderItemCostBackfiller.from_variant(self)
+  end
 
   # Treats compare_at == price (or compare_at < price) as "no promo" by
   # nullifying the column. Rejecting it with a validation error rolled
@@ -43,6 +55,13 @@ class ProductVariant < ApplicationRecord
   def on_sale?
     effective_compare_at_price_cents.present? &&
       effective_compare_at_price_cents > price_cents
+  end
+
+  # Variant override OR product fallback for production cost. nil when
+  # neither side has the data — admin hasn't filled it in yet. Mirrors
+  # effective_compare_at_price_cents both in name and in semantics.
+  def effective_unit_cost_cents
+    unit_cost_cents.presence || product&.unit_cost_cents
   end
 
   def price

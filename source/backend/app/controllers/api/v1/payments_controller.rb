@@ -609,6 +609,10 @@ module Api
             quantity:                 item["quantity"].to_i,
             unit_price_cents:         item["unit_price_cents"].to_i,
             subtotal_cents:           item["subtotal_cents"].to_i,
+            # Snapshot production cost at purchase time so future admin
+            # edits to the variant/product cost don't rewrite history.
+            # nil when neither variant nor product has cost defined yet.
+            unit_cost_cents:          variant.effective_unit_cost_cents,
             production_status:        :pending,
             promised_completion_date: days.days.from_now.to_date
           )
