@@ -99,6 +99,16 @@ export interface Order {
   items_total_cents: number
   shipping_fee_cents: number
   total_cents: number
+  // Aggregated profit metrics (admin-only). All four collapse to null
+  // when no items have unit_cost_cents — UI renders a "Definir custos"
+  // CTA. When SOME items have cost and others don't, numbers reflect
+  // only the items with cost and items_missing_cost_count > 0 surfaces
+  // the gap so the operator knows the rollup is partial.
+  total_cost_cents: number | null
+  order_gross_profit_cents: number | null
+  order_margin_percentage: number | null
+  items_with_cost_count: number
+  items_missing_cost_count: number
   shipping_address?: ShippingAddress
   stripe_intent_id?: string
   tracking_token?: string

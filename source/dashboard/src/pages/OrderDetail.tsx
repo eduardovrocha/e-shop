@@ -260,6 +260,51 @@ export default function OrderDetail() {
                 <span>Total</span>
                 <span>{formatCurrency(order.total_cents)}</span>
               </div>
+
+              {/* Profit summary — admin-only. Shows up only when at least
+                  one item has a cost snapshot. When some items are
+                  missing cost, a footnote surfaces the gap so the
+                  operator can read the rollup as partial. */}
+              {order.total_cost_cents != null && (
+                <>
+                  <div className="border-t border-dashed border-border my-2" />
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Custo total</span>
+                    <span className="tabular-nums">{formatCurrency(order.total_cost_cents)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-semibold">
+                    <span>Lucro bruto</span>
+                    <span
+                      className={[
+                        'tabular-nums',
+                        (order.order_gross_profit_cents ?? 0) < 0 ? 'text-destructive' : 'text-emerald-700',
+                      ].join(' ')}
+                    >
+                      {formatCurrency(order.order_gross_profit_cents ?? 0)}
+                      {order.order_margin_percentage != null && (
+                        <span className="ml-1 text-xs font-normal text-muted-foreground">
+                          ({order.order_margin_percentage.toFixed(1).replace('.', ',')}%)
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  {order.items_missing_cost_count > 0 && (
+                    <p className="text-[11px] text-amber-700 mt-1">
+                      ⚠ {order.items_missing_cost_count} de {order.items_with_cost_count + order.items_missing_cost_count} itens
+                      sem custo definido — números acima são parciais.
+                    </p>
+                  )}
+                </>
+              )}
+
+              {order.total_cost_cents == null && order.order_items && order.order_items.length > 0 && (
+                <>
+                  <div className="border-t border-dashed border-border my-2" />
+                  <p className="text-[11px] text-muted-foreground italic">
+                    Defina o custo dos produtos para ver o lucro do pedido.
+                  </p>
+                </>
+              )}
             </div>
           </CardContent>
         </Card>
