@@ -81,7 +81,7 @@ RSpec.describe "Payments Webhook", type: :request do
       intent_metadata["items_snapshot"] = [
         { "id" => nil, "variant_id" => variant.id, "name" => product.name,
           "size" => variant.size, "quantity" => 1,
-          "unit_price_cents" => 5000, "subtotal_cents" => 5000 },
+          "unit_price_cents" => 5000, "subtotal_cents" => 5000 }
       ].to_json
 
       post webhook_url, params: raw_payload, headers: webhook_headers
