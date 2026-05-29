@@ -40,6 +40,20 @@ export default {
           gold: '#D4A261',
           navy: '#0D2B45',
         },
+        andrequice: {
+          cream: '#FAF5EE',
+          sand: '#E8D1B0',
+          border: '#A8947D',
+          gold: '#D4A261',
+          copper: '#B86E2E',
+          navy: '#0D2B45',
+          azure: '#4C7FA3',
+          brown: '#4A2E1A',
+        },
+      },
+      boxShadow: {
+        soft: '0 2px 12px rgba(74, 46, 26, 0.08)',
+        card: '0 4px 24px rgba(74, 46, 26, 0.10)',
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -65,11 +79,16 @@ export default {
           '60%':       { transform: 'rotate(12deg)' },
           '80%':       { transform: 'rotate(-8deg)' },
         },
+        dropdown: {
+          from: { opacity: '0', transform: 'translateY(-8px) scale(0.97)' },
+          to:   { opacity: '1', transform: 'translateY(0) scale(1)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up':   'accordion-up 0.2s ease-out',
         wiggle:           'wiggle 0.4s ease-in-out',
+        dropdown:         'dropdown 0.15s ease-out forwards',
       },
     },
   },

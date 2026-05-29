@@ -1,17 +1,16 @@
 import { useRef, useState } from 'react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
-import { Menu, Bell, LogOut, ChevronDown, HelpCircle } from 'lucide-react'
-import { useUIStore } from '@/store/uiStore'
+import { Bell, LogOut, ChevronDown, HelpCircle } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
 import api from '@/services/api'
 import { useOrderNotifications } from '@/hooks/useOrderNotifications'
 import { NotificationDropdown } from './NotificationDropdown'
+import { AdminNavDropdown } from './AdminNavDropdown'
 import { useTour } from './onboarding/useTour'
 
 export function AdminHeader() {
-  const { toggleSidebar } = useUIStore()
   const { user, logout } = useAuthStore()
   const { requestReplay } = useTour()
 
@@ -32,15 +31,7 @@ export function AdminHeader() {
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border bg-white/80 px-4 backdrop-blur-sm lg:px-6">
       <div className="flex items-center gap-3">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="lg:hidden"
-          onClick={toggleSidebar}
-          aria-label="Menu"
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
+        <AdminNavDropdown />
       </div>
 
       <div className="flex items-center gap-2">
