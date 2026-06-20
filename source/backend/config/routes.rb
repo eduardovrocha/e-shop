@@ -47,6 +47,7 @@ Rails.application.routes.draw do
           end
         end
         get "production/metrics", to: "production_metrics#show"
+        get "reports/orders",     to: "reports#orders"
         resources :customers, only: %i[index show]
         resources :products do
           collection { get :inventory }
