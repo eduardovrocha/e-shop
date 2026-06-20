@@ -24,6 +24,12 @@ gem "sentry-rails"
 gem "sentry-sidekiq"
 gem "tzinfo-data", platforms: %i[ windows jruby ]
 
+# Geração de PDF (relatórios)
+gem "prawn"
+gem "prawn-table"
+# Prawn depende de matrix, que deixou de ser default gem no Ruby 3.4+
+gem "matrix"
+
 group :development, :test do
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
   gem "rspec-rails"
@@ -40,4 +46,5 @@ group :test do
   gem "shoulda-matchers"
   gem "database_cleaner-active_record"
   gem "webmock"
+  gem "pdf-reader"
 end
