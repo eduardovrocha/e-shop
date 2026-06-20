@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { Search } from 'lucide-react'
+import { Plus, Search } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { AdminPageGrid } from '@/components/AdminPageGrid'
 import { PageTitle } from '@/components/PageTitle'
 import { DataTable, type Column } from '@/components/DataTable'
 import { StatusBadge } from '@/components/StatusBadge'
+import { OriginBadge } from '@/components/OriginBadge'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -26,10 +28,17 @@ const STATUS_OPTIONS = [
   { label: 'Cancelado', value: 'cancelled' },
 ]
 
+const ORIGIN_OPTIONS = [
+  { label: 'Todas as origens', value: 'all' },
+  { label: 'Site', value: 'web' },
+  { label: 'Manual', value: 'manual' },
+]
+
 export default function Orders() {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [originFilter, setOriginFilter] = useState('all')
   const [page, setPage] = useState(1)
 
   const { data, isLoading } = useOrders({
@@ -37,6 +46,7 @@ export default function Orders() {
     per_page: 10,
     search: search || undefined,
     status: statusFilter === 'all' ? undefined : statusFilter,
+    source: originFilter === 'all' ? undefined : originFilter,
   })
 
   const orders = data?.orders ?? []
@@ -66,6 +76,11 @@ export default function Orders() {
       render: (o) => <StatusBadge status={o.status as OrderStatus} />,
     },
     {
+      key: 'source',
+      header: 'Origem',
+      render: (o) => <OriginBadge source={o.source} />,
+    },
+    {
       key: 'delivery_method',
       header: 'Entrega',
       render: (o) => (
@@ -86,11 +101,15 @@ export default function Orders() {
   return (
     <AdminPageGrid>
       {/* col-span-full: título */}
-      <div className="col-span-full">
+      <div className="col-span-full flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <PageTitle
           title="Pedidos"
           subtitle={meta ? `${meta.total_count} pedidos encontrados` : 'Carregando...'}
         />
+        <Button onClick={() => navigate('/orders/new')} className="shrink-0">
+          <Plus className="h-4 w-4" />
+          Novo pedido
+        </Button>
       </div>
 
       {/* col-span-full: filtros */}
@@ -119,6 +138,24 @@ export default function Orders() {
           </SelectTrigger>
           <SelectContent>
             {STATUS_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={originFilter}
+          onValueChange={(v) => {
+            setOriginFilter(v)
+            setPage(1)
+          }}
+        >
+          <SelectTrigger className="w-full sm:w-44">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {ORIGIN_OPTIONS.map((opt) => (
               <SelectItem key={opt.value} value={opt.value}>
                 {opt.label}
               </SelectItem>

@@ -8,6 +8,7 @@ import { TourProvider } from '@/components/onboarding/TourProvider'
 const Login = lazy(() => import('@/pages/Login'))
 const Dashboard = lazy(() => import('@/pages/Dashboard'))
 const Orders = lazy(() => import('@/pages/Orders'))
+const ManualOrderForm = lazy(() => import('@/pages/ManualOrderForm'))
 const OrderDetail = lazy(() => import('@/pages/OrderDetail'))
 const Products = lazy(() => import('@/pages/Products'))
 const ProductForm = lazy(() => import('@/pages/ProductForm'))
@@ -51,6 +52,7 @@ export default function AppRoutes() {
         <Route element={<AdminLayout />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/orders" element={<Orders />} />
+          <Route path="/orders/new" element={<ManualOrderForm />} />
           <Route path="/orders/:id" element={<OrderDetail />} />
           <Route path="/production" element={<Production />} />
           <Route path="/products" element={<Products />} />

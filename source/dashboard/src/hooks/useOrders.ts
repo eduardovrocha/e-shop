@@ -1,5 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ordersService, type OrdersParams, type OrderUpdateData } from '@/services/ordersService'
+import {
+  ordersService,
+  type OrdersParams,
+  type OrderUpdateData,
+  type ManualOrderPayload,
+} from '@/services/ordersService'
 
 export function useOrders(params: OrdersParams = {}) {
   return useQuery({
@@ -24,6 +29,17 @@ export function useUpdateOrder() {
     onSuccess: (updated) => {
       qc.invalidateQueries({ queryKey: ['orders'] })
       qc.setQueryData(['order', updated.id], updated)
+    },
+  })
+}
+
+export function useCreateOrder() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: ManualOrderPayload) => ordersService.create(data),
+    onSuccess: (created) => {
+      qc.invalidateQueries({ queryKey: ['orders'] })
+      qc.setQueryData(['order', created.id], created)
     },
   })
 }

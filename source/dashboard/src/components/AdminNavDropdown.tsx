@@ -6,6 +6,7 @@ import {
   Factory,
   LayoutDashboard,
   Package,
+  PlusCircle,
   Settings,
   ShoppingBag,
   Tag,
@@ -26,6 +27,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/orders', label: 'Pedidos', icon: ShoppingBag },
+  { to: '/orders/new', label: 'Novo pedido', icon: PlusCircle, end: true },
   { to: '/production', label: 'Produção', icon: Factory },
   { to: '/products', label: 'Produtos', icon: Package },
   { to: '/inventory', label: 'Estoque', icon: Warehouse },

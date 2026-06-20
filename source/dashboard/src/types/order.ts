@@ -85,6 +85,9 @@ export interface OrderStatusHistory {
   created_at: string
 }
 
+export type OrderSource = 'web' | 'manual'
+export type ExternalPaymentMethod = 'pix' | 'transferencia' | 'cartao' | 'dinheiro'
+
 export interface Order {
   id: number
   number: string
@@ -92,6 +95,8 @@ export interface Order {
   customer_email: string
   customer_phone: string
   status: OrderStatus
+  source?: OrderSource
+  external_payment_method?: ExternalPaymentMethod | null
   delivery_method: DeliveryMethod
   items: OrderItem[]
   order_items?: OrderItemRow[]
