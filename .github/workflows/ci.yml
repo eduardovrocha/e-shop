@@ -121,7 +121,7 @@ jobs:
           bundler-cache: true
 
       - name: Run Brakeman
-        run: bundle exec brakeman -q --no-pager
+        run: bundle exec brakeman -q --no-pager -i config/brakeman.ignore
 
   frontend:
     name: Frontend Build
