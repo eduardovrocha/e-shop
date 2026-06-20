@@ -49,4 +49,20 @@ RSpec.describe OrdersReportPdf do
       expect(text).to include("30,00") # lucro bruto agregado em reais
     end
   end
+
+  describe "#render (agrupado por status)" do
+    it "cria uma seção por status presente, separada da linha do pedido" do
+      o1 = order_with_item(status: "processing")
+      o2 = order_with_item(status: "delivered")
+
+      text  = text_of(described_class.new(orders: [ o1, o2 ], status: nil).render)
+      label = OrderStatusHistory.title_for("processing")
+
+      expect(text).to include(o1.number)
+      expect(text).to include(o2.number)
+      expect(text).to include(OrderStatusHistory.title_for("delivered"))
+      # O rótulo aparece como cabeçalho de seção E na linha "Pedido X — <status>".
+      expect(text.scan(label).size).to be >= 2
+    end
+  end
 end

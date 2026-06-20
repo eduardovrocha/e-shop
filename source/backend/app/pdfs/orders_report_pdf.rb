@@ -16,7 +16,19 @@ class OrdersReportPdf
     Prawn::Fonts::AFM.hide_m17n_warning = true
     @pdf = Prawn::Document.new(page_size: "A4", margin: 36)
     header
-    @orders.each { |order| order_block(order) }
+    if @status
+      @orders.each { |order| order_block(order) }
+    else
+      grouped = @orders.group_by(&:status)
+      Order::STATUSES.each do |st|
+        list = grouped[st]
+        next if list.blank?
+        @pdf.move_down 4
+        write OrderStatusHistory.title_for(st), size: 13, style: :bold
+        @pdf.move_down 4
+        list.each { |order| order_block(order) }
+      end
+    end
     report_totals(@orders)
     @pdf.render
   end
