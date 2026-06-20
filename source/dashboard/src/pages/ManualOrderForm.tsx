@@ -372,10 +372,6 @@ export default function ManualOrderForm() {
                         onChange={(e) => updateLine(l.variant_id, { priceReais: e.target.value })}
                       />
                     </div>
-                    <div className="w-24 space-y-1.5">
-                      <Label>Subtotal</Label>
-                      <PriceTag cents={brlToCents(l.priceReais) * l.quantity} size="sm" />
-                    </div>
                     <Button
                       variant="ghost"
                       size="icon"
