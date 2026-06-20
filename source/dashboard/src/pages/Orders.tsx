@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Search } from 'lucide-react'
+import { FileText, Loader2, Plus, Search } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { AdminPageGrid } from '@/components/AdminPageGrid'
 import { PageTitle } from '@/components/PageTitle'
@@ -18,6 +18,8 @@ import {
 import { formatCurrency } from '@/lib/utils'
 import type { Order, OrderStatus } from '@/types/order'
 import { useOrders } from '@/hooks/useOrders'
+import { reportsService } from '@/services/reportsService'
+import { useToast } from '@/hooks/useToast'
 
 const STATUS_OPTIONS = [
   { label: 'Todos os status', value: 'all' },
@@ -36,10 +38,32 @@ const ORIGIN_OPTIONS = [
 
 export default function Orders() {
   const navigate = useNavigate()
+  const toast = useToast()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [originFilter, setOriginFilter] = useState('all')
   const [page, setPage] = useState(1)
+  const [reportLoading, setReportLoading] = useState(false)
+
+  async function handleGenerateReport() {
+    setReportLoading(true)
+    try {
+      const res = await reportsService.ordersPdf(statusFilter)
+      const url = URL.createObjectURL(res.data as Blob)
+      const a = document.createElement('a')
+      a.href = url
+      const slug = statusFilter === 'all' ? 'todos' : statusFilter
+      a.download = `relatorio-pedidos-${slug}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch {
+      toast.error('Não foi possível gerar o relatório.')
+    } finally {
+      setReportLoading(false)
+    }
+  }
 
   const { data, isLoading } = useOrders({
     page,
@@ -106,10 +130,24 @@ export default function Orders() {
           title="Pedidos"
           subtitle={meta ? `${meta.total_count} pedidos encontrados` : 'Carregando...'}
         />
-        <Button onClick={() => navigate('/orders/new')} className="shrink-0">
-          <Plus className="h-4 w-4" />
-          Novo pedido
-        </Button>
+        <div className="flex shrink-0 gap-2">
+          <Button
+            variant="outline"
+            onClick={() => void handleGenerateReport()}
+            disabled={reportLoading}
+          >
+            {reportLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <FileText className="h-4 w-4" />
+            )}
+            Gerar relatório PDF
+          </Button>
+          <Button onClick={() => navigate('/orders/new')}>
+            <Plus className="h-4 w-4" />
+            Novo pedido
+          </Button>
+        </div>
       </div>
 
       {/* col-span-full: filtros */}
