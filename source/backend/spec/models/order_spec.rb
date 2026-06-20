@@ -2,9 +2,51 @@ require "rails_helper"
 
 RSpec.describe Order, type: :model do
   describe "validations" do
-    it { is_expected.to validate_presence_of(:stripe_intent_id) }
     it { is_expected.to validate_inclusion_of(:status).in_array(Order::STATUSES) }
     it { is_expected.to validate_inclusion_of(:delivery_method).in_array(Order::DELIVERY_METHODS) }
+
+    it "requires stripe_intent_id for web orders" do
+      order = build(:order, source: "web", stripe_intent_id: nil)
+      expect(order).not_to be_valid
+      expect(order.errors[:stripe_intent_id]).to be_present
+    end
+
+    it "does not require stripe_intent_id for manual orders" do
+      order = build(:order, source: "manual", stripe_intent_id: nil)
+      expect(order).to be_valid
+    end
+
+    it "still enforces uniqueness of stripe_intent_id when present" do
+      create(:order, stripe_intent_id: "pi_dup_123")
+      dup = build(:order, stripe_intent_id: "pi_dup_123")
+      expect(dup).not_to be_valid
+      expect(dup.errors[:stripe_intent_id]).to be_present
+    end
+  end
+
+  describe "manual order fields" do
+    it "defaults source to web" do
+      expect(Order.new.source).to eq("web")
+    end
+
+    it "exposes the source enum values" do
+      expect(Order.sources.keys).to contain_exactly("web", "manual")
+    end
+
+    it "exposes the external_payment_method enum (nullable)" do
+      expect(Order.external_payment_methods.keys)
+        .to contain_exactly("pix", "transferencia", "cartao", "dinheiro")
+      expect(Order.new.external_payment_method).to be_nil
+    end
+
+    it "exposes the shipping_mode enum" do
+      expect(Order.shipping_modes.keys)
+        .to contain_exactly("melhor_envio", "manual", "retirada")
+    end
+
+    it "defaults manual_discount_cents to 0" do
+      expect(Order.new.manual_discount_cents).to eq(0)
+    end
   end
 
   describe "callbacks" do

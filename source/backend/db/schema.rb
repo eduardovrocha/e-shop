@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_25_234130) do
+ActiveRecord::Schema[7.2].define(version: 2026_06_20_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -104,9 +104,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_25_234130) do
     t.datetime "updated_at", null: false
     t.index ["active"], name: "index_coupons_on_active"
     t.index ["public_code"], name: "index_coupons_on_public_code", unique: true, where: "(public_code IS NOT NULL)"
-    t.check_constraint "code_type::text = ANY (ARRAY['public'::character varying::text, 'unique'::character varying::text])", name: "chk_coupons_code_type"
+    t.check_constraint "code_type::text = ANY (ARRAY['public'::character varying, 'unique'::character varying]::text[])", name: "chk_coupons_code_type"
     t.check_constraint "discount_percent >= 1 AND discount_percent <= 100", name: "chk_coupons_discount_percent_range"
-    t.check_constraint "scope_type::text = ANY (ARRAY['all_products'::character varying::text, 'specific_products'::character varying::text])", name: "chk_coupons_scope_type"
+    t.check_constraint "scope_type::text = ANY (ARRAY['all_products'::character varying, 'specific_products'::character varying]::text[])", name: "chk_coupons_scope_type"
   end
 
   create_table "customer_addresses", force: :cascade do |t|
@@ -152,7 +152,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_25_234130) do
     t.index ["user_id", "store_setting_id"], name: "index_onboarding_progresses_on_user_and_store", unique: true
     t.index ["user_id"], name: "index_onboarding_progresses_on_user_id"
     t.check_constraint "current_phase = ANY (ARRAY[1, 2])", name: "onboarding_progresses_phase_check"
-    t.check_constraint "status::text = ANY (ARRAY['not_started'::character varying::text, 'in_progress'::character varying::text, 'completed'::character varying::text, 'skipped'::character varying::text, 'phase_2_ready'::character varying::text])", name: "onboarding_progresses_status_check"
+    t.check_constraint "status::text = ANY (ARRAY['not_started'::character varying, 'in_progress'::character varying, 'completed'::character varying, 'skipped'::character varying, 'phase_2_ready'::character varying]::text[])", name: "onboarding_progresses_status_check"
   end
 
   create_table "order_items", force: :cascade do |t|
@@ -193,7 +193,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_25_234130) do
   end
 
   create_table "orders", force: :cascade do |t|
-    t.string "stripe_intent_id", null: false
+    t.string "stripe_intent_id"
     t.string "customer_name"
     t.string "customer_email"
     t.string "customer_phone"
@@ -222,16 +222,26 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_25_234130) do
     t.string "coupon_code_used"
     t.integer "discount_percent_applied"
     t.integer "discount_amount_cents"
+    t.integer "source", default: 0, null: false
+    t.integer "external_payment_method"
+    t.datetime "paid_at"
+    t.integer "manual_discount_cents", default: 0, null: false
+    t.integer "shipping_mode", default: 0, null: false
+    t.integer "manual_shipping_cost_cents"
+    t.bigint "created_by_admin_id"
     t.index ["coupon_id"], name: "index_orders_on_coupon_id"
     t.index ["created_at"], name: "index_orders_on_created_at"
+    t.index ["created_by_admin_id"], name: "index_orders_on_created_by_admin_id"
     t.index ["customer_email"], name: "index_orders_on_customer_email"
     t.index ["customer_id"], name: "index_orders_on_customer_id"
     t.index ["number"], name: "index_orders_on_number", unique: true, where: "(number IS NOT NULL)"
+    t.index ["source"], name: "index_orders_on_source"
     t.index ["status"], name: "index_orders_on_status"
     t.index ["stripe_intent_id"], name: "index_orders_on_stripe_intent_id", unique: true
     t.index ["tracking_token"], name: "index_orders_on_tracking_token", unique: true
     t.check_constraint "discount_amount_cents IS NULL OR discount_amount_cents >= 0", name: "chk_orders_discount_amount_cents_non_negative"
     t.check_constraint "discount_percent_applied IS NULL OR discount_percent_applied >= 1 AND discount_percent_applied <= 100", name: "chk_orders_discount_percent_applied_range"
+    t.check_constraint "manual_discount_cents >= 0", name: "chk_orders_manual_discount_cents_non_negative"
   end
 
   create_table "processed_webhook_events", force: :cascade do |t|
@@ -417,6 +427,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_25_234130) do
   add_foreign_key "order_status_histories", "orders"
   add_foreign_key "orders", "coupons"
   add_foreign_key "orders", "customers"
+  add_foreign_key "orders", "users", column: "created_by_admin_id"
   add_foreign_key "product_variants", "products"
   add_foreign_key "release_executions", "users"
   add_foreign_key "stripe_mode_changes", "users"

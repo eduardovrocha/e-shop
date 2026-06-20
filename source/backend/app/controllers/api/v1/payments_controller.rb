@@ -500,7 +500,7 @@ module Api
           OrderStatusService.record(order, admin: "stripe")
         end
 
-        deduct_stock!(items_snapshot)
+        OrderFulfillmentService.deduct_stock!(items_snapshot)
 
         # Materialize OrderItem rows the first time this intent is processed
         # and drive each item through mark_paid! so the per-item state machine
@@ -508,12 +508,8 @@ module Api
         # skip-to-ready_to_ship for from_stock). Guarded by an
         # already-created check to stay idempotent across webhook retries.
         if newly_created || order.order_items.empty?
-          create_order_items_for!(order, items_snapshot, promised_snapshot)
-          order.order_items.reload.each(&:mark_paid!)
-          # Stamp the order with the max promised date across items (if any
-          # made_to_order items pushed it out further than the aggregate).
-          max_promised = order.order_items.maximum(:promised_completion_date)
-          order.update!(promised_completion_date: max_promised) if max_promised
+          OrderFulfillmentService.create_order_items_for!(order, items_snapshot, promised_snapshot)
+          OrderFulfillmentService.activate_items!(order)
         end
 
         CustomerUpsertService.call(order)
@@ -585,40 +581,6 @@ module Api
         order.update!(updates) if updates.any?
       end
 
-      # Creates one OrderItem row per item in the snapshot and stamps the
-      # per-item promised_completion_date from the create_intent snapshot.
-      # Items whose variant has been deleted are skipped — the order's items
-      # JSONB still carries the historical record for those.
-      def create_order_items_for!(order, items_snapshot, promised_snapshot)
-        promised_by_variant = promised_snapshot.each_with_object({}) do |entry, h|
-          h[entry["variant_id"].to_i] = entry["promised_completion_days"].to_i
-        end
-
-        items_snapshot.each do |item|
-          variant_id = item["variant_id"].to_i
-          variant    = ProductVariant.find_by(id: variant_id)
-          next unless variant
-
-          days = promised_by_variant[variant_id] || 0
-          OrderItem.create!(
-            order:                    order,
-            product_variant:          variant,
-            product:                  variant.product,
-            name:                     item["name"],
-            size:                     item["size"],
-            quantity:                 item["quantity"].to_i,
-            unit_price_cents:         item["unit_price_cents"].to_i,
-            subtotal_cents:           item["subtotal_cents"].to_i,
-            # Snapshot production cost at purchase time so future admin
-            # edits to the variant/product cost don't rewrite history.
-            # nil when neither variant nor product has cost defined yet.
-            unit_cost_cents:          variant.effective_unit_cost_cents,
-            production_status:        :pending,
-            promised_completion_date: days.days.from_now.to_date
-          )
-        end
-      end
-
       # Enriches the raw frontend snapshot with server-authoritative data.
       # Treats the variant as source of truth (never trust the snapshot for
       # billing-visible fields) — name, size, and price all come from the
@@ -653,43 +615,6 @@ module Api
             "unit_price_cents" => unit_price_cents,
             "subtotal_cents"   => unit_price_cents * qty
           }
-        end
-      end
-
-      # Atomically decrements stock_quantity and clears the matching reservation
-      # for each variant in the enriched items snapshot.
-      def deduct_stock!(items_snapshot)
-        items_snapshot.each do |item|
-          variant_id = item["variant_id"].to_i
-          qty        = [ item["quantity"].to_i, 1 ].max
-          next if variant_id.zero?
-
-          begin
-            variant = ProductVariant.find_by(id: variant_id)
-            unless variant
-              Rails.logger.error "[Stock] Variant #{variant_id} not found — skipping deduction"
-              next
-            end
-
-            # made_to_order items don't decrement physical stock at payment.
-            if variant.product&.made_to_order?
-              Rails.logger.info "[Stock] Skipping deduction for made_to_order variant #{variant.id} (#{variant.sku})"
-              next
-            end
-
-            variant.decrement_stock!(qty)
-
-            # Release the reservation that was created at create_intent time.
-            # Uses [reserved, qty].min to stay non-negative in the edge case
-            # where payment_failed already ran and cleared the reservation first.
-            variant.decrement!(:reserved_quantity, [ variant.reserved_quantity, qty ].min)
-
-            Rails.logger.info "[Stock] Deducted #{qty}× variant #{variant.id} (#{variant.sku}) — stock=#{variant.reload.stock_quantity} reserved=#{variant.reserved_quantity}"
-          rescue ProductVariant::InsufficientStockError => e
-            Rails.logger.error "[Stock] #{e.message}"
-          rescue => e
-            Rails.logger.error "[Stock] Unexpected error for variant #{variant_id}: #{e.message}"
-          end
         end
       end
 

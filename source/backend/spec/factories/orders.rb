@@ -11,6 +11,13 @@ FactoryBot.define do
     status             { "paid" }
     items              { [] }
 
+    trait :manual_source do
+      source                  { :manual }
+      stripe_intent_id        { nil }
+      external_payment_method { :pix }
+      paid_at                 { Time.current }
+    end
+
     trait :pending do
       status { "pending" }
     end

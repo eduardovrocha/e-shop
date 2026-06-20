@@ -28,9 +28,22 @@ class Order < ApplicationRecord
 
   DELIVERY_METHODS = %w[delivery pickup].freeze
 
+  # Origem do pedido. web = checkout do site (Stripe); manual = registrado
+  # pelo admin para vendas fechadas fora do site (WhatsApp/Instagram/balcão).
+  enum :source, { web: 0, manual: 1 }, default: :web
+
+  # Forma de pagamento externa de pedidos manuais (o pagamento já ocorreu
+  # fora do Stripe). nil para pedidos do site.
+  enum :external_payment_method, { pix: 0, transferencia: 1, cartao: 2, dinheiro: 3 }, prefix: :payment
+
+  # Modo de envio do pedido.
+  enum :shipping_mode, { melhor_envio: 0, manual: 1, retirada: 2 }, prefix: :shipping
+
   has_many :status_histories, class_name: "OrderStatusHistory",
                                dependent: :destroy, inverse_of: :order
   has_many :order_items, dependent: :destroy
+  belongs_to :customer, optional: true
+  belongs_to :created_by_admin, class_name: "User", optional: true
 
   # Coupon snapshot — the discount_* columns are the source of truth for the
   # historical record. The FK to coupon is informational; the coupon may be
@@ -39,7 +52,10 @@ class Order < ApplicationRecord
   belongs_to :coupon, optional: true
   has_one :coupon_usage, dependent: :destroy
 
-  validates :stripe_intent_id,  presence: true, uniqueness: true
+  # Pedidos do site exigem o PaymentIntent do Stripe; pedidos manuais não têm
+  # intent. A unicidade vale sempre que houver valor (allow_nil).
+  validates :stripe_intent_id, presence: true, if: :web?
+  validates :stripe_intent_id, uniqueness: { allow_nil: true }
   validates :status,            inclusion: { in: STATUSES }
   validates :delivery_method,   inclusion: { in: DELIVERY_METHODS }
   validates :tracking_token,    presence: true, uniqueness: true

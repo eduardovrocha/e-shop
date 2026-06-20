@@ -11,6 +11,8 @@ class OrderSerializer
       customer_email:     @order.customer_email,
       customer_phone:     @order.customer_phone,
       delivery_method:    @order.delivery_method,
+      source:                  @order.source,
+      external_payment_method: @order.external_payment_method,
       status:             @order.status,
       items_total_cents:  @order.items_total_cents,
       shipping_fee_cents: @order.shipping_fee_cents,

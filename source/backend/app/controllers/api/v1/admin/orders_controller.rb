@@ -5,6 +5,7 @@ module Api
         def index
           orders = Order.order(created_at: :desc)
           orders = orders.where(status: params[:status]) if params[:status].present?
+          orders = orders.where(source: params[:source]) if params[:source].present?
           if params[:search].present?
             q = "%#{params[:search]}%"
             orders = orders.where("customer_name ILIKE ? OR customer_email ILIKE ?", q, q)
@@ -18,6 +19,18 @@ module Api
           render json: order_detail_payload(order)
         rescue ActiveRecord::RecordNotFound
           render json: { error: "Pedido não encontrado" }, status: :not_found
+        end
+
+        # Registra uma venda fechada fora do site (pedido manual). Reusa o
+        # mesmo Order/OrderItem e o mesmo fluxo de estoque/produção do site.
+        def create
+          result = ManualOrderService.call(manual_order_params, admin: current_admin)
+
+          if result.ok?
+            render json: order_detail_payload(result.order), status: :created
+          else
+            render json: { error: result.error }, status: :unprocessable_entity
+          end
         end
 
         def update
@@ -61,6 +74,17 @@ module Api
             :status, :tracking_code, :notes,
             :carrier, :shipping_service, :estimated_delivery
           )
+        end
+
+        def manual_order_params
+          params.require(:manual_order).permit(
+            :external_payment_method, :paid_at, :shipping_mode,
+            :shipping_fee_cents, :manual_shipping_cost_cents,
+            :carrier, :shipping_service, :manual_discount_cents, :notes,
+            customer:         %i[name email phone],
+            shipping_address: %i[cep address city state neighborhood],
+            items:            %i[variant_id quantity unit_price_cents]
+          ).to_h
         end
 
         def order_detail_payload(order)

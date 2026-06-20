@@ -34,7 +34,7 @@ Rails.application.routes.draw do
           post :wipe, on: :collection
         end
 
-        resources :orders, only: %i[index show update] do
+        resources :orders, only: %i[index show update create] do
           member do
             post :resend_email
           end
