@@ -237,7 +237,7 @@ export default function ManualOrderForm() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageTitle title="Novo pedido manual" subtitle="Registre uma venda fechada fora do site" />
 
       {/* ── Cliente ── */}
@@ -392,7 +392,7 @@ export default function ManualOrderForm() {
       </Card>
 
       {/* ── Pagamento + Envio ── */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
         <Card className="h-full">
           <CardHeader>
             <CardTitle>Pagamento</CardTitle>
