@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { PriceTag } from '@/components/PriceTag'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, maskPhoneBR } from '@/lib/utils'
 import {
   brlToCents,
   computeTotals,
@@ -132,7 +132,7 @@ export default function ManualOrderForm() {
   function selectCustomer(c: { name: string; email: string; phone: string }) {
     setName(c.name)
     setEmail(c.email)
-    setPhone(c.phone)
+    setPhone(maskPhoneBR(c.phone))
     setCustomerSearch('')
   }
 
@@ -192,7 +192,11 @@ export default function ManualOrderForm() {
     }
 
     const payload: ManualOrderPayload = {
-      customer: { name: name.trim(), email: email.trim() || undefined, phone: phone.trim() || undefined },
+      customer: {
+        name: name.trim(),
+        email: email.trim() || undefined,
+        phone: phone.replace(/\D/g, '') || undefined,
+      },
       items: lines.map((l) => ({
         variant_id: l.variant_id,
         quantity: l.quantity,
@@ -289,7 +293,13 @@ export default function ManualOrderForm() {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="customer-phone">Telefone</Label>
-                <Input id="customer-phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                <Input
+                  id="customer-phone"
+                  inputMode="tel"
+                  placeholder="(11) 99999-9999"
+                  value={phone}
+                  onChange={(e) => setPhone(maskPhoneBR(e.target.value))}
+                />
               </div>
             </div>
           </CardContent>
