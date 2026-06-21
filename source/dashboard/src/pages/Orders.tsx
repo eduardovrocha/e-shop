@@ -25,6 +25,7 @@ const STATUS_OPTIONS = [
   { label: 'Todos os status', value: 'all' },
   { label: 'Pendente', value: 'pending' },
   { label: 'Pago', value: 'paid' },
+  { label: 'Em produção', value: 'producing' },
   { label: 'Enviado', value: 'shipped' },
   { label: 'Entregue', value: 'delivered' },
   { label: 'Cancelado', value: 'cancelled' },
