@@ -103,7 +103,7 @@ function resetCheckout() {
     deliveryMethod: 'delivery',
     selectedShipping: null,
     shippingAddress: null,
-    contact: { name: '', phone: '', email: '' },
+    contact: { name: '', phone: '', email: '', taxId: '' },
     addressExtra: { number: '', complement: '' },
   })
 }
@@ -133,10 +133,14 @@ async function advanceToAddressStep(user: ReturnType<typeof userEvent.setup>) {
   // Continue to step 3
   await user.click(continueButtons()[0])
 
-  // Step 3 — Contato: fill in
+  // Step 3 — Contato: fill in (includes CPF, required since the tax_id roll-out)
   await user.type(screen.getByPlaceholderText('seuemail@exemplo.com'), 'a@a.com')
   await user.type(screen.getByPlaceholderText('João da Silva'), 'João da Silva')
   await user.type(screen.getByPlaceholderText('(38) 99999-9999'), '38999999999')
+  await user.type(
+    screen.getByPlaceholderText('000.000.000-00 ou 00.000.000/0000-00'),
+    '11144477735'
+  )
   await user.click(continueButtons()[0])
 }
 

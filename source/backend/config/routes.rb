@@ -35,6 +35,9 @@ Rails.application.routes.draw do
         end
 
         resources :orders, only: %i[index show update create] do
+          collection do
+            get :lookup_by_tax_id
+          end
           member do
             post :resend_email
           end

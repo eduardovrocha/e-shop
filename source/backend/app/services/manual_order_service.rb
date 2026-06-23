@@ -6,7 +6,11 @@
 # (OrderFulfillmentService) — nada de pipeline paralelo. Tudo transacional:
 # falha em qualquer etapa = rollback total.
 class ManualOrderService
-  Result = Struct.new(:ok, :order, :error, keyword_init: true) do
+  # field_errors espelha o mapa `errors.messages` do ActiveRecord quando o
+  # erro vem da validação de Order (CPF/CNPJ ausente/inválido). Quando o
+  # erro vem das pré-validações do service (sem item, total negativo etc.)
+  # field_errors fica nil e o caller usa só `error`.
+  Result = Struct.new(:ok, :order, :error, :field_errors, keyword_init: true) do
     def ok? = ok
   end
 
@@ -38,6 +42,14 @@ class ManualOrderService
     Result.new(ok: true, order: order.reload)
   rescue ValidationError => e
     Result.new(ok: false, error: e.message)
+  rescue ActiveRecord::RecordInvalid => e
+    # Order validation falhou (ex.: CPF/CNPJ). Expõe o mapa por-campo
+    # para o controller renderizar inline no form do admin.
+    Result.new(
+      ok:           false,
+      error:        e.record.errors.full_messages.join(", "),
+      field_errors: e.record.errors.messages
+    )
   end
 
   private
@@ -62,6 +74,15 @@ class ManualOrderService
       raise ValidationError, "Informe o endereço de entrega para este modo de envio."
     end
 
+    # Defesa em profundidade: o form admin já bloqueia o submit sem número,
+    # mas guardamos aqui também — payloads via API podem chegar de outros
+    # caminhos no futuro, e número faltando corrompe a renderização do
+    # detalhe e do email de confirmação ("Logradouro, undefined").
+    if shipping_mode != "retirada" && shipping_address.is_a?(Hash) &&
+       shipping_address["number"].to_s.strip.empty?
+      raise ValidationError, "Informe o número do endereço."
+    end
+
     raise ValidationError, "O total do pedido não pode ser negativo." if total_cents.negative?
   end
 
@@ -79,6 +100,7 @@ class ManualOrderService
       customer_name:              customer[:name],
       customer_email:             customer[:email].presence,
       customer_phone:             customer[:phone].presence,
+      tax_id:                     customer[:tax_id].presence,
       delivery_method:            shipping_mode == "retirada" ? "pickup" : "delivery",
       shipping_mode:              shipping_mode,
       shipping_address:           shipping_address,

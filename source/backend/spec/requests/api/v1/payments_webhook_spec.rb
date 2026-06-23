@@ -10,6 +10,8 @@ RSpec.describe "Payments Webhook", type: :request do
       "customer_name"      => "João Teste",
       "customer_email"     => "joao@test.com",
       "customer_phone"     => "11999999999",
+      "tax_id"             => "11144477735",
+      "tax_id_kind"        => "cpf",
       "delivery_method"    => "pickup",
       "items_total_cents"  => "5000",
       "shipping_fee_cents" => "0",

@@ -11,7 +11,7 @@ RSpec.describe "POST /api/v1/admin/orders (pedido manual)", type: :request do
 
   let(:valid_payload) do
     {
-      customer:                { name: "Maria Silva", email: "maria@example.com", phone: "11988887777" },
+      customer:                { name: "Maria Silva", email: "maria@example.com", phone: "11988887777", tax_id: "11144477735" },
       items:                   [ { variant_id: variant.id, quantity: 2, unit_price_cents: 4500 } ],
       external_payment_method: "pix",
       shipping_mode:           "retirada",

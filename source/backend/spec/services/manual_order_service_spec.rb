@@ -6,7 +6,7 @@ RSpec.describe ManualOrderService do
 
   def base_params(overrides = {})
     {
-      customer:                { name: "Maria Silva", email: "maria@example.com", phone: "11988887777" },
+      customer:                { name: "Maria Silva", email: "maria@example.com", phone: "11988887777", tax_id: "11144477735" },
       items:                   [ { variant_id: variant.id, quantity: 2, unit_price_cents: 4500 } ],
       external_payment_method: "pix",
       shipping_mode:           "retirada",
@@ -80,7 +80,7 @@ RSpec.describe ManualOrderService do
       order = call(
         shipping_mode:              "manual",
         manual_shipping_cost_cents: 2500,
-        shipping_address:           { cep: "01310-100", address: "Av. Paulista, 1000", city: "São Paulo", state: "SP" }
+        shipping_address:           { cep: "01310-100", address: "Av. Paulista", city: "São Paulo", state: "SP", number: "1000" }
       ).order
 
       expect(order.shipping_mode).to eq("manual")
@@ -92,7 +92,7 @@ RSpec.describe ManualOrderService do
       order = call(
         shipping_mode:      "melhor_envio",
         shipping_fee_cents: 1990,
-        shipping_address:   { cep: "01310-100", address: "Av. Paulista, 1000", city: "São Paulo", state: "SP" }
+        shipping_address:   { cep: "01310-100", address: "Av. Paulista", city: "São Paulo", state: "SP", number: "1000" }
       ).order
 
       expect(order.shipping_mode).to eq("melhor_envio")

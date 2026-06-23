@@ -322,6 +322,11 @@ export default function OrderDetail() {
               {order.customer_phone && (
                 <p className="text-muted-foreground">{order.customer_phone}</p>
               )}
+              <p className="text-muted-foreground">
+                {order.tax_id_kind
+                  ? `${order.tax_id_kind === 'cnpj' ? 'CNPJ' : 'CPF'}: ${order.tax_id_formatted}`
+                  : 'CPF/CNPJ: —'}
+              </p>
             </CardContent>
           </Card>
 
@@ -339,7 +344,8 @@ export default function OrderDetail() {
               {order.shipping_address && (
                 <>
                   <p>
-                    {order.shipping_address.address}, {order.shipping_address.number}
+                    {order.shipping_address.address}
+                    {order.shipping_address.number ? `, ${order.shipping_address.number}` : ''}
                     {order.shipping_address.complement ? ` — ${order.shipping_address.complement}` : ''}
                   </p>
                   <p>

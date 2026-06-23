@@ -12,7 +12,7 @@ RSpec.describe "Pedido manual — integração com produção e estoque", type: 
   def manual_call(items)
     ManualOrderService.call(
       {
-        customer:                { name: "Cliente Teste", email: "cliente@example.com", phone: "11999990000" },
+        customer:                { name: "Cliente Teste", email: "cliente@example.com", phone: "11999990000", tax_id: "11144477735" },
         items:                   items,
         external_payment_method: "pix",
         shipping_mode:           "retirada",

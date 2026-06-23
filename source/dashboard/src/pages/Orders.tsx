@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { FileText, Loader2, Plus, Search } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { AdminPageGrid } from '@/components/AdminPageGrid'
 import { PageTitle } from '@/components/PageTitle'
 import { DataTable, type Column } from '@/components/DataTable'
@@ -40,7 +40,10 @@ const ORIGIN_OPTIONS = [
 export default function Orders() {
   const navigate = useNavigate()
   const toast = useToast()
-  const [search, setSearch] = useState('')
+  // search inicial vem do `?search=` da URL — usado quando o admin clica em
+  // "Ver histórico" no form de pedido manual (que pré-filtra por CPF/CNPJ).
+  const [searchParams] = useSearchParams()
+  const [search, setSearch] = useState(searchParams.get('search') ?? '')
   const [statusFilter, setStatusFilter] = useState('all')
   const [originFilter, setOriginFilter] = useState('all')
   const [page, setPage] = useState(1)
@@ -156,7 +159,7 @@ export default function Orders() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Buscar por cliente ou número..."
+            placeholder="Buscar por cliente, email ou CPF/CNPJ..."
             className="pl-9"
             value={search}
             onChange={(e) => {

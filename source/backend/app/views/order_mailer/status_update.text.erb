@@ -62,6 +62,7 @@ CONTATO
 <% if @order.customer_name.present?  %><%= @order.customer_name  %>
 <% end %><% if @order.customer_email.present? %><%= @order.customer_email %>
 <% end %><% if @order.customer_phone.present? %><%= @order.customer_phone %>
+<% end %><% if @order.tax_id_formatted.present? %><%= @order.tax_id_kind == "cnpj" ? "CNPJ" : "CPF" %>: <%= @order.tax_id_formatted %>
 <% end %>
 
 ENTREGA

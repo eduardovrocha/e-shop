@@ -21,6 +21,9 @@ export interface CheckoutContact {
   name: string
   phone: string
   email: string
+  // CPF (11 dígitos) ou CNPJ (14 dígitos), sempre sem máscara. A versão com
+  // máscara é puramente apresentacional — `TaxIdInput` aplica-a no render.
+  taxId: string
 }
 
 export interface CheckoutAddressExtra {
@@ -42,7 +45,7 @@ interface CheckoutState {
   clear: () => void
 }
 
-const EMPTY_CONTACT: CheckoutContact = { name: '', phone: '', email: '' }
+const EMPTY_CONTACT: CheckoutContact = { name: '', phone: '', email: '', taxId: '' }
 const EMPTY_ADDRESS_EXTRA: CheckoutAddressExtra = { number: '', complement: '' }
 
 export const useCheckoutStore = create<CheckoutState>()(

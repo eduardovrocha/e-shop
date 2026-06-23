@@ -10,6 +10,7 @@ import { formatPrice } from '@/lib/utils'
 import { formatShippingLine } from '@/utils/shipping'
 import { formatVariantLine } from '@/utils/variant'
 import { formatInstallmentLabel, type InstallmentCount } from '@/utils/installments'
+import { formatTaxId, inferTaxIdKind } from '@/lib/taxId'
 
 // Snapshot shape passed in via location.state.order from Checkout.tsx
 // at the moment Stripe confirmPayment succeeds.
@@ -21,7 +22,7 @@ interface OrderSnapshot {
   promisedDate: string | null // YYYY-MM-DD
   installmentCount?: InstallmentCount
   deliveryMethod: 'delivery' | 'pickup'
-  contact: { name: string; email: string; phone: string }
+  contact: { name: string; email: string; phone: string; taxId: string }
   shippingAddress: { cep: string; street: string; city: string; state: string } | null
   addressExtra: { number: string; complement: string }
   selectedShipping: {
@@ -319,6 +320,12 @@ export default function OrderConfirmation() {
               )}
               {order.contact.phone && (
                 <p className="text-sm text-andrequice-brown">{order.contact.phone}</p>
+              )}
+              {order.contact.taxId && (
+                <p className="text-sm text-andrequice-brown">
+                  {inferTaxIdKind(order.contact.taxId) === 'cnpj' ? 'CNPJ' : 'CPF'}:{' '}
+                  {formatTaxId(order.contact.taxId)}
+                </p>
               )}
             </div>
             <div className="pt-6 md:pt-0 md:pl-8 border-t md:border-t-0 border-andrequice-sand">

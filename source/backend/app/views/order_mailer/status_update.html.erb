@@ -281,6 +281,11 @@
                         <%= @order.customer_phone %>
                       </p>
                     <% end %>
+                    <% if @order.tax_id_formatted.present? %>
+                      <p style="margin:4px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#4A2E1A;line-height:1.4;">
+                        <%= @order.tax_id_kind == "cnpj" ? "CNPJ" : "CPF" %>: <%= @order.tax_id_formatted %>
+                      </p>
+                    <% end %>
                   </td>
 
                   <!-- Entrega -->

@@ -94,6 +94,11 @@ export interface Order {
   customer_name: string
   customer_email: string
   customer_phone: string
+  // CPF (000.000.000-00) ou CNPJ (00.000.000/0000-00) já formatado pelo
+  // backend. Pedidos legados (pré-migration) ficam com nil. tax_id_kind
+  // identifica o tipo para rotulagem correta em views.
+  tax_id_formatted: string | null
+  tax_id_kind: 'cpf' | 'cnpj' | null
   status: OrderStatus
   source?: OrderSource
   external_payment_method?: ExternalPaymentMethod | null

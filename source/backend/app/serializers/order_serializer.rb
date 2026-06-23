@@ -10,6 +10,8 @@ class OrderSerializer
       customer_name:      @order.customer_name,
       customer_email:     @order.customer_email,
       customer_phone:     @order.customer_phone,
+      tax_id_formatted:   @order.tax_id_formatted,
+      tax_id_kind:        @order.tax_id_kind,
       delivery_method:    @order.delivery_method,
       source:                  @order.source,
       external_payment_method: @order.external_payment_method,

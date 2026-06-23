@@ -11,6 +11,8 @@ class OrderDetailSerializer
       customer_name:            @order.customer_name,
       customer_email:           @order.customer_email,
       customer_phone:           @order.customer_phone,
+      tax_id_formatted:         @order.tax_id_formatted,
+      tax_id_kind:              @order.tax_id_kind,
       delivery_method:          @order.delivery_method,
       status:                   @order.status,
       items_total_cents:        @order.items_total_cents,

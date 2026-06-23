@@ -8,6 +8,8 @@ import { Badge } from '@/components/Badge'
 import { OrderSummary } from '@/components/OrderSummary'
 import { CouponInput } from '@/components/CouponInput'
 import { CheckoutAccordion, type AccordionStepDef } from '@/components/CheckoutAccordion'
+import { TaxIdInput } from '@/components/TaxIdInput'
+import { isTaxIdValid } from '@/lib/taxId'
 import { useCartStore } from '@/store/cartStore'
 import { useCheckoutStore } from '@/store/checkoutStore'
 import { useStore } from '@/hooks/useStore'
@@ -363,7 +365,8 @@ export default function Cart() {
   const isContactValid  =
     contact.name.trim().length >= 3 &&
     contact.phone.replace(/\D/g, '').length >= 10 &&
-    EMAIL_RE.test(contact.email)
+    EMAIL_RE.test(contact.email) &&
+    isTaxIdValid(contact.taxId)
   const isAddressValid  = deliveryMethod === 'pickup' || (
     addressExtra.number.trim().length >= 1 &&
     !!shippingAddress?.cep &&
@@ -689,6 +692,11 @@ export default function Cart() {
             inputMode="numeric"
             maxLength={15}
             required
+          />
+          <TaxIdInput
+            value={contact.taxId}
+            onChange={(digits) => setContact({ ...contact, taxId: digits })}
+            hint="Necessário para a emissão da nota e contato fiscal."
           />
           <Button variant="primary" size="lg" fullWidth disabled={!canConfirm} onClick={onConfirm}>
             Continuar

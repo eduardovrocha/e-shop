@@ -26,6 +26,18 @@ module Api
           return render json: { error: "Método de entrega inválido" }, status: :unprocessable_entity
         end
 
+        # Valida CPF/CNPJ antes de criar o PaymentIntent. Sem documento válido
+        # não há pedido — não vale a pena reservar estoque/cupom/intent só
+        # para descobrir o erro depois. Normalização e checksum reusam a
+        # mesma lógica do Order (TaxIdChecksum + regex 11/14 dígitos).
+        tax_id_digits = params[:tax_id].to_s.gsub(/\D/, "")
+        unless tax_id_digits.match?(/\A(\d{11}|\d{14})\z/) && TaxIdChecksum.valid?(tax_id_digits)
+          label = tax_id_digits.length == 14 ? "CNPJ" : "CPF"
+          message = tax_id_digits.empty? ? "Informe CPF ou CNPJ" : "#{label} inválido"
+          return render json: { errors: { tax_id: [ message ] } }, status: :unprocessable_entity
+        end
+        tax_id_kind = tax_id_digits.length == 14 ? "cnpj" : "cpf"
+
         # Pickup can be turned off via two switches in the admin panel
         # (StoreSetting.pickup_enabled OR ShippingSetting.local_pickup_enabled).
         # Either one being off blocks the pickup flow; the storefront mirrors
@@ -106,6 +118,8 @@ module Api
               customer_name:      params[:customer_name],
               customer_email:     params[:customer_email],
               customer_phone:     params[:customer_phone],
+              tax_id:             tax_id_digits,
+              tax_id_kind:        tax_id_kind,
               shipping_address:    params[:shipping_address]&.to_json,
               shipping_service_id: params[:shipping_service_id],
               shipping_cep:        params[:shipping_cep],
@@ -468,6 +482,11 @@ module Api
           o.customer_name            = metadata["customer_name"]
           o.customer_email           = metadata["customer_email"]
           o.customer_phone           = metadata["customer_phone"]
+          # tax_id and tax_id_kind are set by Order's before_validation
+          # callbacks based on tax_id alone — assigning the kind here is
+          # redundant but harmless and keeps the metadata round-trip
+          # explicit when reading the webhook in isolation.
+          o.tax_id                   = metadata["tax_id"]
           o.delivery_method          = metadata["delivery_method"] || "pickup"
           o.items_total_cents        = metadata["items_total_cents"].to_i
           o.shipping_fee_cents       = metadata["shipping_fee_cents"].to_i

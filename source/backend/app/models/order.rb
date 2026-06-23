@@ -1,4 +1,12 @@
 class Order < ApplicationRecord
+  # Rótulos amigáveis para erros vindos do AR — "Tax id ..." vira "CPF/CNPJ".
+  # Resto cai no default (`humanize`). Mantém os full_messages legíveis nos
+  # contratos antigos que ainda renderizam `error: msg`.
+  def self.human_attribute_name(attr, options = {})
+    return "CPF/CNPJ" if attr.to_s == "tax_id"
+    super
+  end
+
   STATUSES = %w[
     pending paid failed disputed cancelled
     processing ready_to_ship producing packed shipped out_for_delivery delivered refunded
@@ -39,6 +47,12 @@ class Order < ApplicationRecord
   # Modo de envio do pedido.
   enum :shipping_mode, { melhor_envio: 0, manual: 1, retirada: 2 }, prefix: :shipping
 
+  # CPF (11 dígitos) ou CNPJ (14 dígitos). Armazenado sempre cru (sem máscara).
+  # Pedidos legados anteriores à migration podem ter `tax_id` nil — daí a
+  # obrigatoriedade ser `on: :create`. tax_id_kind é derivado do tamanho
+  # do número e ressetado no `before_validation`.
+  enum :tax_id_kind, { cpf: 0, cnpj: 1 }, prefix: :tax_id
+
   has_many :status_histories, class_name: "OrderStatusHistory",
                                dependent: :destroy, inverse_of: :order
   has_many :order_items, dependent: :destroy
@@ -62,7 +76,20 @@ class Order < ApplicationRecord
   validates :items_total_cents, :shipping_fee_cents, :total_cents,
             numericality: { greater_than_or_equal_to: 0 }
 
+  # CPF/CNPJ — obrigatório apenas na criação para não invalidar pedidos
+  # legados que existem em produção sem o campo. Validações de formato e
+  # dígito verificador rodam apenas quando o valor muda, então update de
+  # pedido legado SEM tocar em tax_id continua passando. tax_id_kind é
+  # derivado de tax_id no callback; não tem validação própria porque o
+  # erro útil ao usuário sempre se refere ao tax_id em si.
+  validates :tax_id, presence: { message: "Informe CPF ou CNPJ" }, on: :create
+  validates :tax_id, format: { with: /\A(\d{11}|\d{14})\z/, message: "deve ter 11 (CPF) ou 14 (CNPJ) dígitos" },
+                     if:     :tax_id_changed?
+  validate :tax_id_checksum_valid, if: :tax_id_changed?
+
   before_validation :ensure_tracking_token
+  before_validation :normalize_tax_id
+  before_validation :infer_tax_id_kind
   after_create      :assign_number
 
   scope :paid,    -> { where(status: "paid") }
@@ -102,6 +129,18 @@ class Order < ApplicationRecord
   def public_tracking_url
     host = ENV.fetch("FRONTEND_URL", "http://localhost").sub(/\/$/, "")
     "#{host}/track/#{tracking_token}"
+  end
+
+  # Formato para exibição (admin, email, recibo). Nunca usar `tax_id` direto
+  # nas views — sempre passar por aqui para receber a máscara correta. Retorna
+  # nil se o pedido não tiver documento (pedido legado).
+  def tax_id_formatted
+    return nil if tax_id.blank?
+    case tax_id.length
+    when 11 then tax_id.gsub(/\A(\d{3})(\d{3})(\d{3})(\d{2})\z/, '\1.\2.\3-\4')
+    when 14 then tax_id.gsub(/\A(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})\z/, '\1.\2.\3/\4-\5')
+    else         tax_id
+    end
   end
 
   # Recomputes the order's status from the production_status of its items.
@@ -180,6 +219,34 @@ class Order < ApplicationRecord
       token = SecureRandom.urlsafe_base64(16)
       break token unless Order.exists?(tracking_token: token)
     end
+  end
+
+  # Strip de máscara e qualquer caractere não-numérico. Aceita o campo
+  # chegando do payload como "111.444.777-35", "11.222.333/0001-81", " 111…",
+  # etc. Resultado: só dígitos. Blank in → blank out (não força "").
+  def normalize_tax_id
+    return if tax_id.nil?
+    cleaned = tax_id.to_s.gsub(/\D/, "")
+    self.tax_id = cleaned.presence
+  end
+
+  # Define kind a partir do tamanho do documento normalizado. Tamanhos
+  # inválidos zeram o kind para que a validação de formato/presença
+  # acuse o erro real (não o "kind inválido").
+  def infer_tax_id_kind
+    self.tax_id_kind =
+      case tax_id.to_s.length
+      when 11 then :cpf
+      when 14 then :cnpj
+      else         nil
+      end
+  end
+
+  def tax_id_checksum_valid
+    return if tax_id.blank?
+    return if TaxIdChecksum.valid?(tax_id)
+    label = tax_id.length == 14 ? "CNPJ" : "CPF"
+    errors.add(:tax_id, "#{label} inválido")
   end
 
   def assign_number

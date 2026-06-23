@@ -21,6 +21,8 @@ export interface CreateIntentPayload {
   customer_name: string
   customer_email: string
   customer_phone: string
+  // CPF (11 dígitos) ou CNPJ (14 dígitos) crus. Backend normaliza e valida.
+  tax_id: string
   shipping_address: ShippingAddress | null
   shipping_cep?: string
   shipping_service_id?: number

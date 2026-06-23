@@ -4,6 +4,11 @@ FactoryBot.define do
     customer_name      { Faker::Name.name }
     customer_email     { Faker::Internet.email }
     customer_phone     { "11999999999" }
+    # CPF válido pelo algoritmo do TaxIdChecksum. Pedidos no fluxo real
+    # exigem documento; os testes não precisam diferenciar entre clientes,
+    # então um fixo é suficiente. Quando um spec específico precisar de
+    # outro documento, sobrescreve no `build`/`create`.
+    tax_id             { "11144477735" }
     delivery_method    { "pickup" }
     items_total_cents  { 5000 }
     shipping_fee_cents { 0 }

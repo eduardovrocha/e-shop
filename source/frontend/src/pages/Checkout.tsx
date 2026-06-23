@@ -309,6 +309,7 @@ export default function Checkout() {
           customer_name:   contact.name,
           customer_email:  contact.email,
           customer_phone:  contact.phone,
+          tax_id:          contact.taxId,
           shipping_address: deliveryMethod === 'delivery' && shippingAddress
             ? {
                 cep:          shippingAddress.cep,
@@ -332,13 +333,20 @@ export default function Checkout() {
         })
         setIntent(newIntent)
       } catch (err: unknown) {
-        const axiosError = err as { response?: { data?: { error?: string } } }
-        const errMsg = axiosError?.response?.data?.error ?? 'Não foi possível iniciar o pagamento. Tente novamente.'
-        // If the backend rejected the coupon at this final step, drop it
-        // so the buyer doesn't get stuck retrying with a dead coupon.
+        const axiosError = err as {
+          response?: { data?: { error?: string; errors?: Record<string, string[]> } }
+        }
+        // Per-field errors (currently only tax_id from create_intent) take
+        // precedence — they're more actionable than the generic message and
+        // the spec mandates preserving the server text on the field.
+        const fieldErrors = axiosError?.response?.data?.errors
+        const taxIdMsg = fieldErrors?.tax_id?.[0]
+        const errMsg =
+          taxIdMsg ??
+          axiosError?.response?.data?.error ??
+          'Não foi possível iniciar o pagamento. Tente novamente.'
         if (/cupom/i.test(errMsg)) removeCoupon()
         setServerError(errMsg)
-        // Allow a retry attempt (e.g. user refreshes or comes back)
         intentRequestedRef.current = false
       } finally {
         setLoading(false)

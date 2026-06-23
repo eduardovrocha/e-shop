@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { Loader2, Plus, Search, Trash2 } from 'lucide-react'
 import axios from 'axios'
 import { PageTitle } from '@/components/PageTitle'
@@ -28,6 +28,9 @@ import {
 import { useProducts } from '@/hooks/useProducts'
 import { useCustomers } from '@/hooks/useCustomers'
 import { useCreateOrder } from '@/hooks/useOrders'
+import { ordersService } from '@/services/ordersService'
+import { TaxIdInput } from '@/components/TaxIdInput'
+import { isTaxIdValid } from '@/lib/taxId'
 import { useCepLookup } from '@/hooks/useCepLookup'
 import { useToast } from '@/hooks/useToast'
 import { shippingService } from '@/services/shippingService'
@@ -60,6 +63,28 @@ export default function ManualOrderForm() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
+  const [taxId, setTaxId] = useState('')
+  const [taxIdServerError, setTaxIdServerError] = useState<string | undefined>(undefined)
+  const [recurringCustomer, setRecurringCustomer] = useState<{ count: number } | null>(null)
+
+  // Lookup de cliente recorrente após validação client-side. Sem auto-fill —
+  // apenas sinaliza ao admin que o CPF/CNPJ tem histórico, com link para a
+  // lista filtrada. Debounce 400ms evita disparar chamada a cada tecla.
+  useEffect(() => {
+    setRecurringCustomer(null)
+    if (!isTaxIdValid(taxId)) return
+    const t = window.setTimeout(() => {
+      ordersService
+        .lookupByTaxId(taxId)
+        .then((res) => {
+          if (res.orders_count > 0) setRecurringCustomer({ count: res.orders_count })
+        })
+        .catch(() => {
+          /* lookup é puramente informativo — silenciar erros de rede */
+        })
+    }, 400)
+    return () => window.clearTimeout(t)
+  }, [taxId])
 
   // ── Itens ──────────────────────────────────────────────────────────────
   const [productSearch, setProductSearch] = useState('')
@@ -73,6 +98,11 @@ export default function ManualOrderForm() {
   // ── Envio ──────────────────────────────────────────────────────────────
   const [shippingMode, setShippingMode] = useState<ShippingMode>('retirada')
   const cep = useCepLookup()
+  // Número e complemento ficam fora do hook useCepLookup porque o ViaCEP
+  // nunca retorna esses campos — eles são puramente input do operador, em
+  // paridade com o checkout web (que mantém em `addressExtra`).
+  const [addressNumber, setAddressNumber] = useState('')
+  const [addressComplement, setAddressComplement] = useState('')
   const [quoteOptions, setQuoteOptions] = useState<ShippingOption[] | null>(null)
   const [selectedQuote, setSelectedQuote] = useState<ShippingOption | null>(null)
   const [quoteLoading, setQuoteLoading] = useState(false)
@@ -136,6 +166,11 @@ export default function ManualOrderForm() {
     setCustomerSearch('')
   }
 
+  function handleTaxIdChange(digits: string) {
+    setTaxId(digits)
+    if (taxIdServerError) setTaxIdServerError(undefined)
+  }
+
   // ── Cotação de frete (melhor_envio) ──────────────────────────────────────
   async function handleQuote() {
     const clean = cep.address.cep.replace(/\D/g, '')
@@ -175,9 +210,15 @@ export default function ManualOrderForm() {
     if (!name.trim() || (!email.trim() && !phone.trim())) {
       return 'Informe o nome e ao menos um contato (email ou telefone) do cliente.'
     }
+    if (!isTaxIdValid(taxId)) {
+      return 'Informe um CPF ou CNPJ válido.'
+    }
     if (shippingMode !== 'retirada') {
       if (!cep.address.cep.trim() || !cep.address.address.trim() || !cep.address.city.trim()) {
         return 'Preencha o endereço de entrega para este modo de envio.'
+      }
+      if (addressNumber.trim().length === 0) {
+        return 'Informe o número do endereço.'
       }
     }
     if (!totalOk) return 'O total do pedido não pode ser negativo.'
@@ -196,6 +237,7 @@ export default function ManualOrderForm() {
         name: name.trim(),
         email: email.trim() || undefined,
         phone: phone.replace(/\D/g, '') || undefined,
+        tax_id: taxId,
       },
       items: lines.map((l) => ({
         variant_id: l.variant_id,
@@ -224,6 +266,10 @@ export default function ManualOrderForm() {
         city: cep.address.city,
         state: cep.address.state,
         neighborhood: cep.address.neighborhood || undefined,
+        // Mesmas chaves snake_case usadas pelo checkout web — preserva a
+        // forma do JSONB shipping_address no Order entre os dois fluxos.
+        number: addressNumber.trim(),
+        complement: addressComplement.trim() || undefined,
       }
     }
 
@@ -232,11 +278,24 @@ export default function ManualOrderForm() {
       toast.success(`Pedido ${created.number} registrado.`)
       navigate(`/orders/${created.id}`)
     } catch (err) {
-      const message =
-        axios.isAxiosError(err) && err.response?.data?.error
-          ? (err.response.data.error as string)
-          : 'Não foi possível registrar o pedido.'
-      toast.error(message)
+      // Preserva erros por campo do backend (`{ errors: { tax_id: [...] } }`)
+      // e exibe-os inline no input correspondente. Toast generaliza para
+      // não duplicar — usuário já vê o erro junto ao campo.
+      if (axios.isAxiosError(err)) {
+        const data = err.response?.data as
+          | { error?: string; errors?: Record<string, string[]> }
+          | undefined
+        const taxIdMsg = data?.errors?.tax_id?.[0]
+        if (taxIdMsg) {
+          setTaxIdServerError(taxIdMsg)
+          toast.error(taxIdMsg)
+          return
+        }
+        const message = data?.error || 'Não foi possível registrar o pedido.'
+        toast.error(message)
+        return
+      }
+      toast.error('Não foi possível registrar o pedido.')
     }
   }
 
@@ -301,6 +360,27 @@ export default function ManualOrderForm() {
                   onChange={(e) => setPhone(maskPhoneBR(e.target.value))}
                 />
               </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <TaxIdInput
+                value={taxId}
+                onChange={handleTaxIdChange}
+                error={taxIdServerError}
+                required
+              />
+              {recurringCustomer && (
+                <div className="self-end rounded-lg border border-andrequice-gold bg-andrequice-cream/50 px-3 py-2 text-xs text-andrequice-navy">
+                  Cliente com {recurringCustomer.count}{' '}
+                  {recurringCustomer.count === 1 ? 'pedido anterior' : 'pedidos anteriores'}.{' '}
+                  <Link
+                    to={`/orders?search=${encodeURIComponent(taxId)}`}
+                    className="font-medium text-andrequice-gold underline"
+                  >
+                    Ver histórico
+                  </Link>
+                </div>
+              )}
             </div>
           </CardContent>
       </Card>
@@ -506,6 +586,31 @@ export default function ManualOrderForm() {
                   <div className="space-y-1.5">
                     <Label htmlFor="state">UF</Label>
                     <Input id="state" value={cep.address.state} disabled />
+                  </div>
+                </div>
+
+                {/* Número (obrigatório) + Complemento (opcional) — espelha o
+                    layout 1+2 do checkout web. */}
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="address-number">
+                      Número<span className="ml-0.5 text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="address-number"
+                      placeholder="123"
+                      value={addressNumber}
+                      onChange={(e) => setAddressNumber(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label htmlFor="address-complement">Complemento</Label>
+                    <Input
+                      id="address-complement"
+                      placeholder="Apto, Bloco..."
+                      value={addressComplement}
+                      onChange={(e) => setAddressComplement(e.target.value)}
+                    />
                   </div>
                 </div>
               </div>
