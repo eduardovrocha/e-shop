@@ -96,3 +96,7 @@ test/reports/
 # ── Gems compiladas localmente ────────────────────────────────────────
 vendor/bundle/
 **/vendor/bundle/
+
+# ── Controle remoto de manutenção (local, não versionado) ─────────────
+deploy/scripts/maintenance-remote.sh
+deploy/scripts/readme-maintenance.md
