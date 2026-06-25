@@ -193,6 +193,9 @@ services:
       - puma_socket:/app/tmp/sockets:ro
       - certbot_www:/var/www/certbot:ro
       - certbot_conf:/etc/letsencrypt:ro
+      # Página de manutenção — flag + HTML/JSON vivem no host; container só lê.
+      # Quem ativa/desativa é deploy/scripts/maintenance via flag `enabled`.
+      - /var/www/maintenance:/var/www/maintenance:ro
     depends_on:
       - api
       - frontend

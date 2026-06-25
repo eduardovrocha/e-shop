@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Andrequicé — Em manutenção</title>
+  <!-- Favicon inline (data URI) — sem request externa; não quebra se faltar -->
+  <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230D2B45'/%3E%3Ctext x='16' y='23' font-family='Georgia,serif' font-size='20' font-weight='700' fill='%23D4A261' text-anchor='middle'%3EA%3C/text%3E%3C/svg%3E">
+  <style>
+    /* ── Design tokens (valores reais de tailwind.config.js) ───────────────── */
+    :root {
+      --cream:  #FAF5EE;
+      --sand:   #E8D1B0;
+      --gold:   #D4A261;
+      --copper: #B86E2E;
+      --navy:   #0D2B45;
+      --brown:  #4A2E1A;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body { height: 100%; }
+
+    body {
+      /* Fontes da marca primeiro; fallback de sistema elegante se ausentes.
+         Sem dependências externas (sem Google Fonts, sem CDN). */
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+                   Roboto, system-ui, sans-serif;
+      background-color: var(--cream);
+      color: var(--brown);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100%;
+      padding: 24px;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 560px;
+      text-align: center;
+      padding: 48px 32px;
+    }
+
+    .brand {
+      font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+      font-size: clamp(1.5rem, 4vw, 2rem);
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--copper);
+      margin-bottom: 40px;
+    }
+
+    .rule {
+      width: 56px;
+      height: 2px;
+      margin: 0 auto 32px;
+      background-color: var(--gold);
+      border: 0;
+    }
+
+    h1 {
+      font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+      font-size: clamp(2rem, 6vw, 3rem);
+      font-weight: 700;
+      line-height: 1.15;
+      color: var(--navy);
+      margin-bottom: 20px;
+    }
+
+    .subtitle {
+      font-size: clamp(1rem, 2.5vw, 1.125rem);
+      line-height: 1.6;
+      color: var(--brown);
+      max-width: 38ch;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 480px) {
+      .card { padding: 32px 20px; }
+      .brand { margin-bottom: 28px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="card" role="main">
+    <div class="brand">andrequice.store</div>
+    <hr class="rule" aria-hidden="true">
+    <h1>Estamos em manutenção</h1>
+    <p class="subtitle">Voltamos em instantes. Obrigado pela paciência.</p>
+  </main>
+</body>
+</html>

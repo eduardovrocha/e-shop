@@ -1,0 +1,5 @@
+{
+  "error": "maintenance",
+  "message": "Estamos em manutenção. Tente novamente em alguns minutos.",
+  "retry_after_seconds": 3600
+}

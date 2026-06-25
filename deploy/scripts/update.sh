@@ -101,6 +101,18 @@ echo "    $(git log --oneline "${PREVIOUS_COMMIT}..origin/production" | head -5)
 git checkout production
 git reset --hard origin/production
 
+# ── Sincronizar página de manutenção (NUNCA toca no flag `enabled`) ───────────
+# Mantém /var/www/maintenance/{index.html,api.json} atualizados com o repo.
+# O estado da manutenção (presença de `enabled`) é deliberadamente preservado.
+MAINT_DIR="/var/www/maintenance"
+if mkdir -p "$MAINT_DIR" 2>/dev/null && \
+   cp -f "${APP_DIR}/deploy/maintenance/index.html" "${MAINT_DIR}/index.html" && \
+   cp -f "${APP_DIR}/deploy/maintenance/api.json"   "${MAINT_DIR}/api.json"; then
+  echo "    Página de manutenção sincronizada (flag preservado)."
+else
+  echo "    ⚠️  Não foi possível sincronizar a página de manutenção (deploy segue)."
+fi
+
 # ── [3/8] Detectar migrations pendentes ──────────────────────────────────────
 echo ""
 echo "[3/8] Verificando migrations pendentes..."

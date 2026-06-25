@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ─── maintenance — liga/desliga a página de manutenção (Andrequicé) ───────────
+# Storefront, dashboard (admin) e API passam a responder 503 branded.
+# Webhooks Stripe e health checks continuam passando (exceções no nginx.conf).
+#
+# A ativação é por PRESENÇA DE ARQUIVO FLAG no host. O nginx avalia
+# `if (-f /var/www/maintenance/enabled)` a CADA request — ou seja, o toggle é
+# efetivo na hora. O reload existe para garantir resolução limpa e validar a
+# config; é reload (não restart), zero downtime.
+#
+# Roda como o usuário `deploy` (membro do grupo docker) — NÃO precisa de sudo.
+# Uso:  maintenance {on|off|status|log}
+# ──────────────────────────────────────────────────────────────────────────────
+
+APP_DIR="${APP_DIR:-/home/deploy/andrequice}"
+FLAG_DIR="/var/www/maintenance"
+FLAG="${FLAG_DIR}/enabled"
+LOG="${FLAG_DIR}/maintenance.log"
+
+COMPOSE="docker compose -f ${APP_DIR}/deploy/production/docker-compose.yml --env-file ${APP_DIR}/.env"
+
+reload_nginx() {
+    # Valida antes de recarregar; reload (não restart) = zero downtime.
+    if $COMPOSE exec -T nginx nginx -t; then
+        $COMPOSE exec -T nginx nginx -s reload
+        echo "   nginx recarregado."
+    else
+        echo "   ⚠️  nginx -t falhou — reload NÃO executado." >&2
+        echo "   (O flag já é lido em runtime; verifique a config do nginx.)" >&2
+        return 1
+    fi
+}
+
+log_action() {
+    echo "[$(date -Iseconds)] $1 by $(whoami) from ${SSH_CLIENT:-local}" >> "$LOG"
+}
+
+case "${1:-status}" in
+    on)
+        mkdir -p "$FLAG_DIR"
+        touch "$FLAG"
+        reload_nginx
+        log_action "ON"
+        echo "✅ Manutenção ATIVADA"
+        echo "   Storefront, dashboard e API agora respondem 503."
+        echo "   Webhook Stripe (/api/v1/payments/webhook) e health checks seguem passando."
+        ;;
+    off)
+        rm -f "$FLAG"
+        reload_nginx
+        log_action "OFF"
+        echo "✅ Manutenção DESATIVADA"
+        echo "   Tráfego normal restaurado."
+        ;;
+    status)
+        if [[ -f "$FLAG" ]]; then
+            echo "🔴 Manutenção: ATIVA"
+            echo "   Ativada em: $(date -r "$FLAG" -Iseconds 2>/dev/null || stat -c %y "$FLAG" 2>/dev/null || echo '?')"
+        else
+            echo "🟢 Manutenção: INATIVA"
+        fi
+        ;;
+    log)
+        tail -n 20 "$LOG" 2>/dev/null || echo "(log vazio)"
+        ;;
+    *)
+        echo "Uso: maintenance {on|off|status|log}" >&2
+        exit 1
+        ;;
+esac
