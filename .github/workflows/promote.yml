@@ -37,7 +37,16 @@ jobs:
           install -m 700 -d ~/.ssh
           echo "${{ secrets.SSH_DEPLOY_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+          # ssh-keyscan pode retornar não-zero num blip de rede do runner e,
+          # sob `bash -e`, derrubaria o step. Tenta algumas vezes; só falha
+          # (com mensagem clara) se nenhuma host key for capturada.
+          for i in 1 2 3 4 5; do
+            ssh-keyscan -H -T 15 "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null && break
+            echo "ssh-keyscan tentativa $i falhou; aguardando 5s..."
+            sleep 5
+          done
+          test -s ~/.ssh/known_hosts \
+            || { echo "::error::ssh-keyscan não obteve a host key de ${{ secrets.VPS_HOST }} (host inacessível pelo runner?)"; exit 1; }
 
       - name: Deploy to VPS
         run: |
