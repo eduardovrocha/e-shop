@@ -22,6 +22,11 @@ LOG="${FLAG_DIR}/maintenance.log"
 COMPOSE="docker compose -f ${APP_DIR}/deploy/production/docker-compose.yml --env-file ${APP_DIR}/.env"
 
 reload_nginx() {
+    # docker compose resolve contextos relativos a partir do cwd. Garantir um
+    # diretório acessível (o app dir) evita "stat .: permission denied" quando
+    # o comando é invocado de um cwd que o usuário não lê (ex.: sudo a partir
+    # de /root).
+    cd "$APP_DIR" || { echo "   ⚠️  não consegui acessar $APP_DIR" >&2; return 1; }
     # Valida antes de recarregar; reload (não restart) = zero downtime.
     if $COMPOSE exec -T nginx nginx -t; then
         $COMPOSE exec -T nginx nginx -s reload
